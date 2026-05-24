@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en"><head><script>(function(firebaseConfig, initialAuthToken, appId) {
+        window.__firebase_config = firebaseConfig;
+        window.__initial_auth_token = initialAuthToken;
+        window.__app_id = appId;
+            })("\n{\n  \"apiKey\": \"AIzaSyCqyCcs2R2e7AegGjvFAwG98wlamtbHvZY\",\n  \"authDomain\": \"bard-frontend.firebaseapp.com\",\n  \"projectId\": \"bard-frontend\",\n  \"storageBucket\": \"bard-frontend.firebasestorage.app\",\n  \"messagingSenderId\": \"175205271074\",\n  \"appId\": \"1:175205271074:web:2b7bd4d34d33bf38e6ec7b\"\n}\n","eyJhbGciOiJSUzI1NiIsImtpZCI6ImE1MTMzNTUyZGIzZmQ1ZWM5NjdlZWFkNjk3ZjNhZTgwYjliNzk1ZjQiLCJ0eXAiOiJKV1QifQ.eyJzdWIiOiJmaXJlYmFzZS1hZG1pbnNkay1mYnN2Y0BiYXJkLWZyb250ZW5kLmlhbS5nc2VydmljZWFjY291bnQuY29tIiwiYXVkIjoiaHR0cHM6Ly9pZGVudGl0eXRvb2xraXQuZ29vZ2xlYXBpcy5jb20vZ29vZ2xlLmlkZW50aXR5LmlkZW50aXR5dG9vbGtpdC52MS5JZGVudGl0eVRvb2xraXQiLCJ1aWQiOiIxNTkzNTU1NDc3ODA3NDg4MjcxNyIsImlzcyI6ImZpcmViYXNlLWFkbWluc2RrLWZic3ZjQGJhcmQtZnJvbnRlbmQuaWFtLmdzZXJ2aWNlYWNjb3VudC5jb20iLCJjbGFpbXMiOnsiYXBwSWQiOiJjX2ZkZTBhYjdmZGU3ZTNiZjZfaW5kZXguaHRtbC05OTkifSwiZXhwIjoxNzc5NjQ2Nzk0LCJpYXQiOjE3Nzk2NDMxOTQsImFsZyI6IlJTMjU2In0.IMsODIH6atEOEtJVB5msaxlYn3Fd1cPX3TnXbxWY1x4ABt0ck9KPnTomtL4f6UtbhsksjtPzrMt19eBk3c8ZLxyoyYIxb-YQiq6X4ntmF2-XBmjTKExtDQFjJ-jdr9Q-v5a9HxDUQTFl9bCFgA6a_hLCcZJiv2-X18T1oflziYhpqEpO47YST6GCaideg9IXo0eYmUlTwPOwGWoMBVzAjPz-hfZTdfjQn73KkiHbX0IDUDthu1N5dDXZp3PxGlENq8dnv6b2C3WSzLVLzHFv9op1B11hGzpaqqmdD63ktQ4LP2WO9AQLnLaLmdpesg9DekmTSe2oKHRxYNI7gx1GFg","c_fde0ab7fde7e3bf6_index.html-999")</script><script>(function(){'use strict';var h=typeof Object.defineProperties=="function"?Object.defineProperty:function(a,b,d){if(a==Array.prototype||a==Object.prototype)return a;a[b]=d.value;return a};function l(a){a=["object"==typeof globalThis&&globalThis,a,"object"==typeof window&&window,"object"==typeof self&&self,"object"==typeof global&&global];for(var b=0;b<a.length;++b){var d=a[b];if(d&&d.Math==Math)return d}throw Error("Cannot find global object");}var n=l(this);
+function p(a,b){if(b)a:{var d=n;a=a.split(".");for(var c=0;c<a.length-1;c++){var e=a[c];if(!(e in d))break a;d=d[e]}a=a[a.length-1];c=d[a];b=b(c);b!=c&&b!=null&&h(d,a,{configurable:!0,writable:!0,value:b})}}function r(a){function b(c){return a.next(c)}function d(c){return a.throw(c)}return new Promise(function(c,e){function f(g){g.done?c(g.value):Promise.resolve(g.value).then(b,d).then(f,e)}f(a.next())})}function t(a){return r(a())}
+p("Object.values",function(a){return a?a:function(b){var d=[],c;for(c in b)Object.prototype.hasOwnProperty.call(b,c)&&d.push(b[c]);return d}});p("Array.prototype.includes",function(a){return a?a:function(b,d){var c=this;c instanceof String&&(c=String(c));var e=c.length;d=d||0;for(d<0&&(d=Math.max(d+e,0));d<e;d++){var f=c[d];if(f===b||Object.is(f,b))return!0}return!1}});/*
+
+ MIT License
+
+ Copyright (c) 2017-2023 W.Y.
+
+ Permission is hereby granted, free of charge, to any person obtaining a copy
+ of this software and associated documentation files (the "Software"), to deal
+ in the Software without restriction, including without limitation the rights
+ to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ copies of the Software, and to permit persons to whom the Software is
+ furnished to do so, subject to the following conditions:
+
+ The above copyright notice and this permission notice shall be included in
+ all copies or substantial portions of the Software.
+
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+
+*/
+function u(a,b){var d=a.style;b.backgroundColor&&(d.backgroundColor=b.backgroundColor);b.width&&(d.width=`${b.width}px`);b.height&&(d.height=`${b.height}px`);var c=b.style;c!=null&&Object.keys(c).forEach(e=>{d[e]=c[e]})};var v=(()=>{var a=0;return()=>{a+=1;return`u${`0000${(Math.random()*1679616<<0).toString(36)}`.slice(-4)}${a}`}})();function w(a){var b=[];for(let d=0,c=a.length;d<c;d++)b.push(a[d]);return b}let x=null;function y(a={}){return x?x:a.l?x=a.l:x=w(window.getComputedStyle(document.documentElement))}function z(a,b){return(a=(a.ownerDocument.defaultView||window).getComputedStyle(a).getPropertyValue(b))?parseFloat(a.replace("px","")):0}
+function A(a,b={}){var d;if(!(d=b.width)){d=z(a,"border-left-width");var c=z(a,"border-right-width");d=a.clientWidth+d+c}(b=b.height)||(b=z(a,"border-top-width"),c=z(a,"border-bottom-width"),b=a.clientHeight+b+c);return{width:d,height:b}}function B(a){return new Promise((b,d)=>{var c=new Image;c.onload=()=>{c.decode().then(()=>{requestAnimationFrame(()=>b(c))})};c.onerror=d;c.crossOrigin="anonymous";c.decoding="async";c.src=a})}
+function C(a){return t(function*(){return Promise.resolve().then(()=>(new XMLSerializer).serializeToString(a)).then(encodeURIComponent).then(b=>`data:image/svg+xml;charset=utf-8,${b}`)})}
+function D(a,b,d){return t(function*(){var c=document.createElementNS("http://www.w3.org/2000/svg","svg"),e=document.createElementNS("http://www.w3.org/2000/svg","foreignObject");c.setAttribute("width",`${b}`);c.setAttribute("height",`${d}`);c.setAttribute("viewBox",`0 0 ${b} ${d}`);e.setAttribute("width","100%");e.setAttribute("height","100%");e.setAttribute("x","0");e.setAttribute("y","0");e.setAttribute("externalResourcesRequired","true");c.appendChild(e);e.appendChild(a);return C(c)})}
+var E=(a,b)=>{if(a instanceof b)return!0;a=Object.getPrototypeOf(a);return a===null?!1:a.constructor.name===b.name||E(a,b)};function F(a,b){return y(b).map(d=>{var c=a.getPropertyValue(d),e=a.getPropertyPriority(d);return`${d}: ${c}${e?" !important":""};`}).join(" ")}
+function G(a,b,d,c){a=window.getComputedStyle(a,d);var e=a.getPropertyValue("content");if(e!==""&&e!=="none"){var f=v();try{b.className=`${b.className} ${f}`}catch(k){return}e=document.createElement("style");var g=e.appendChild;d=`.${f}:${d}`;a.cssText?(c=a.getPropertyValue("content"),c=`${a.cssText} content: '${c.replace(/'|"/g,"")}';`):c=F(a,c);g.call(e,document.createTextNode(`${d}{${c}}`));b.appendChild(e)}};function H(a){return a.search(/^(data:)/)!==-1}function I(a,b,d){return t(function*(){var c=yield fetch(a,b);if(c.status===404)throw Error(`Resource "${c.url}" not found`);var e=yield c.blob();return new Promise((f,g)=>{var k=new FileReader;k.onerror=g;k.onloadend=()=>{try{f(d({o:c,result:k.result}))}catch(m){g(m)}};k.readAsDataURL(e)})})}const J={};function K(a,b,d){var c=a.replace(/\?.*/,"");d&&(c=a);/ttf|otf|eot|woff2?/i.test(c)&&(c=c.replace(/.*\//,""));return b?`[${b}]${c}`:c}
+function L(a,b,d){return t(function*(){var c=K(a,b,d.C);if(J[c]!=null)return J[c];d.u&&(a+=(/\?/.test(a)?"&":"?")+(new Date).getTime());try{let f=yield I(a,d.i,({o:g,result:k})=>{b||(b=g.headers.get("Content-Type")||"");return k.split(/,/)[1]});var e=`data:${b};base64,${f}`}catch(f){e=d.B||""}return J[c]=e})};const M={P:"application/font-woff",R:"application/font-woff",N:"application/font-truetype",v:"application/vnd.ms-fontobject",H:"image/png",F:"image/jpeg",D:"image/jpeg",A:"image/gif",M:"image/tiff",L:"image/svg+xml",O:"image/webp"};function N(a){return(a=/\.([^./]*?)$/g.exec(a))?a[1]:""};function O(a){return t(function*(){var b=a.toDataURL();return b==="data:,"?a.cloneNode(!1):B(b)})}function aa(a,b){return t(function*(){if(a.currentSrc){var d=document.createElement("canvas");let c=d.getContext("2d");d.width=a.clientWidth;d.height=a.clientHeight;c==null||c.drawImage(a,0,0,d.width,d.height);d=d.toDataURL();return B(d)}d=a.poster;d=yield L(d,M[N(d).toLowerCase()]||"",b);return B(d)})}
+function ba(a,b){return t(function*(){try{let d;if(a==null?0:(d=a.contentDocument)==null?0:d.body)return yield P(a.contentDocument.body,b,!0)}catch(d){}return a.cloneNode(!1)})}function ca(a,b){return t(function*(){return E(a,HTMLCanvasElement)?O(a):E(a,HTMLVideoElement)?aa(a,b):E(a,HTMLIFrameElement)?ba(a,b):a.cloneNode(a.tagName!=null&&a.tagName.toUpperCase()==="SVG")})}
+function da(a,b,d){return t(function*(){if(b.tagName!=null&&b.tagName.toUpperCase()==="SVG")return b;var c=[];if(a.tagName!=null&&a.tagName.toUpperCase()==="SLOT"&&a.assignedNodes)c=w(a.assignedNodes());else{let e;if(E(a,HTMLIFrameElement)&&((e=a.contentDocument)==null?0:e.body))c=w(a.contentDocument.body.childNodes);else{let f;c=w(((f=a.shadowRoot)!=null?f:a).childNodes)}}if(c.length===0||E(a,HTMLVideoElement))return b;yield c.reduce((e,f)=>e.then(()=>P(f,d)).then(g=>{g&&b.appendChild(g)}),Promise.resolve());
+return b})}function ea(a,b,d){var c=b.style;if(c){var e=window.getComputedStyle(a);e.cssText?(c.cssText=e.cssText,c.transformOrigin=e.transformOrigin):y(d).forEach(f=>{var g=e.getPropertyValue(f);f==="font-size"&&g.endsWith("px")&&(g=`${Math.floor(parseFloat(g.substring(0,g.length-2)))-.1}px`);E(a,HTMLIFrameElement)&&f==="display"&&g==="inline"&&(g="block");f==="d"&&b.getAttribute("d")&&(g=`path(${b.getAttribute("d")})`);c.setProperty(f,g,e.getPropertyPriority(f))})}}
+function fa(a,b){E(a,HTMLSelectElement)&&(b=Array.from(b.children).find(d=>a.value===d.getAttribute("value")))&&b.setAttribute("selected","")}
+function ha(a,b){return t(function*(){var d=a.querySelectorAll?a.querySelectorAll("use"):[];if(d.length===0)return a;var c={};for(var e=0;e<d.length;e++){var f=d[e].getAttribute("xlink:href");if(f){let g=document.querySelector(f);a.querySelector(f)||!g||c[f]||(c[f]=yield P(g,b,!0))}}d=Object.values(c);if(d.length){c=document.createElementNS("http://www.w3.org/1999/xhtml","svg");c.setAttribute("xmlns","http://www.w3.org/1999/xhtml");c.style.position="absolute";c.style.width="0";c.style.height="0";
+c.style.overflow="hidden";c.style.display="none";e=document.createElementNS("http://www.w3.org/1999/xhtml","defs");c.appendChild(e);for(f=0;f<d.length;f++)e.appendChild(d[f]);a.appendChild(c)}return a})}
+function P(a,b,d){return t(function*(){return d||!b.filter||b.filter(a)?Promise.resolve(a).then(c=>ca(c,b)).then(c=>da(a,c,b)).then(c=>{E(c,Element)&&(ea(a,c,b),G(a,c,":before",b),G(a,c,":after",b),E(a,HTMLTextAreaElement)&&(c.textContent=a.value),E(a,HTMLInputElement)&&c.setAttribute("value",a.value),fa(a,c));return c}).then(c=>ha(c,b)):null})};const Q=/url\((['"]?)([^'"]+?)\1\)/g,ia=/url\([^)]+\)\s*format\((["']?)([^"']+)\1\)/g,ja=/src:\s*(?:url\([^)]+\)\s*format\([^)]+\)[,;]\s*)+/g;function ka(a){var b=[];a.replace(Q,(d,c,e)=>{b.push(e);return d});return b.filter(d=>!H(d))}
+function la(a,b,d,c){return t(function*(){try{let e=d?(new URL(b,d||void 0)).toString():b,f;f=yield L(e,M[N(b).toLowerCase()]||"",c);return a.replace(new RegExp(`(url\\(['"]?)(${b.replace(/([.*+?^${}()|\[\]\/\\])/g,"\\$1")})(['"]?\\))`,"g"),`$1${f}$3`)}catch(e){}return a})}function ma(a,{I:b}){return b?a.replace(ja,d=>{for(;;){let [c,,e]=ia.exec(d)||[];if(!e)return"";if(e===b)return`src: ${c};`}}):a}
+function R(a,b,d){return t(function*(){if(a.search(Q)===-1)return a;var c=ma(a,d);return ka(c).reduce((e,f)=>e.then(g=>la(g,f,b,d)),Promise.resolve(c))})};function S(a,b,d){return t(function*(){var c,e=(c=b.style)==null?void 0:c.getPropertyValue(a);return e?(c=yield R(e,null,d),b.style.setProperty(a,c,b.style.getPropertyPriority(a)),!0):!1})}function na(a,b){return t(function*(){(yield S("background",a,b))||(yield S("background-image",a,b));(yield S("mask",a,b))||(yield S("-webkit-mask",a,b))||(yield S("mask-image",a,b))||(yield S("-webkit-mask-image",a,b))})}
+function oa(a,b){return t(function*(){var d=E(a,HTMLImageElement);if(d&&!H(a.src)||E(a,SVGImageElement)&&!H(a.href.baseVal)){var c=d?a.src:a.href.baseVal,e=yield L(c,M[N(c).toLowerCase()]||"",b);yield new Promise((f,g)=>{a.onload=f;a.onerror=b.m?(...k)=>{try{f(b.m(...k))}catch(m){g(m)}}:g;a.decode&&(a.decode=f);a.loading==="lazy"&&(a.loading="eager");d?(a.srcset="",a.src=e):a.href.baseVal=e})}})}
+function pa(a,b){return t(function*(){var d=w(a.childNodes).map(c=>T(c,b));yield Promise.all(d).then(()=>a)})}function T(a,b){return t(function*(){E(a,Element)&&(yield na(a,b),yield oa(a,b),yield pa(a,b))})};const U={};function V(a){return t(function*(){var b=U[a];if(b!=null)return b;b=yield(yield fetch(a)).text();b={url:a,cssText:b};return U[a]=b})}function W(a,b){return t(function*(){var d=a.cssText,c=/url\(["']?([^"')]+)["']?\)/g,e=(d.match(/url\([^)]+\)/g)||[]).map(f=>t(function*(){var g=f.replace(c,"$1");g.startsWith("https://")||(g=(new URL(g,a.url)).href);return I(g,b.i,({result:k})=>{d=d.replace(f,`url(${k})`);return[f,k]})}));return Promise.all(e).then(()=>d)})}
+function X(a){if(a==null)return[];var b=[];a=a.replace(/(\/\*[\s\S]*?\*\/)/gi,"");for(var d=RegExp("((@.*?keyframes [\\s\\S]*?){([\\s\\S]*?}\\s*?)})","gi");;){var c=d.exec(a);if(c===null)break;b.push(c[0])}a=a.replace(d,"");d=/@import[\s\S]*?url\([^)]*\)[\s\S]*?;/gi;for(c=RegExp("((\\s*?(?:\\/\\*[\\s\\S]*?\\*\\/)?\\s*?@media[\\s\\S]*?){([\\s\\S]*?)}\\s*?})|(([\\s\\S]*?){([\\s\\S]*?)})","gi");;){let e=d.exec(a);if(e===null)if(e=c.exec(a),e===null)break;else d.lastIndex=c.lastIndex;else c.lastIndex=
+d.lastIndex;b.push(e[0])}return b}
+function qa(a,b){return t(function*(){var d=[],c=[];a.forEach(e=>{if("cssRules"in e)try{w(e.cssRules||[]).forEach((f,g)=>{if(f.type===CSSRule.IMPORT_RULE){let k=g+1;f=V(f.href).then(m=>W(m,b)).then(m=>X(m).forEach(q=>{try{e.insertRule(q,q.startsWith("@import")?k+=1:e.cssRules.length)}catch(Da){}})).catch(()=>{});c.push(f)}})}catch(f){let g=a.find(k=>k.href==null)||document.styleSheets[0];e.href!=null&&c.push(V(e.href).then(k=>W(k,b)).then(k=>X(k).forEach(m=>{g.insertRule(m,g.cssRules.length)})).catch(()=>
+{}))}});return Promise.all(c).then(()=>{a.forEach(e=>{if("cssRules"in e)try{w(e.cssRules||[]).forEach(f=>{d.push(f)})}catch(f){}});return d})})}function ra(a){return a.filter(b=>b.type===CSSRule.FONT_FACE_RULE).filter(b=>b.style.getPropertyValue("src").search(Q)!==-1)}function sa(a,b){return t(function*(){if(a.ownerDocument==null)throw Error("Provided element is not within a Document");var d=w(a.ownerDocument.styleSheets);d=yield qa(d,b);return ra(d)})}
+function ta(a){function b(c){(c.style.fontFamily||getComputedStyle(c).fontFamily).split(",").forEach(e=>{d.add(e.trim().replace(/["']/g,""))});Array.from(c.children).forEach(e=>{e instanceof HTMLElement&&b(e)})}var d=new Set;b(a);return d}function ua(a,b){return t(function*(){var d=yield sa(a,b),c=ta(a);return(yield Promise.all(d.filter(e=>c.has(e.style.fontFamily.trim().replace(/["']/g,""))).map(e=>R(e.cssText,e.parentStyleSheet?e.parentStyleSheet.href:null,b)))).join("\n")})}
+function va(a,b){return t(function*(){var d=b.j!=null?b.j:b.K?null:yield ua(a,b);if(d){let c=document.createElement("style");c.appendChild(document.createTextNode(d));a.firstChild?a.insertBefore(c,a.firstChild):a.appendChild(c)}})};function wa(a,b={}){return t(function*(){var {width:d,height:c}=A(a,b),e=yield P(a,b,!0);yield va(e,b);yield T(e,b);u(e,b);return yield D(e,d,c)})}
+function xa(a,b={}){return t(function*(){var {width:d,height:c}=A(a,b),e=yield wa(a,b);e=yield B(e);var f=document.createElement("canvas"),g=f.getContext("2d"),k=b.G||window.devicePixelRatio||1,m=b.h||d,q=b.g||c;f.width=m*k;f.height=q*k;!b.J&&(f.width>16384||f.height>16384)&&(f.width>16384&&f.height>16384?f.width>f.height?(f.height*=16384/f.width,f.width=16384):(f.width*=16384/f.height,f.height=16384):f.width>16384?(f.height*=16384/f.width,f.width=16384):(f.width*=16384/f.height,f.height=16384));
+f.style.width=`${m}`;f.style.height=`${q}`;b.backgroundColor&&(g.fillStyle=b.backgroundColor,g.fillRect(0,0,f.width,f.height));g.drawImage(e,0,0,f.width,f.height);return f})}function ya(a,b={}){return t(function*(){return(yield xa(a,b)).toDataURL()})};const za=["gemini.google.com","corp.google.com","proxy.googlers.com"];function Y(){return document.body.querySelectorAll('[class*="animate"]').length>0}function Z(a){return t(function*(){try{return yield ya(a,{h:a.offsetWidth,g:a.offsetHeight})}catch(d){var b=a.offsetHeight;let c=document.createElement("canvas");c.width=a.offsetWidth;c.height=b;return c.toDataURL("image/png")}})}
+function Aa(){return t(function*(){var a=document.body.offsetWidth,b=document.body.offsetHeight,d=document.body.cloneNode(!0);d.querySelectorAll('[class*="animate"]').forEach(c=>{c.classList.remove(...Array.from(c.classList).filter(e=>e.startsWith("animate")))});d.style.width=`${a}px`;d.style.height=`${b}px`;return d})}
+function Ba(a){return t(function*(){var b=document.body;if(Y()){var d=yield Aa();b=d;document.body.appendChild(d)}d=yield Z(b);Y()&&document.body.removeChild(b);window.parent.postMessage({type:"SEND_SCREENSHOT",image:d,topOffset:document.documentElement.scrollTop},a.origin)})}function Ca(a){return t(function*(){var b={type:"SEND_SCREENSHOT_FOR_DATA_VISUALIZATION",image:yield Z(document.body),topOffset:0};window.parent.postMessage(b,a.origin)})}
+window.addEventListener("message",a=>t(function*(){if(za.some(d=>a.origin.includes(d))){var b=a.data;b&&(b.type==="MAKE_SCREENSHOT"&&(yield Ba(a)),b.type==="MAKE_SCREENSHOT_FOR_DATA_VISUALIZATION"&&(yield Ca(a)))}}));
+})();</script><script>(function() {
+  // Ensure this script is executed only once
+  if (window.firebaseAuthBridgeScriptLoaded) {
+    return;
+  }
+  window.firebaseAuthBridgeScriptLoaded = true;
+
+  let nextTokenPromiseId = 0;
+
+  // Stores { resolve, reject } for ongoing token requests
+  const pendingTokenPromises = {};
+
+  // Listen for messages from the Host Application
+  window.addEventListener('message', function(event) {
+
+    const messageData = event.data;
+
+  if (messageData && messageData.type === 'RESOLVE_NEW_FIREBASE_TOKEN') {
+      const { success, token, error, promiseId } = messageData ?? {};
+      if (pendingTokenPromises[promiseId]) {
+        if (success) {
+          pendingTokenPromises[promiseId].resolve(token);
+        } else {
+          pendingTokenPromises[promiseId].reject(new Error(error || 'Token refresh failed from host.'));
+        }
+        delete pendingTokenPromises[promiseId];
+      }
+    }
+  });
+
+  // Expose a function for the Generated App to request a new Firebase token
+  window.requestNewFirebaseToken = function() {
+    const currentPromiseId = nextTokenPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingTokenPromises[currentPromiseId] = { resolve, reject };
+    });
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({
+        type: 'REQUEST_NEW_FIREBASE_TOKEN',
+        promiseId: currentPromiseId
+      }, '*');
+    } else {
+      pendingTokenPromises[currentPromiseId].reject(new Error('No parent window to request token from.'));
+      delete pendingTokenPromises[currentPromiseId];
+    }
+    return promise;
+  };
+})();</script><script>
+let realOriginalGetUserMedia = null;
+if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+  realOriginalGetUserMedia = navigator.mediaDevices.getUserMedia.bind(navigator.mediaDevices);
+}
+
+(function() {
+  if (navigator.mediaDevices && navigator.mediaDevices.__proto__) {
+    try {
+      Object.defineProperty(navigator.mediaDevices.__proto__, 'getUserMedia', {
+        get: function() {
+          return undefined; // Or throw an error
+        },
+        configurable: false
+      });
+    } catch (error) {
+      console.error("Error defining prototype getter:", error);
+    }
+  }
+})();
+
+(function() {
+  const pendingMediaResolvers = {};
+  let nextMediaPromiseId = 0;
+
+  function requestMediaPermissions(constraints) {
+    const mediaPromiseId = nextMediaPromiseId++;
+    const promise = new Promise((resolve, reject) => {
+      pendingMediaResolvers[mediaPromiseId] = (granted) => {
+        delete pendingMediaResolvers[mediaPromiseId];
+        resolve(granted);
+      };
+    });
+
+    window.parent.postMessage({
+      type: 'requestMediaPermission',
+      constraints: constraints,
+      promiseId: mediaPromiseId,
+    }, '*');
+
+    return promise;
+  }
+
+  let originalGetUserMedia = realOriginalGetUserMedia;
+
+  function interceptGetUserMedia() {
+    if (navigator.mediaDevices) {
+      Object.defineProperty(navigator.mediaDevices, 'getUserMedia', {
+        value: function(constraints) {
+          return requestMediaPermissions(constraints).then((granted) => {
+            if (granted) {
+              if (originalGetUserMedia) {
+                return originalGetUserMedia(constraints);
+              } else {
+                throw new Error("Original getUserMedia not available.");
+              }
+            } else {
+              throw new DOMException('Permission denied', 'NotAllowedError');
+            }
+          });
+        },
+        writable: false,
+        configurable: false
+      });
+    }
+  }
+
+  interceptGetUserMedia();
+
+  const observer = new MutationObserver(function(mutationsList, observer) {
+    for (const mutation of mutationsList) {
+      if (mutation.type === 'reconfigured' && mutation.name === 'getUserMedia' && mutation.object === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'attributes' && mutation.attributeName === 'getUserMedia' && mutation.target === navigator.mediaDevices) {
+        interceptGetUserMedia();
+      } else if (mutation.type === 'childList' && mutation.addedNodes) {
+        mutation.addedNodes.forEach(node => {
+          if (node === navigator.mediaDevices) {
+            interceptGetUserMedia();
+          }
+        });
+      }
+    }
+  });
+
+  function interceptSpeechRecognition() {
+    if (!window.SpeechRecognition && !window.webkitSpeechRecognition) {
+      return;
+    }
+
+    const OriginalSpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+
+    const SpeechRecognitionWrapper = function(...args) {
+      const recognizer = new OriginalSpeechRecognition(...args);
+      const originalStart = recognizer.start.bind(recognizer);
+
+      recognizer.start = function() {
+        requestMediaPermissions({ audio: true }).then(granted => {
+          if (granted) {
+            originalStart();
+          } else {
+            const errorEvent = new SpeechRecognitionErrorEvent('error');
+            errorEvent.error = 'not-allowed'; // This is the standard error for permission denial.
+            recognizer.dispatchEvent(errorEvent);
+          }
+        });
+      };
+
+      return recognizer;
+    };
+
+    SpeechRecognitionWrapper.prototype = OriginalSpeechRecognition.prototype;
+    SpeechRecognitionWrapper.prototype.constructor = SpeechRecognitionWrapper;
+
+    if (window.SpeechRecognition) {
+      window.SpeechRecognition = SpeechRecognitionWrapper;
+    }
+    if (window.webkitSpeechRecognition) {
+      window.webkitSpeechRecognition = SpeechRecognitionWrapper;
+    }
+  }
+
+  interceptSpeechRecognition();
+
+  window.addEventListener('message', function(event) {
+    if (event.data) {
+      if (event.data.type === 'resolveMediaPermission') {
+        const { promiseId, granted } = event.data;
+        if (pendingMediaResolvers[promiseId]) {
+          pendingMediaResolvers[promiseId](granted);
+        }
+      }
+    }
+  });
+
+})();</script><script ws-interception-config="{&quot;parentOrigin&quot;:&quot;https://gemini.google.com&quot;,&quot;proxiedDomains&quot;:[]}">(function(){'use strict';var u=typeof Object.defineProperties=="function"?Object.defineProperty:function(b,d,e){if(b==Array.prototype||b==Object.prototype)return b;b[d]=e.value;return b};function v(b){b=["object"==typeof globalThis&&globalThis,b,"object"==typeof window&&window,"object"==typeof self&&self,"object"==typeof global&&global];for(var d=0;d<b.length;++d){var e=b[d];if(e&&e.Math==Math)return e}throw Error("Cannot find global object");}var w=v(this);
+function y(b,d){if(d)a:{var e=w;b=b.split(".");for(var h=0;h<b.length-1;h++){var k=b[h];if(!(k in e))break a;e=e[k]}b=b[b.length-1];h=e[b];d=d(h);d!=h&&d!=null&&u(e,b,{configurable:!0,writable:!0,value:d})}}function z(b){function d(h){return b.next(h)}function e(h){return b.throw(h)}return new Promise(function(h,k){function m(n){n.done?h(n.value):Promise.resolve(n.value).then(d,e).then(m,k)}m(b.next())})}y("globalThis",function(b){return b||w});/*
+
+ Copyright The Closure Library Authors.
+ SPDX-License-Identifier: Apache-2.0
+*/
+function A(b,d){function e(){}e.prototype=d.prototype;b.i=d.prototype;b.prototype=new e;b.prototype.constructor=b;b.g=function(h,k,m){for(var n=Array(arguments.length-2),p=2;p<arguments.length;p++)n[p-2]=arguments[p];return d.prototype[k].apply(h,n)}};function B(b,d,e="*"){function h(a){if(typeof a==="string")return F.encode(a).buffer;if(a instanceof ArrayBuffer)return a.slice(0);if(ArrayBuffer.isView(a))return a.buffer.slice(a.byteOffset,a.byteOffset+a.byteLength);throw Error("Invalid data type");}function k(a){a=h(a);var f={type:"send",data:new Uint8Array(a)},g;(g=r)==null||g.postMessage(f,[a])}function m(){if(!r)throw Error("Data port not captured yet.");r.onmessage=a=>{if(a.data.type==="message"){a=new MessageEvent("message",{data:G.decode(a.data.data)});
+let f;(f=c.onmessage)==null||f.call(c,a);c.dispatchEvent(a)}}}function n(){if(!t)throw Error("Control port not captured yet.");t.onmessage=a=>{switch(a.data.type){case "open":l=1;var f=new Event("open"),g;(g=c.onopen)==null||g.call(c,f);c.dispatchEvent(f);q.forEach(H=>{k(H)});q=[];break;case "close":g=a.data;l=3;g=new CloseEvent("close",{code:g.code,reason:g.reason,wasClean:g.wasClean});(f=c.onclose)==null||f.call(c,g);c.dispatchEvent(g);break;case "error":l=3;f=new Event("error");let x;(x=c.onerror)==
+null||x.call(c,f);c.dispatchEvent(f)}}}function p(a){return z(function*(){var f=new MessageChannel;t=f.port1;var g=new MessageChannel;r=g.port1;n();m();window.parent.postMessage({type:"websocket_open",portOrdering:["control","data"],url:b,protocols:a||[],connectionId:I},e,[f.port2,g.port2])}())}var c=Reflect.construct(EventTarget,[],new.target);c.CONNECTING=0;c.OPEN=1;c.CLOSING=2;c.CLOSED=3;c.url=b;c.binaryType="arraybuffer";c.protocol="";c.h="";var l=0,t=null,r=null,q=[],F=new TextEncoder,G=new TextDecoder;
+c.onopen=null;c.onmessage=null;c.onclose=null;c.onerror=null;Object.defineProperty(c,"readyState",{get:()=>l,enumerable:!0,configurable:!0});Object.defineProperty(c,"bufferedAmount",{get:()=>{var a=0;q.forEach(f=>{a+=typeof f==="string"?f.length:f.byteLength});return a},enumerable:!0,configurable:!0});var I=function(){var a;return((a=globalThis.crypto)==null?0:a.randomUUID)?globalThis.crypto.randomUUID():"xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,f=>{var g=Math.random()*16|0;return(f===
+"x"?g:g&3|8).toString(16)})}();c.send=a=>{if(l===1)a instanceof Blob?a.arrayBuffer().then(f=>{k(f)}):k(a);else if(l===0)if(typeof a==="string")q.push(a);else if(a instanceof ArrayBuffer||ArrayBuffer.isView(a))q.push(h(a));else throw Error("Sending Blob is not supported before the connection is open.");else console.debug("WebSocket send called in CLOSING or CLOSED state; ignored.")};c.close=(a=1E3,f="")=>{if(l!==2&&l!==3){l=2;a={type:"close",code:a,reason:f,wasClean:a===1E3};var g;(g=t)==null||g.postMessage(a)}};
+Promise.resolve().then(()=>p(d));return c}A(B,EventTarget);var C=document.currentScript,D=C==null?void 0:C.getAttribute("ws-interception-config");if(!D)throw Error("WebSocket Interceptor: Missing ws-interception-config attribute in the script tag.");var E=JSON.parse(D);if(!E.parentOrigin||typeof E.parentOrigin!=="string")throw Error("WebSocket Interceptor: Invalid parentOrigin in ws-interception-config");
+(function(b){var d=Object.getOwnPropertyDescriptor(window,"WebSocket");if(!d||d.writable||d.configurable)d=Object.assign(function(e,h){try{let k=(new URL(e)).hostname;if(b.proxiedDomains.some(m=>k===m||k.endsWith(`.${m}`)))return new B(e,h,b.parentOrigin)}catch(k){throw window.parent.postMessage({type:"websocket_blocked",url:e,reason:"blocked_invalid_url"},b.parentOrigin),new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");}window.parent.postMessage({type:"websocket_blocked",
+url:e,reason:"blocked_domain_not_allowlisted"},b.parentOrigin);throw new DOMException(`WebSocket connection to '${e}' is not allowed in Canvas.`,"SecurityError");},{CONNECTING:0,OPEN:1,CLOSING:2,CLOSED:3}),Object.defineProperty(window,"WebSocket",{value:d,writable:!1,configurable:!1})})({proxiedDomains:E.proxiedDomains||[],parentOrigin:E.parentOrigin});}).call(this);
+</script><script>((function(modelInformation) {
+  const originalFetch = window.fetch;
+  // TODO: b/421908508 - Move these out of the script and match all generative AI model calls.
+  let googleLlmBaseApiUrls = [
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':streamGenerateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.textModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageEditModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.imageTransformModelName + ':generateContent',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predict',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.videoModelName + ':predictLongRunning',
+    'https://generativelanguage.googleapis.com/v1beta/models/' + modelInformation.ttsModelName + ':generateContent',
+  ];
+  modelInformation.deprecatedTextModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+    );
+  });
+  modelInformation.deprecatedImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predict',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':predictLongRunning',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+  modelInformation.deprecatedGenerateImageModelNames.forEach((modelName) => {
+    googleLlmBaseApiUrls.push(
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':generateContent',
+      'https://generativelanguage.googleapis.com/v1beta/models/' + modelName + ':streamGenerateContent',
+    );
+  });
+
+  const pendingFetchResolvers = {};
+  let nextPromiseId = 0;
+
+  function handleStringInput(input, optionsArgument) {
+    const actualUrl = input;
+    const fetchCallArgs = [actualUrl, optionsArgument];
+    const effectiveOptions = optionsArgument || {};
+    const bodyForApiKeyCheck = effectiveOptions.body;
+    const bodyForPostMessage = effectiveOptions.body;
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  function handleRequestInput(input, optionsArgument) {
+    const actualUrl = input.url;
+    const fetchCallArgs = [input, optionsArgument];
+    const effectiveOptions = { method: input.method, headers: new Headers(input.headers) };
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (optionsArgument) {
+      if (optionsArgument.method) effectiveOptions.method = optionsArgument.method;
+      if (optionsArgument.headers) effectiveOptions.headers = new Headers(optionsArgument.headers);
+      if ('body' in optionsArgument) {
+        bodyForApiKeyCheck = optionsArgument.body;
+        bodyForPostMessage = optionsArgument.body;
+      } else {
+        bodyForApiKeyCheck = undefined;
+        bodyForPostMessage = input.body;
+      }
+    } else {
+      bodyForApiKeyCheck = undefined;
+      bodyForPostMessage = input.body;
+    }
+    return { actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage };
+  }
+
+  window.fetch = function(input, optionsArgument) {
+    let actualUrl;
+    let fetchCallArgs;
+    let effectiveOptions = {};
+    let bodyForApiKeyCheck;
+    let bodyForPostMessage;
+
+    if (typeof input === 'string') {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleStringInput(input, optionsArgument));
+    } else if (input instanceof Request) {
+      ({actualUrl, fetchCallArgs, effectiveOptions, bodyForApiKeyCheck, bodyForPostMessage} = handleRequestInput(input, optionsArgument));
+    } else {
+      return originalFetch.apply(window, [input, optionsArgument]);
+    }
+
+    effectiveOptions.method = effectiveOptions.method || 'GET';
+    if (!effectiveOptions.headers) {
+      effectiveOptions.headers = new Headers();
+    }
+
+
+    if (typeof actualUrl === 'string' && googleLlmBaseApiUrls.some((url) => actualUrl.startsWith(url))) {
+      let apiKeyIsNull = true;
+
+      const regex = new RegExp("models/([^:]+)");
+      const modelNameMatch = actualUrl.match(regex);
+      const modelName = modelNameMatch ? modelNameMatch[1] : 'unspecified';
+
+
+      try {
+        const urlObject = new URL(actualUrl);  // Use URL object for robust parsing
+        const apiKeyParam = urlObject.searchParams.get('key');
+        if (apiKeyParam) {
+          apiKeyIsNull = false;
+        }
+      } catch (e) {
+        // Continue checks even if URL parsing fails
+      }
+
+      if (apiKeyIsNull && effectiveOptions.headers) {
+        const h = new Headers(effectiveOptions.headers);
+        const apiKeyHeaderValue = h.get('X-API-Key') || h.get('x-api-key');
+        if (apiKeyHeaderValue) {
+          apiKeyIsNull = false;
+          return originalFetch.apply(window, fetchCallArgs);
+        }
+      }
+
+      if (apiKeyIsNull && effectiveOptions.method && ['POST', 'PUT', 'PATCH'].includes(effectiveOptions.method.toUpperCase()) && typeof bodyForApiKeyCheck === 'string') {
+        try {
+          const bodyData = JSON.parse(bodyForApiKeyCheck);
+          if (bodyData && bodyData.apiKey) {
+            apiKeyIsNull = false;
+            return originalFetch.apply(window, fetchCallArgs);
+          }
+        } catch (e) {
+          // Ignore JSON parsing errors
+        }
+      }
+
+      if(apiKeyIsNull) {
+        const promiseId = nextPromiseId++;
+        const promise = new Promise((resolve) => {
+          pendingFetchResolvers[promiseId] = (resolvedResponse) => {
+            delete pendingFetchResolvers[promiseId];
+            resolve(resolvedResponse);
+          };
+        });
+
+        let serializedBodyForPostMessage;
+        if (typeof bodyForPostMessage === 'string' || bodyForPostMessage == null) {
+            serializedBodyForPostMessage = bodyForPostMessage;
+        } else if (bodyForPostMessage instanceof ReadableStream) {
+            serializedBodyForPostMessage = null;
+        } else {
+            try {
+                serializedBodyForPostMessage = JSON.stringify(bodyForPostMessage);
+            } catch (e) {
+                serializedBodyForPostMessage = null;
+            }
+        }
+
+        const messageOptions = {
+            method: effectiveOptions.method,
+            headers: Object.fromEntries(new Headers(effectiveOptions.headers).entries()),
+            body: serializedBodyForPostMessage
+        };
+
+        window.parent.postMessage({
+          type: 'requestFetch',
+          url: actualUrl,
+          modelName: modelName,
+          options: messageOptions,
+          promiseId: promiseId,
+        }, '*');
+
+        return promise;
+      }
+      return originalFetch.apply(window, fetchCallArgs);
+    }
+    return originalFetch.apply(window, fetchCallArgs);
+  };
+
+  window.addEventListener('message', function(event) {
+    if (event.data && event.data.type === 'resolveFetch') {
+      const { promiseId, response } = event.data;
+      if (pendingFetchResolvers[promiseId]) {
+        try {
+          const reconstructedResponse = new Response(response.body, {
+            status: response.status,
+            statusText: response.statusText,
+            headers: new Headers(response.headers),
+          });
+          pendingFetchResolvers[promiseId](reconstructedResponse);
+        } catch (error) {
+          pendingFetchResolvers[promiseId](new Response(null, { status: 500, statusText: "Interceptor Response Reconstruction Error" }));
+        }
+      }
+    }
+  });
+
+}))({"textModelName":"gemini-3-flash-preview","imageModelName":"imagen-4.0-generate-001","imageEditModelName":"gemini-3.1-flash-image-preview","imageTransformModelName":"gemini-3-pro-image-preview-11-2025","videoModelName":"veo-2.0-generate-001","ttsModelName":"gemini-2.5-flash-preview-tts","deprecatedTextModelNames":["gemini-2.0-flash","gemini-2.5-flash","gemini-2.5-flash-preview-04-17","gemini-2.5-flash-preview-05-20","gemini-2.5-flash-preview-09-2025"],"deprecatedImageModelNames":["imagen-3.0-generate-001","imagen-3.0-generate-002"],"deprecatedGenerateImageModelNames":["gemini-2.5-flash-image-preview","gemini-2.5-flash-image"]})</script><script>(function(){'use strict';function a(){window.parent.postMessage({type:"interaction"},"*")}window.addEventListener("click",a,{capture:!0,passive:!0});window.addEventListener("touchstart",a,{capture:!0,passive:!0});window.addEventListener("keydown",a,{capture:!0,passive:!0});}).call(this);
+</script><script>(function() {
+  const originalConsoleLog = console.log;
+  const originalConsoleError = console.error;
+
+    /**
+   * Normalizes an error event or a promise rejection reason into a structured error object.
+   * @param {*} errorEventOrReason The error object or reason.
+   * @return {object} Structured error data { message, name, stack }.
+   */
+  function getErrorObject(errorEventOrReason) {
+    if (errorEventOrReason instanceof Error) {
+      return {
+        message: errorEventOrReason.message,
+        name: errorEventOrReason.name,
+        stack: errorEventOrReason.stack,
+      };
+    }
+    // Fallback for non-Error objects.
+    try {
+      return {
+        message: JSON.stringify(errorEventOrReason),
+        name: 'UnknownErrorType',
+        stack: null,
+      };
+    } catch (e) {
+      return {
+        message: String(errorEventOrReason),
+        name: 'UnknownErrorTypeNonStringifiable',
+        stack: null,
+      };
+    }
+  }
+
+  /**
+   * Converts an array of arguments (from log/error) into a single string.
+   * Handles Error objects specially to include their message and stack.
+   * @param {Array<*>} args - Arguments passed to console methods.
+   * @return {string} A string representation of the arguments.
+   */
+  function stringifyArgs(args) {
+    return args
+      .map((arg) => {
+        if (arg instanceof Error) {
+          const {message, stack} = arg;
+          return `Error: ${message}${stack ? ('\nStack: ' + stack) : ''}`;
+        }
+        if (typeof arg === 'object' && arg !== null) {
+          try {
+            return JSON.stringify(arg);
+          } catch (error) {
+            return '[Circular Object]';
+          }
+        } else {
+          return String(arg);
+        }
+      })
+      .join(' ');
+  }
+
+  console.log = function(...args) {
+    const logString = stringifyArgs(args);
+    window.parent.postMessage({ type: 'log', message: logString }, '*');
+    originalConsoleLog.apply(console, args);
+  };
+
+  console.error = function(...args) {
+    let errorData;
+    if (args.length > 0 && args[0] instanceof Error) {
+      const err = args[0];
+      // If the first arg is an Error, capture its details.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        ...getErrorObject(err),
+        rawArgsString: stringifyArgs(args.slice(1)),
+        timestamp: new Date().toISOString(),
+      };
+    } else {
+      // If not an Error object, treat all args as a general error message.
+      errorData = {
+        type: 'error',
+        source: 'CONSOLE_ERROR',
+        message: stringifyArgs(args),
+        name: 'ConsoleLoggedError',
+        stack: null,
+        timestamp: new Date().toISOString(),
+      };
+    }
+    window.parent.postMessage(errorData, '*');
+    originalConsoleError.apply(console, args);
+  };
+
+  // Listen for global unhandled synchronous errors.
+  window.addEventListener('error', function(event) {
+    const errorDetails = event.error ? getErrorObject(event.error) : {
+      message: event.message,
+      name: 'GlobalError',
+      stack: null,
+      filename: event.filename,
+      lineno: event.lineno,
+      colno: event.colno,
+    };
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'global',
+      ...errorDetails,
+      message: errorDetails.message || event.message,
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+  // Listen for unhandled promise rejections (asynchronous errors).
+  window.addEventListener('unhandledrejection', function(event) {
+    const errorDetails = getErrorObject(event.reason);
+
+    window.parent.postMessage({
+      type: 'error',
+      source: 'unhandledrejection',
+      ...errorDetails,
+      message: errorDetails.message || 'Unhandled Promise Rejection',
+      timestamp: new Date().toISOString(),
+    }, '*');
+  });
+
+})();</script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Snap - English in Real Life</title>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&amp;family=DM+Serif+Display&amp;display=swap" rel="stylesheet">
+<style>
+:root{
+  --teal:#0d7377;
+  --teal-dark:#0a5a5d;
+  --gold:#d4a017;
+  --gold-light:#f4c430;
+  --cream:#fdf6e3;
+  --ink:#1a2e2f;
+  --paper:#fffdf7;
+  --soft:#eef5f5;
+  --green:#2d8659;
+  --green-bright:#3ddc84;
+  --red:#c0392b;
+  --warn:#e8b923;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Sora',sans-serif;
+  background:radial-gradient(ellipse at top,#fdf6e3 0%,#eef5f5 60%,#dde9e9 100%);
+  color:var(--ink);
+  min-height:100vh;
+  padding:14px;
+  overflow-x:hidden;
+}
+.wrap{max-width:540px;margin:0 auto}
+
+/* ---------- Top bar ---------- */
+.topbar{
+  display:flex;align-items:center;gap:10px;
+  margin-bottom:8px;
+}
+.brand{
+  font-family:'DM Serif Display',serif;
+  font-size:18px;color:var(--teal);
+}
+.brand span{color:var(--gold)}
+.progress-wrap{flex:1}
+.progress{
+  height:5px;background:rgba(13,115,119,.15);
+  border-radius:99px;overflow:hidden;
+}
+.progress-fill{
+  height:100%;
+  background:linear-gradient(90deg,var(--teal),var(--gold));
+  transition:width .4s ease;
+  width:0%;
+}
+.streak{
+  background:var(--paper);
+  padding:5px 12px;border-radius:99px;
+  font-size:13px;font-weight:700;
+  color:var(--gold);
+  box-shadow:0 2px 8px rgba(0,0,0,.06);
+}
+
+/* ---------- Tabs ---------- */
+.tabs-scroll{
+  display:flex;gap:8px;overflow-x:auto;
+  padding-bottom:6px;margin-bottom:8px;
+  scrollbar-width:none;
+}
+.tabs-scroll::-webkit-scrollbar{display:none;}
+.tab-btn{
+  background:var(--soft);color:var(--teal-dark);
+  border:1px solid rgba(13,115,119,.15);
+  padding:6px 14px;border-radius:99px;
+  font-size:12px;font-weight:600;cursor:pointer;
+  white-space:nowrap;transition:all .2s;
+  font-family:'Sora',sans-serif;
+}
+.tab-btn.active{
+  background:var(--teal);color:var(--paper);
+  box-shadow:0 4px 10px rgba(13,115,119,.25);
+  border-color:var(--teal);
+}
+
+/* ---------- Audio bar ---------- */
+.audio-bar{
+  display:flex;align-items:center;gap:6px;
+  margin-bottom:12px;
+  background:var(--paper);
+  padding:6px 10px;
+  border-radius:99px;
+  box-shadow:0 2px 8px rgba(0,0,0,.05);
+  font-size:12px;
+}
+.mode-toggle{
+  display:flex;background:var(--soft);
+  border-radius:99px;padding:2px;gap:2px;
+}
+.mode-btn{
+  border:none;background:transparent;
+  padding:5px 12px;border-radius:99px;
+  font-family:'Sora',sans-serif;font-size:11px;
+  font-weight:600;color:#666;cursor:pointer;
+  letter-spacing:.5px;text-transform:uppercase;
+}
+.mode-btn.active{
+  background:var(--teal);color:var(--paper);
+  box-shadow:0 2px 6px rgba(13,115,119,.3);
+}
+.audio-bar .spacer{flex:1}
+.icon-btn{
+  background:transparent;
+  border:1.5px solid var(--soft);
+  width:30px;height:30px;
+  border-radius:50%;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  color:var(--teal);
+  font-weight:700;font-size:12px;
+  transition:all .15s;
+  padding:0;
+}
+.icon-btn:hover{background:var(--soft);border-color:var(--teal)}
+.icon-btn.on{background:var(--teal);color:var(--paper);border-color:var(--teal)}
+.icon-btn.speaking{
+  background:var(--gold);color:var(--ink);border-color:var(--gold);
+  animation:pulse 1s ease-in-out infinite;
+}
+@keyframes pulse{
+  0%,100%{box-shadow:0 0 0 0 rgba(212,160,23,.6)}
+  50%{box-shadow:0 0 0 8px rgba(212,160,23,0)}
+}
+
+/* ----- Voice quality dot ----- */
+.q-dot{
+  width:10px;height:10px;
+  border-radius:50%;
+  background:#bbb;
+  transition:background .25s;
+  flex-shrink:0;
+  margin-left:-2px;margin-right:2px;
+}
+.q-dot.google{
+  background:var(--green-bright);
+  box-shadow:0 0 6px rgba(61,220,132,.7);
+}
+.q-dot.fallback{background:var(--warn)}
+
+.speed-btn{
+  background:transparent;border:1.5px solid var(--soft);
+  border-radius:99px;
+  padding:5px 10px;
+  font-family:'Sora',sans-serif;font-weight:700;font-size:11px;
+  color:var(--teal);cursor:pointer;min-width:38px;
+}
+.speed-btn:hover{background:var(--soft)}
+
+/* ---------- Settings popover ---------- */
+.settings-wrap{position:relative}
+.popover{
+  position:absolute;
+  top:calc(100% + 8px);right:0;
+  background:var(--paper);
+  border-radius:14px;
+  padding:14px;
+  box-shadow:0 8px 24px rgba(0,0,0,.15);
+  width:280px;
+  z-index:50;
+  display:none;
+}
+.popover.open{display:block;animation:rise .2s ease}
+.popover h4{
+  font-family:'DM Serif Display',serif;
+  color:var(--teal);font-size:14px;
+  margin-bottom:8px;
+  display:flex;align-items:center;gap:8px;
+}
+.popover h4 .legend-dot{
+  width:8px;height:8px;border-radius:50%;
+  display:inline-block;
+}
+.popover select{
+  width:100%;
+  padding:8px 10px;
+  border:1.5px solid var(--soft);
+  border-radius:8px;
+  font-family:'Sora',sans-serif;
+  font-size:12px;
+  background:var(--paper);
+  color:var(--ink);
+  cursor:pointer;
+}
+.legend{
+  display:flex;gap:14px;
+  margin-top:10px;font-size:10px;color:#777;
+}
+.legend span{display:flex;align-items:center;gap:5px}
+.legend i{
+  width:8px;height:8px;border-radius:50%;
+  display:inline-block;font-style:normal;
+}
+.legend .g{background:var(--green-bright)}
+.legend .y{background:var(--warn)}
+.popover .hint{
+  font-size:10px;color:#888;
+  margin-top:6px;line-height:1.4;
+}
+
+/* ---------- Stage with side arrows ---------- */
+.stage-wrap{
+  position:relative;
+  display:flex;align-items:stretch;gap:6px;
+}
+.flip-btn{
+  flex-shrink:0;
+  width:36px;
+  background:rgba(255,253,247,.7);
+  border:1.5px solid rgba(13,115,119,.15);
+  border-radius:14px;
+  color:var(--teal);
+  font-size:20px;font-weight:700;
+  cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  transition:all .15s;
+  align-self:center;
+  height:80px;
+}
+.flip-btn:hover:not(:disabled){
+  background:var(--paper);
+  border-color:var(--teal);
+  transform:scale(1.06);
+  box-shadow:0 4px 12px rgba(13,115,119,.15);
+}
+.flip-btn:disabled{
+  opacity:.25;cursor:default;
+}
+.stage{flex:1;min-width:0;position:relative}
+
+/* swipe hint - fades out */
+.swipe-hint{
+  position:absolute;
+  bottom:-22px;left:50%;
+  transform:translateX(-50%);
+  font-size:10px;color:#999;
+  letter-spacing:1px;text-transform:uppercase;
+  pointer-events:none;
+  animation:hintFade 4s ease forwards;
+  white-space:nowrap;
+}
+@keyframes hintFade{
+  0%{opacity:0}
+  15%{opacity:.7}
+  70%{opacity:.7}
+  100%{opacity:0}
+}
+
+/* ---------- Moment card ---------- */
+.moment{
+  background:var(--paper);
+  border-radius:18px;
+  overflow:hidden;
+  box-shadow:0 6px 24px rgba(13,115,119,.12);
+  animation:rise .3s ease;
+}
+@keyframes rise{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:none}
+}
+.tag{
+  padding:8px 16px;
+  background:linear-gradient(90deg,var(--teal),var(--teal-dark));
+  color:var(--paper);
+  font-size:10px;
+  letter-spacing:2px;
+  text-transform:uppercase;
+  display:flex;justify-content:space-between;align-items:center;
+}
+.tag .where{opacity:.85}
+.tag .scene-num{
+  background:rgba(255,255,255,.2);
+  padding:2px 8px;border-radius:99px;
+  font-weight:600;font-size:9px;
+  letter-spacing:1px;
+}
+.tag .again{
+  background:var(--gold);color:var(--ink);
+  padding:2px 8px;border-radius:99px;
+  font-weight:700;font-size:9px;
+}
+.tag .meta{display:flex;gap:6px;align-items:center}
+
+.body{padding:22px 18px 18px}
+
+/* Listen mode pad */
+.listen-pad{
+  background:linear-gradient(135deg,var(--teal),var(--teal-dark));
+  color:var(--paper);
+  border-radius:14px;
+  padding:30px 20px;
+  text-align:center;
+  margin-bottom:6px;
+}
+.listen-pad .ear{
+  font-family:'DM Serif Display',serif;
+  font-size:36px;margin-bottom:8px;
+}
+.listen-pad p{font-size:13px;opacity:.85;margin-bottom:14px}
+.big-replay{
+  background:var(--gold);color:var(--ink);
+  border:none;
+  padding:12px 28px;
+  border-radius:99px;
+  font-family:'Sora',sans-serif;font-weight:700;font-size:14px;
+  cursor:pointer;
+  display:inline-flex;align-items:center;gap:8px;
+}
+.big-replay:hover{background:var(--gold-light)}
+.big-replay.speaking{animation:pulse 1s ease-in-out infinite}
+
+/* Bubbles */
+.bubble{
+  background:var(--soft);
+  padding:12px 16px;
+  border-radius:16px;
+  border-top-left-radius:4px;
+  margin-bottom:8px;
+  font-size:16px;line-height:1.45;
+  max-width:88%;
+  position:relative;
+  transition:all .25s;
+}
+.bubble.right{
+  background:linear-gradient(135deg,var(--cream),#fdecc7);
+  border-top-left-radius:16px;
+  border-top-right-radius:4px;
+  margin-left:auto;
+}
+.bubble.now-playing{
+  box-shadow:0 0 0 3px var(--gold);
+  transform:scale(1.02);
+}
+.who{
+  font-size:11px;font-weight:700;
+  color:var(--teal);
+  letter-spacing:1px;text-transform:uppercase;
+  margin-bottom:3px;
+  padding-left:6px;
+}
+.who.right{color:var(--gold);text-align:right;padding-right:6px;padding-left:0}
+
+.narration{
+  font-size:17px;line-height:1.5;
+  color:#333;
+  padding:6px 4px 2px;
+  font-style:italic;
+  transition:all .25s;
+}
+.narration::before{
+  content:"";display:inline-block;
+  width:3px;height:18px;background:var(--gold);
+  margin-right:10px;vertical-align:middle;border-radius:2px;
+}
+.narration.now-playing{
+  background:rgba(212,160,23,.1);
+  border-radius:10px;
+  padding:10px 14px;
+}
+
+.target{
+  background:linear-gradient(180deg,transparent 55%,var(--gold-light) 55%);
+  font-weight:700;color:var(--ink);
+  padding:0 3px;
+}
+.slang{color:var(--teal);font-weight:700}
+
+/* Question */
+.q{
+  margin-top:16px;
+  font-size:13px;color:#666;
+  font-weight:500;
+  padding-left:4px;
+}
+.q b{color:var(--teal);font-weight:700}
+
+.options{
+  display:flex;flex-wrap:wrap;gap:6px;
+  margin-top:10px;
+}
+.option{
+  background:var(--paper);
+  border:1.5px solid rgba(13,115,119,.2);
+  padding:9px 14px;
+  border-radius:99px;
+  font-family:'Sora',sans-serif;
+  font-size:14px;
+  font-weight:500;
+  cursor:pointer;
+  transition:all .15s;
+  color:var(--ink);
+  flex:1 1 auto;
+  text-align:center;
+}
+.option:hover:not(.locked){
+  border-color:var(--teal);
+  background:var(--soft);
+  transform:scale(1.02);
+}
+.option.locked{cursor:default}
+.option.right{
+  border-color:var(--green);
+  background:#e8f5ee;
+  color:var(--green);
+  font-weight:700;
+}
+.option.wrong{
+  border-color:var(--red);
+  background:#fdecea;
+  color:var(--red);
+  opacity:.7;
+}
+.options.full .option{
+  flex:1 1 100%;
+  border-radius:12px;
+  text-align:left;
+  padding:11px 14px;
+}
+
+.fb{
+  margin-top:12px;
+  padding:8px 14px;
+  border-radius:10px;
+  font-size:13px;
+  font-weight:500;
+  display:none;
+  text-align:center;
+}
+.fb.show{display:block;animation:rise .25s}
+.fb.right{background:#e8f5ee;color:var(--green)}
+.fb.wrong{background:#fdecea;color:var(--red)}
+
+.reveal{
+  margin-top:10px;
+  background:var(--soft);
+  border-radius:10px;
+  padding:10px 14px;
+  font-size:13px;color:#555;
+  display:none;
+  border-left:3px solid var(--teal);
+}
+.reveal.show{display:block;animation:rise .25s}
+.reveal b{color:var(--teal)}
+
+/* Download button */
+.download-btn {
+  background: transparent;
+  border: 1.5px solid var(--teal);
+  color: var(--teal);
+  padding: 8px 16px;
+  border-radius: 99px;
+  font-family: 'Sora', sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  cursor: pointer;
+  margin-top: 16px;
+  transition: all .2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+}
+.download-btn:hover {
+  background: var(--teal);
+  color: var(--paper);
+}
+
+/* Final */
+.final{
+  background:linear-gradient(135deg,var(--teal),var(--teal-dark));
+  color:var(--paper);
+  padding:36px 22px;
+  text-align:center;
+  border-radius:20px;
+  box-shadow:0 12px 32px rgba(13,115,119,.25);
+}
+.final-score{
+  font-family:'DM Serif Display',serif;
+  font-size:64px;color:var(--gold-light);
+  line-height:1;margin-bottom:4px;
+}
+.final h2{
+  font-family:'DM Serif Display',serif;
+  font-size:24px;margin-bottom:6px;
+}
+.final p{opacity:.85;font-size:13px;margin-bottom:18px}
+.met{
+  background:rgba(255,255,255,.1);
+  border-radius:14px;padding:14px;
+  margin:14px 0;
+  display:grid;gap:6px;
+}
+.met-item{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:5px 4px;font-size:14px;
+}
+.met-item .name{font-weight:600}
+.met-item .count{
+  background:var(--gold);color:var(--ink);
+  padding:2px 9px;border-radius:99px;
+  font-size:11px;font-weight:700;
+}
+.btn-restart{
+  background:var(--gold);color:var(--ink);
+  border:none;padding:11px 26px;
+  border-radius:99px;font-weight:700;
+  font-family:'Sora',sans-serif;font-size:13px;
+  cursor:pointer;
+  margin-top:6px;
+}
+
+@media (max-width:420px){
+  .bubble,.narration{font-size:15px}
+  .option{font-size:13px;padding:8px 12px}
+  .mode-btn{font-size:10px;padding:4px 9px}
+  .flip-btn{width:28px;font-size:18px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="topbar">
+    <div class="brand">En<span>ish</span></div>
+    <div class="progress-wrap">
+      <div class="progress"><div class="progress-fill" id="progressFill" style="width: 0%;"></div></div>
+    </div>
+    <div class="streak" id="streakBox">0</div>
+  </div>
+
+  <div class="tabs-scroll" id="tabsContainer"><button class="tab-btn active">Phrasal Verbs 1</button><button class="tab-btn ">Phrasal Verbs 2</button><button class="tab-btn ">Common Expressions 1</button><button class="tab-btn ">Common Expressions 2</button><button class="tab-btn ">Expected Answers 1</button><button class="tab-btn ">Expected Answers 2</button><button class="tab-btn ">How do you ask?</button></div>
+
+  <div class="audio-bar">
+    <div class="mode-toggle">
+      <button class="mode-btn active" id="modeRead" data-mode="read">Read</button>
+      <button class="mode-btn" id="modeListen" data-mode="listen">Listen</button>
+    </div>
+    <div class="spacer"></div>
+    <button class="icon-btn on" id="btnAuto" title="Auto-play on/off">A</button>
+    <button class="icon-btn" id="btnReplay" title="Replay">▶</button>
+    <span class="q-dot fallback" id="qDot" title="Voice quality"></span>
+    <button class="speed-btn" id="btnSpeed" title="Speed">1.0x</button>
+    <div class="settings-wrap">
+      <button class="icon-btn" id="btnSettings" title="Voice">V</button>
+      <div class="popover" id="popover">
+        <h4>Voice <span class="legend-dot" id="legendDot" style="background: var(--warn);"></span></h4>
+        <select id="voiceSelect"><option value="0">Samantha (en-US)</option><option value="1">Albert (en-US)</option><option value="2">Bad News (en-US)</option><option value="3">Bahh (en-US)</option><option value="4">Bells (en-US)</option><option value="5">Boing (en-US)</option><option value="6">Bubbles (en-US)</option><option value="7">Cellos (en-US)</option><option value="8">Wobble (en-US)</option><option value="9">Fred (en-US)</option><option value="10">Good News (en-US)</option><option value="11">Jester (en-US)</option><option value="12">Junior (en-US)</option><option value="13">Kathy (en-US)</option><option value="14">Organ (en-US)</option><option value="15">Superstar (en-US)</option><option value="16">Ralph (en-US)</option><option value="17">Trinoids (en-US)</option><option value="18">Whisper (en-US)</option><option value="19">Zarvox (en-US)</option><option value="20">Daniel (en-GB)</option><option value="21">Karen (en-AU)</option><option value="22">Moira (en-IE)</option><option value="23">Rishi (en-IN)</option><option value="24">Tessa (en-ZA)</option></select>
+        <div class="legend">
+          <span><i class="g"></i> Google (best)</span>
+          <span><i class="y"></i> Other (ok)</span>
+        </div>
+        <div class="hint">Google voices sound the most natural. The dot shows which kind you're using.</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="stage-wrap">
+    <button class="flip-btn" id="flipPrev" title="Previous (swipe right)" disabled="">‹</button>
+    <div class="stage" id="stage">
+    <div class="moment">
+      <div class="tag">
+        <span class="where">track</span>
+        <div class="meta">
+          <span class="scene-num">1 / 10</span>
+          
+        </div>
+      </div>
+      <div class="body">
+        <div class="narration">Coach yells: "<span class="target">Keep on</span> running! <span class="slang">2</span> laps left, <span class="slang">c'mon</span>!"</div>
+        <div class="q"><b>Keep on</b> means...</div>
+        <div class="options "><button class="option" data-r="1" data-i="0">continue</button><button class="option" data-r="0" data-i="1">stop</button><button class="option" data-r="0" data-i="2">hurry</button></div>
+        <div class="fb" id="fb"></div>
+        
+        
+      <button class="download-btn" id="btnDownloadApp">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Download App to Play Offline
+      </button>
+    
+      </div>
+    </div>
+  </div>
+    <button class="flip-btn" id="flipNext" title="Next (swipe left)">›</button>
+  </div>
+
+  <div class="swipe-hint" id="swipeHint">tap arrows or swipe to flip freely</div>
+
+</div>
+
+<script>
+/* ============================================================
+   TTS EXPANSION
+   ============================================================ */
+const ABBR_MAP = {
+  "u":"you", "ur":"your", "r":"are", "pls":"please", "plz":"please",
+  "thx":"thanks", "ty":"thank you", "btw":"by the way",
+  "idk":"I don't know", "imo":"in my opinion", "tbh":"to be honest",
+  "lol":"laugh out loud", "omg":"oh my god", "fyi":"for your information",
+  "asap":"as soon as possible", "brb":"be right back",
+  "tmrw":"tomorrow", "ttyl":"talk to you later",
+  "rn":"right now", "ily":"I love you", "np":"no problem",
+  "yep":"yep", "nah":"nah", "srsly":"seriously",
+  "wanna":"want to", "gonna":"going to", "gotta":"got to",
+  "kinda":"kind of", "sorta":"sort of", "lemme":"let me",
+  "gimme":"give me", "dunno":"don't know", "ya":"you",
+  "cuz":"because", "cause":"because",
+  "k":"okay", "ok":"okay"
+};
+function expandForTTS(s){
+  let t = s.replace(/<[^>]+>/g,'');
+  t = t.replace(/\b([A-Za-z']+)\b/g, (match)=>{
+    const key = match.toLowerCase();
+    if(ABBR_MAP.hasOwnProperty(key)) return ABBR_MAP[key];
+    return match;
+  });
+  return t;
+}
+
+/* ============================================================
+   DATA: 7 CATEGORIES (10 MOMENTS EACH)
+   ============================================================ */
+const CATEGORIES = [
+  {
+    title: "Phrasal Verbs 1",
+    moments: [
+      { type:"LINE", where:"track", text:"Coach yells: \"<span class='target'>Keep on</span> running! <span class='slang'>2</span> laps left, <span class='slang'>c'mon</span>!\"", tts:[{text:"Coach yells. Keep on running! Two laps left, come on!"}], target:"keep on", q:"<b>Keep on</b> means...", opts:[{t:"continue", r:true},{t:"stop", r:false},{t:"hurry", r:false}], fbR:"Yes - continue.", fbW:"It means continue." },
+      { type:"CHAT", where:"street", lines:[{who:"Salem", side:"left", t:"<span class='target'>WATCH OUT!!</span> Car!!"},{who:"brother", side:"right", t:"<span class='slang'>omg</span> <span class='slang'>thx</span> bro <span class='slang'>:O</span>"}], tts:[{who:"Salem", text:"Watch out! Car!"},{who:"brother", text:"Oh my god, thanks bro!"}], target:"watch out", q:"<b>Watch out</b> means...", opts:[{t:"look at me", r:false},{t:"be careful", r:true},{t:"run away", r:false}], fbR:"Right - it is a warning.", fbW:"It is a warning: be careful." },
+      { type:"CHAT", where:"WhatsApp after exam", lines:[{who:"Khalid", side:"left", t:"how was it?? <span class='slang'>srsly</span>"},{who:"Faisal", side:"right", t:"<span class='target'>piece of cake</span> <span class='slang'>tbh</span>. done in 20 min <span class='slang'>lol</span>"}], tts:[{who:"Khalid", text:"How was it? Seriously."},{who:"Faisal", text:"Piece of cake, to be honest. Done in twenty minutes."}], target:"piece of cake", q:"For Faisal the test was...", opts:[{t:"very hard", r:false},{t:"very easy", r:true},{t:"about food", r:false}], fbR:"Yes - very easy.", fbW:"Done in 20 min? Easy." },
+      { type:"LINE", where:"1am, lamp on", text:"Eyes heavy. Majed mumbles: \"<span class='slang'>gonna</span> <span class='target'>keep on</span> reading till I get this.\"", tts:[{text:"Eyes heavy. Majed mumbles. Going to keep on reading till I get this."}], target:"keep on", q:"Same words, new scene. He will...", opts:[{t:"go to sleep", r:false},{t:"continue reading", r:true},{t:"close the book", r:false}], fbR:"Yes - same meaning as the track scene.", fbW:"Same as the coach. Continue." },
+      { type:"CHAT", where:"climbing", lines:[{who:"Yousef", side:"left", t:"my legs <span class='slang'>omg</span>... I <span class='target'>give up</span> <span class='slang'>:(</span>"},{who:"Omar", side:"right", t:"<span class='target'>hang in there</span> bro! top is RIGHT there <span class='slang'>pls</span>"}], tts:[{who:"Yousef", text:"My legs, oh my god. I give up."},{who:"Omar", text:"Hang in there bro! Top is right there, please."}], target:"give up", q:"<b>Give up</b> means...", opts:[{t:"keep walking", r:false},{t:"quit, stop trying", r:true},{t:"give a gift", r:false}], fbR:"Yes - quit. And 'hang in there' = stay strong.", fbW:"He is exhausted. He wants to quit.", bonus:"hang in there" },
+      { type:"YOU", where:"text from your cousin", text:"\"big test <span class='slang'>tmrw</span>, <span class='slang'>idk</span> if I can do it, <span class='slang'>wanna</span> stop <span class='slang'>tbh</span>\"", tts:[{text:"Big test tomorrow. I don't know if I can do it. Want to stop, to be honest."}], target:"hang in there", q:"You reply:", opts:[{t:"piece of cake bro lol", r:false},{t:"hang in there, just 1 more day. u got this", r:true},{t:"watch out!!", r:false}], fbR:"Perfect reply.", fbW:"He needs courage - 'hang in there'." },
+      { type:"LINE", where:"kitchen", text:"Dad pokes the new coffee machine: \"can't <span class='target'>figure out</span> this thing, <span class='slang'>srsly</span>...\"", tts:[{text:"Dad pokes the new coffee machine. Can't figure out this thing, seriously."}], target:"figure out", q:"He cannot...", opts:[{t:"find the coffee", r:false},{t:"understand it", r:true},{t:"buy it", r:false}], fbR:"Right - cannot understand how it works.", fbW:"He is confused - he cannot understand it." },
+      { type:"CHAT", where:"football match", lines:[{who:"coach", side:"left", t:"Sami, <span class='target'>watch out</span> for No. 7's left foot, <span class='slang'>k</span>?"},{who:"Sami", side:"right", t:"<span class='slang'>got it</span> coach <span class='slang'>:)</span>"}], tts:[{who:"coach", text:"Sami, watch out for number seven's left foot, okay?"},{who:"Sami", text:"Got it, coach."}], target:"watch out", q:"Same expression again. Coach wants Sami to...", opts:[{t:"shoot with left foot", r:false},{t:"be careful of the left foot", r:true},{t:"watch the shoes", r:false}], fbR:"Yes - it is always a warning.", fbW:"Still a warning. Be careful." },
+      { type:"CHAT", where:"homework group chat", lines:[{who:"Tariq", side:"left", t:"stuck on Q5 for an HOUR. can't <span class='target'>figure</span> it <span class='target'>out</span> <span class='slang'>:(</span>"},{who:"Naif", side:"right", t:"<span class='slang'>lol</span> that? <span class='target'>piece of cake</span>. multiply <span class='slang'>by 2</span> bro"}], tts:[{who:"Tariq", text:"Stuck on question five for an hour. Can't figure it out."},{who:"Naif", text:"Laugh out loud, that? Piece of cake. Multiply by two, bro."}], target:"figure out", q:"For Naif it is...", opts:[{t:"impossible", r:false},{t:"also hard", r:false},{t:"very easy", r:true}], fbR:"Yes - met both expressions again.", fbW:"He solves it in one line. Easy.", bonus:"piece of cake" },
+      { type:"YOU", where:"little brother + bicycle", text:"He fell 3 times. He's pushing the bike away, crying: \"I can't!!\"", tts:[{text:"He fell three times. He's pushing the bike away, crying. I can't!"}], target:"keep on", q:"You say:", opts:[{t:"yeah ok, give up.", r:false},{t:"don't give up! keep on trying, u almost did it!", r:true},{t:"watch out for the bike", r:false}], fbR:"Excellent - pure encouragement.", fbW:"You want him to continue - 'keep on'." }
+    ]
+  },
+  {
+    title: "Phrasal Verbs 2",
+    moments: [
+      { type:"CHAT", where:"office chat", lines:[{who:"Boss", side:"left", t:"Ali didn't <span class='target'>show up</span> to the meeting today."}, {who:"HR", side:"right", t:"He called in sick."}], tts:[{who:"Boss", text:"Ali didn't show up to the meeting today."}, {who:"HR", text:"He called in sick."}], target:"show up", q:"<b>Show up</b> means...", opts:[{t:"arrive/appear", r:true},{t:"show off", r:false},{t:"look up", r:false}], fbR:"Correct! It means to arrive.", fbW:"It means to arrive or appear." },
+      { type:"LINE", where:"coffee shop", text:"\"It’s been months! We really need to <span class='target'>catch up</span> over coffee soon.\"", tts:[{text:"It’s been months! We really need to catch up over coffee soon."}], target:"catch up", q:"<b>Catch up</b> here means...", opts:[{t:"run faster", r:false},{t:"share recent news", r:true},{t:"grab something", r:false}], fbR:"Yes, sharing what happened recently.", fbW:"It means sharing recent news." },
+      { type:"CHAT", where:"party planning", lines:[{who:"Sara", side:"left", t:"Is the picnic still happening <span class='slang'>tmrw</span>?"}, {who:"Nour", side:"right", t:"No, had to <span class='target'>call it off</span> because of the rain."}], tts:[{who:"Sara", text:"Is the picnic still happening tomorrow?"}, {who:"Nour", text:"No, had to call it off because of the rain."}], target:"call off", q:"<b>Call off</b> means...", opts:[{t:"cancel", r:true},{t:"postpone", r:false},{t:"shout", r:false}], fbR:"Exactly, to cancel completely.", fbW:"It means to cancel an event." },
+      { type:"LINE", where:"desk", text:"\"I keep <span class='target'>putting off</span> this report, but it's due tomorrow!\"", tts:[{text:"I keep putting off this report, but it's due tomorrow!"}], target:"put off", q:"<b>Put off</b> means...", opts:[{t:"remove clothing", r:false},{t:"delay doing it", r:true},{t:"finish it", r:false}], fbR:"Right, delaying or procrastinating.", fbW:"It means to delay or procrastinate." },
+      { type:"CHAT", where:"movie theater", lines:[{who:"Ziad", side:"left", t:"Was the movie good?"}, {who:"Bader", side:"right", t:"Yeah! It <span class='target'>turned out</span> to be amazing."}], tts:[{who:"Ziad", text:"Was the movie good?"}, {who:"Bader", text:"Yeah! It turned out to be amazing."}], target:"turn out", q:"<b>Turn out</b> means...", opts:[{t:"turn the lights off", r:false},{t:"resulted in the end", r:true},{t:"leave", r:false}], fbR:"Yes, it resulted in being amazing.", fbW:"It means the final result." },
+      { type:"LINE", where:"restaurant", text:"\"Sorry we are late, we didn't expect so many people to <span class='target'>show up</span>.\"", tts:[{text:"Sorry we are late, we didn't expect so many people to show up."}], target:"show up", q:"Same word! Here it means...", opts:[{t:"arrive", r:true},{t:"leave", r:false},{t:"complain", r:false}], fbR:"Yes, arrive/attend.", fbW:"Still means to arrive/appear." },
+      { type:"YOU", where:"friend is busy", text:"Friend: \"I'm so behind on my favorite TV show!\"", tts:[{text:"I'm so behind on my favorite TV show!"}], target:"catch up", q:"You reply:", opts:[{t:"you need to call it off", r:false},{t:"take the weekend to catch up!", r:true},{t:"show up soon", r:false}], fbR:"Perfect use of catch up.", fbW:"Catch up applies to TV shows too!" },
+      { type:"CHAT", where:"weather update", lines:[{who:"News", side:"left", t:"Storm warning! All flights are <span class='target'>called off</span>."}, {who:"Traveler", side:"right", t:"Oh no, my vacation <span class='slang'>:(</span>"}], tts:[{who:"News", text:"Storm warning! All flights are called off."}, {who:"Traveler", text:"Oh no, my vacation."}], target:"call off", q:"The flights are...", opts:[{t:"delayed", r:false},{t:"canceled", r:true},{t:"boarding", r:false}], fbR:"Yes, completely canceled.", fbW:"Called off = canceled." },
+      { type:"LINE", where:"dentist office", text:"\"Don't <span class='target'>put off</span> your dentist visit, it will only get worse.\"", tts:[{text:"Don't put off your dentist visit, it will only get worse."}], target:"put off", q:"You should not...", opts:[{t:"delay it", r:true},{t:"pay for it", r:false},{t:"cancel it", r:false}], fbR:"Right, don't delay it.", fbW:"Put off means delay." },
+      { type:"YOU", where:"baking a cake", text:"You thought you ruined the cake, but everyone ate it and loved it.", tts:[{text:"You thought you ruined the cake, but everyone ate it and loved it."}], target:"turn out", q:"You say:", opts:[{t:"it called off well", r:false},{t:"it turned out great actually!", r:true},{t:"it put off perfectly", r:false}], fbR:"Exactly, the end result was good.", fbW:"'Turned out' describes the final result." }
+    ]
+  },
+  {
+    title: "Common Expressions 1",
+    moments: [
+      { type:"CHAT", where:"sick leave", lines:[{who:"Employee", side:"left", t:"Hey, I'm feeling a bit <span class='target'>under the weather</span> today."}, {who:"Boss", side:"right", t:"No problem, rest up."}], tts:[{who:"Employee", text:"Hey, I'm feeling a bit under the weather today."}, {who:"Boss", text:"No problem, rest up."}], target:"under the weather", q:"The employee feels...", opts:[{t:"cold", r:false},{t:"sick", r:true},{t:"happy", r:false}], fbR:"Yes, mildly sick.", fbW:"It means feeling sick." },
+      { type:"LINE", where:"office 5:30 PM", text:"\"We've been working on this for 9 hours. Let's <span class='target'>call it a day</span>.\"", tts:[{text:"We've been working on this for nine hours. Let's call it a day."}], target:"call it a day", q:"<b>Call it a day</b> means...", opts:[{t:"stop working", r:true},{t:"work harder", r:false},{t:"call someone", r:false}], fbR:"Exactly, stop working for the day.", fbW:"It means to finish working for today." },
+      { type:"CHAT", where:"unexpected text", lines:[{who:"Sara", side:"left", t:"An old friend texted me totally <span class='target'>out of the blue</span>!"}, {who:"Nour", side:"right", t:"Wow! After how many years?"}], tts:[{who:"Sara", text:"An old friend texted me totally out of the blue!"}, {who:"Nour", text:"Wow! After how many years?"}], target:"out of the blue", q:"<b>Out of the blue</b> means...", opts:[{t:"from the sky", r:false},{t:"sadly", r:false},{t:"unexpectedly", r:true}], fbR:"Yes, with no warning.", fbW:"It means completely unexpectedly." },
+      { type:"LINE", where:"police station", text:"Detective: \"Does the name 'John Smith' <span class='target'>ring a bell</span>?\"", tts:[{text:"Does the name John Smith ring a bell?"}], target:"ring a bell", q:"The detective is asking if the name...", opts:[{t:"makes a sound", r:false},{t:"sounds familiar", r:true},{t:"is famous", r:false}], fbR:"Correct, sounds familiar to your memory.", fbW:"It means 'does it sound familiar?'" },
+      { type:"CHAT", where:"exam results", lines:[{who:"Student", side:"left", t:"I GOT AN A+!! I am <span class='target'>over the moon</span>!!"}, {who:"Mom", side:"right", t:"So proud of you! <span class='slang'>:)</span>"}], tts:[{who:"Student", text:"I got an A plus! I am over the moon!"}, {who:"Mom", text:"So proud of you!"}], target:"over the moon", q:"The student is...", opts:[{t:"astronaut", r:false},{t:"extremely happy", r:true},{t:"tired", r:false}], fbR:"Yes, incredibly happy.", fbW:"It means extremely happy." },
+      { type:"YOU", where:"friend looks tired", text:"Your friend is sneezing and has a headache.", tts:[{text:"Your friend is sneezing and has a headache."}], target:"under the weather", q:"You say:", opts:[{t:"You look out of the blue.", r:false},{t:"You look a bit under the weather.", r:true},{t:"Let's call it a day.", r:false}], fbR:"Perfect fit.", fbW:"They look sick, so 'under the weather'." },
+      { type:"CHAT", where:"gym session", lines:[{who:"Trainer", side:"left", t:"You did 50 pushups. Great job. Let's <span class='target'>call it a day</span>."}, {who:"Client", side:"right", t:"Finally... <span class='slang'>thx</span>"}], tts:[{who:"Trainer", text:"You did 50 pushups. Great job. Let's call it a day."}, {who:"Client", text:"Finally... thanks."}], target:"call it a day", q:"The trainer wants to...", opts:[{t:"finish the workout", r:true},{t:"do 50 more", r:false},{t:"call someone", r:false}], fbR:"Yes, stop the activity.", fbW:"It means to finish the current activity." },
+      { type:"LINE", where:"interview", text:"\"I didn't apply, they just offered me the job <span class='target'>out of the blue</span>!\"", tts:[{text:"I didn't apply, they just offered me the job out of the blue!"}], target:"out of the blue", q:"The job offer was...", opts:[{t:"expected", r:false},{t:"unexpected", r:true},{t:"blue colored", r:false}], fbR:"Yes, a total surprise.", fbW:"It was unexpected." },
+      { type:"YOU", where:"trying to remember", text:"Someone mentions a restaurant name, but you're not sure if you know it.", tts:[{text:"Someone mentions a restaurant name, but you're not sure if you know it."}], target:"ring a bell", q:"You say:", opts:[{t:"That doesn't ring a bell.", r:true},{t:"That is out of the blue.", r:false},{t:"It's under the weather.", r:false}], fbR:"Great! Meaning it doesn't sound familiar.", fbW:"Use 'ring a bell' for memory/familiarity." },
+      { type:"CHAT", where:"getting a puppy", lines:[{who:"Kid", side:"left", t:"Dad bought me a puppy! I'm <span class='target'>over the moon</span>!"}, {who:"Friend", side:"right", t:"Cute! Send pics <span class='slang'>asap</span>"}], tts:[{who:"Kid", text:"Dad bought me a puppy! I'm over the moon!"}, {who:"Friend", text:"Cute! Send pics as soon as possible."}], target:"over the moon", q:"The kid is...", opts:[{t:"crying", r:false},{t:"thrilled/happy", r:true},{t:"scared", r:false}], fbR:"Yes, super happy.", fbW:"Over the moon = super happy." }
+    ]
+  },
+  {
+    title: "Common Expressions 2",
+    moments: [
+      { type:"LINE", where:"meeting room", text:"Manager: \"Before we start, let's make sure we are all <span class='target'>on the same page</span>.\"", tts:[{text:"Before we start, let's make sure we are all on the same page."}], target:"on the same page", q:"<b>On the same page</b> means...", opts:[{t:"reading a book", r:false},{t:"in agreement / understanding", r:true},{t:"standing together", r:false}], fbR:"Yes, having the same understanding.", fbW:"It means agreeing and understanding the same thing." },
+      { type:"CHAT", where:"project update", lines:[{who:"Client", side:"left", t:"I need to travel, but <span class='target'>keep me in the loop</span>."}, {who:"Vendor", side:"right", t:"Will do. I'll email you daily."}], tts:[{who:"Client", text:"I need to travel, but keep me in the loop."}, {who:"Vendor", text:"Will do. I'll email you daily."}], target:"keep me in the loop", q:"The client wants to be...", opts:[{t:"kept informed", r:true},{t:"left alone", r:false},{t:"put in a circle", r:false}], fbR:"Right, they want updates.", fbW:"It means keep me updated." },
+      { type:"LINE", where:"kitchen remodel", text:"Builder: \"We finished the floors. <span class='target'>So far so good</span>!\"", tts:[{text:"We finished the floors. So far so good!"}], target:"so far so good", q:"The builder means...", opts:[{t:"it's taking too long", r:false},{t:"it's going well up to now", r:true},{t:"it's very bad", r:false}], fbR:"Yes, things are fine until this point.", fbW:"It means good progress up to now." },
+      { type:"CHAT", where:"long meeting", lines:[{who:"Speaker", side:"left", t:"Okay, let's <span class='target'>wrap up</span> this meeting. Any last questions?"}, {who:"Team", side:"right", t:"Nope, all good."}], tts:[{who:"Speaker", text:"Okay, let's wrap up this meeting. Any last questions?"}, {who:"Team", text:"Nope, all good."}], target:"wrap up", q:"<b>Wrap up</b> means...", opts:[{t:"give a gift", r:false},{t:"finish or conclude", r:true},{t:"start over", r:false}], fbR:"Yes, to bring to a close.", fbW:"It means to finish or conclude." },
+      { type:"LINE", where:"exam hall", text:"Student: \"I studied for hours, but during the test I just <span class='target'>drew a blank</span>.\"", tts:[{text:"I studied for hours, but during the test I just drew a blank."}], target:"draw a blank", q:"The student...", opts:[{t:"drew a picture", r:false},{t:"couldn't remember anything", r:true},{t:"got a perfect score", r:false}], fbR:"Yes, memory completely failed.", fbW:"Draw a blank = forget suddenly." },
+      { type:"YOU", where:"team disagreement", text:"Two team members are arguing about the goal.", tts:[{text:"Two team members are arguing about the goal."}], target:"on the same page", q:"You say:", opts:[{t:"Are we on the same page?", r:true},{t:"Did you draw a blank?", r:false},{t:"Wrap it up.", r:false}], fbR:"Good way to check understanding.", fbW:"Use this to align understanding." },
+      { type:"CHAT", where:"planning a surprise", lines:[{who:"Sara", side:"left", t:"I'm buying the cake now. <span class='target'>Keep me in the loop</span> about where he is!"}, {who:"Nour", side:"right", t:"He is 10 mins away!"}], tts:[{who:"Sara", text:"I'm buying the cake now. Keep me in the loop about where he is!"}, {who:"Nour", text:"He is 10 mins away!"}], target:"keep me in the loop", q:"Sara needs Nour to...", opts:[{t:"run away", r:false},{t:"keep giving her information", r:true},{t:"eat the cake", r:false}], fbR:"Yes, keep her updated.", fbW:"Keep me in the loop = give me updates." },
+      { type:"YOU", where:"first day of work", text:"Your mom asks: 'How is the new job?'", tts:[{text:"How is the new job?"}], target:"so far so good", q:"You just started, it's fine. You say:", opts:[{t:"Draw a blank.", r:false},{t:"So far so good!", r:true},{t:"Keep me in the loop.", r:false}], fbR:"Perfect natural response.", fbW:"It means 'fine until now'." },
+      { type:"LINE", where:"podcast end", text:"Host: \"That's all our time! Let's <span class='target'>wrap up</span> the show here.\"", tts:[{text:"That's all our time! Let's wrap up the show here."}], target:"wrap up", q:"The host is going to...", opts:[{t:"finish the episode", r:true},{t:"play music", r:false},{t:"talk more", r:false}], fbR:"Right, to end it.", fbW:"Wrap up = finish." },
+      { type:"CHAT", where:"trivia night", lines:[{who:"Host", side:"left", t:"What is the capital of Peru?"}, {who:"Player", side:"right", t:"Oh man, I know this but I'm <span class='target'>drawing a blank</span>!"}], tts:[{who:"Host", text:"What is the capital of Peru?"}, {who:"Player", text:"Oh man, I know this but I'm drawing a blank!"}], target:"draw a blank", q:"The player...", opts:[{t:"is drawing a map", r:false},{t:"suddenly forgot it", r:true},{t:"knows the answer", r:false}], fbR:"Yes, temporarily forgot.", fbW:"Draw a blank = forget." }
+    ]
+  },
+  {
+    title: "Expected Answers 1",
+    moments: [
+      { type:"CHAT", where:"spilled coffee", lines:[{who:"You", side:"left", t:"Oh my gosh, I'm so sorry I spilled my coffee on your desk!"}, {who:"Colleague", side:"right", t:"<span class='target'>No worries, it happens.</span> I'll grab some napkins."}], tts:[{who:"You", text:"Oh my gosh, I'm so sorry I spilled my coffee on your desk!"}, {who:"Colleague", text:"No worries, it happens. I'll grab some napkins."}], target:"Apology response", q:"When someone apologizes for a small mistake, a good reply is:", opts:[{t:"No worries, it happens.", r:true},{t:"You are bad.", r:false},{t:"Thank you.", r:false}], fbR:"Yes, it's polite and forgiving.", fbW:"'No worries' is standard and polite." },
+      { type:"YOU", where:"helping a friend move", text:"Friend: \"Thank you SO much for helping me carry these boxes!\"", tts:[{text:"Thank you SO much for helping me carry these boxes!"}], target:"Thanks response", q:"You reply:", opts:[{t:"I am sorry.", r:false},{t:"Anytime! Glad to help.", r:true},{t:"I don't know.", r:false}], fbR:"Perfect natural response.", fbW:"'Anytime' is a friendly way to say 'you're welcome'." },
+      { type:"LINE", where:"office hallway", text:"Coworker walks by: \"Hey, <span class='target'>how's it going?</span>\"", tts:[{text:"Hey, how's it going?"}], target:"Greeting response", q:"A standard casual response is:", opts:[{t:"Not bad, you?", r:true},{t:"I am going to the store.", r:false},{t:"Yes, it is.", r:false}], fbR:"Correct! It's a greeting, not a deep question.", fbW:"'Not bad, you?' is the most natural reply." },
+      { type:"CHAT", where:"great news", lines:[{who:"Friend", side:"left", t:"Guess what? I finally got the job I interviewed for!"}, {who:"You", side:"right", t:"<span class='target'>That's awesome! Congrats!</span>"}], tts:[{who:"Friend", text:"Guess what? I finally got the job I interviewed for!"}, {who:"You", text:"That's awesome! Congrats!"}], target:"Good news response", q:"This response shows...", opts:[{t:"jealousy", r:false},{t:"excitement for them", r:true},{t:"confusion", r:false}], fbR:"Yes, matching their good energy.", fbW:"You should congratulate them." },
+      { type:"YOU", where:"bad news", text:"Coworker: \"I just found out my car needs a $1,000 repair...\"", tts:[{text:"I just found out my car needs a $1,000 repair..."}], target:"Bad news response", q:"You reply:", opts:[{t:"Oh no, I'm sorry to hear that. That sucks.", r:true},{t:"That's awesome! Congrats!", r:false},{t:"No worries, it happens.", r:false}], fbR:"Empathy is the right response here.", fbW:"Acknowledge the bad situation with sympathy." },
+      { type:"CHAT", where:"bumping into someone", lines:[{who:"Stranger", side:"left", t:"Oops, sorry about that!"}, {who:"You", side:"right", t:"<span class='target'>You're good!</span>"}], tts:[{who:"Stranger", text:"Oops, sorry about that!"}, {who:"You", text:"You're good!"}], target:"Apology response", q:"'You're good' here means:", opts:[{t:"You are a good person.", r:false},{t:"Don't worry / No problem.", r:true},{t:"I am angry.", r:false}], fbR:"Yes, very common casual forgiveness.", fbW:"It means 'no problem'." },
+      { type:"LINE", where:"door held open", text:"Stranger holding the door: \"Here you go.\"\nYou: \"Thanks!\"\nStranger: \"<span class='target'>No problem.</span>\"", tts:[{text:"Here you go. Thanks! No problem."}], target:"Thanks response", q:"'No problem' is used instead of...", opts:[{t:"Hello", r:false},{t:"You're welcome", r:true},{t:"Goodbye", r:false}], fbR:"Correct, it's a casual 'you're welcome'.", fbW:"It replaces 'you're welcome'." },
+      { type:"YOU", where:"passing in the hall", text:"Boss: \"Morning! How are you doing?\"", tts:[{text:"Morning! How are you doing?"}], target:"Greeting response", q:"You reply:", opts:[{t:"I am doing my homework.", r:false},{t:"Good morning! I'm doing well, and you?", r:true},{t:"No worries.", r:false}], fbR:"Polite and returns the question.", fbW:"Answer briefly and ask them back." },
+      { type:"CHAT", where:"engagement", lines:[{who:"Cousin", side:"left", t:"We just got engaged last night!!"}, {who:"You", side:"right", t:"<span class='target'>Oh my gosh, I'm so happy for you!!</span>"}], tts:[{who:"Cousin", text:"We just got engaged last night!!"}, {who:"You", text:"Oh my gosh, I'm so happy for you!!"}], target:"Good news response", q:"The tone should be:", opts:[{t:"Enthusiastic", r:true},{t:"Sad", r:false},{t:"Bored", r:false}], fbR:"Yes, match the high energy of good news.", fbW:"Engagement requires an enthusiastic reply." },
+      { type:"YOU", where:"failed exam", text:"Classmate: \"I completely failed the math exam...\"", tts:[{text:"I completely failed the math exam..."}], target:"Bad news response", q:"You reply:", opts:[{t:"Awesome!", r:false},{t:"Oh man, that's rough. I'm sorry.", r:true},{t:"You're good.", r:false}], fbR:"Empathetic and natural.", fbW:"Acknowledge that it's a 'rough' (hard) situation." }
+    ]
+  },
+  {
+    title: "Expected Answers 2",
+    moments: [
+      { type:"CHAT", where:"carrying heavy bags", lines:[{who:"Neighbor", side:"left", t:"Do you need a hand with those bags?"}, {who:"You", side:"right", t:"<span class='target'>I'm good, thanks though!</span>"}], tts:[{who:"Neighbor", text:"Do you need a hand with those bags?"}, {who:"You", text:"I'm good, thanks though!"}], target:"Offer response", q:"'I'm good' means...", opts:[{t:"I am a good person", r:false},{t:"No thank you, I can manage", r:true},{t:"Yes please", r:false}], fbR:"Yes, polite refusal.", fbW:"It means 'No thank you'." },
+      { type:"LINE", where:"looking at a presentation", text:"Colleague: \"<span class='target'>What do you think</span> of this new slide design?\"", tts:[{text:"What do you think of this new slide design?"}], target:"Opinion response", q:"A good reply to give approval is:", opts:[{t:"Looks great to me.", r:true},{t:"I'm good.", r:false},{t:"See you later.", r:false}], fbR:"Right, it's a simple positive opinion.", fbW:"'Looks great to me' gives positive feedback." },
+      { type:"YOU", where:"text from friend", text:"Friend: \"Hey, are you free this weekend?\"", tts:[{text:"Hey, are you free this weekend?"}], target:"Checking in response", q:"A safe, natural reply when you aren't sure yet:", opts:[{t:"I might be, what's up?", r:true},{t:"I am good thanks.", r:false},{t:"Looks great to me.", r:false}], fbR:"Yes, asks for context before committing.", fbW:"'What's up?' asks them what their plan is first." },
+      { type:"CHAT", where:"office desk", lines:[{who:"Coworker", side:"left", t:"Hey, can you do me a huge favor?"}, {who:"You", side:"right", t:"<span class='target'>Depends, what is it?</span>"}], tts:[{who:"Coworker", text:"Hey, can you do me a huge favor?"}, {who:"You", text:"Depends, what is it?"}], target:"Favor response", q:"Why say 'depends'?", opts:[{t:"You want to say no immediately.", r:false},{t:"You need to know the favor before saying yes.", r:true},{t:"You are angry.", r:false}], fbR:"Smart! Don't commit blind.", fbW:"It means 'it depends on what you want'." },
+      { type:"LINE", where:"leaving work on Friday", text:"Coworker: \"See you Monday! <span class='target'>Have a good weekend!</span>\"", tts:[{text:"See you Monday! Have a good weekend!"}], target:"Farewell response", q:"The standard reply is:", opts:[{t:"Thanks, you too!", r:true},{t:"I might be.", r:false},{t:"Depends.", r:false}], fbR:"Yes, returning the wish.", fbW:"Always say 'you too' to return the good wish." },
+      { type:"YOU", where:"coffee shop counter", text:"Barista: \"Would you like a receipt with that?\"", tts:[{text:"Would you like a receipt with that?"}], target:"Offer response", q:"You don't want it. You say:", opts:[{t:"No thanks, I'm good.", r:true},{t:"You too!", r:false},{t:"Depends.", r:false}], fbR:"Perfect polite refusal.", fbW:"'No thanks, I'm good' is the standard refusal." },
+      { type:"CHAT", where:"trying on clothes", lines:[{who:"Friend", side:"left", t:"Does this shirt look weird on me?"}, {who:"You", side:"right", t:"<span class='target'>Actually, it looks really good!</span>"}], tts:[{who:"Friend", text:"Does this shirt look weird on me?"}, {who:"You", text:"Actually, it looks really good!"}], target:"Opinion response", q:"'Actually' is used here to:", opts:[{t:"Sound mean.", r:false},{t:"Disagree with their negative thought.", r:true},{t:"Change the subject.", r:false}], fbR:"Yes, it pleasantly surprises them.", fbW:"It politely contradicts their insecurity." },
+      { type:"LINE", where:"phone call", text:"Mom: \"Just checking in, did you make it home safe?\"", tts:[{text:"Just checking in, did you make it home safe?"}], target:"Checking in response", q:"You say:", opts:[{t:"You too!", r:false},{t:"Yep, just walked in the door.", r:true},{t:"Depends.", r:false}], fbR:"Direct and reassuring.", fbW:"Answer the check-in directly." },
+      { type:"YOU", where:"airport drop-off", text:"Your friend is getting out of the car to catch a flight.", tts:[{text:"Your friend is getting out of the car to catch a flight."}], target:"Farewell response", q:"You say:", opts:[{t:"Have a safe flight!", r:true},{t:"What do you think?", r:false},{t:"I'm good thanks.", r:false}], fbR:"The perfect travel farewell.", fbW:"Wish them safety for travel." },
+      { type:"CHAT", where:"group project", lines:[{who:"Classmate", side:"left", t:"Can someone review my part of the essay tonight?"}, {who:"You", side:"right", t:"<span class='target'>Sure, send it over.</span>"}], tts:[{who:"Classmate", text:"Can someone review my part of the essay tonight?"}, {who:"You", text:"Sure, send it over."}], target:"Favor response", q:"'Send it over' means...", opts:[{t:"Throw the paper", r:false},{t:"Email or message it to me", r:true},{t:"Forget about it", r:false}], fbR:"Yes, accepting the favor.", fbW:"It means 'send me the file'." }
+    ]
+  },
+  {
+    title: "How do you ask?",
+    moments: [
+      { type:"LINE", where:"street in London", text:"You are lost. You stop a stranger: \"<span class='target'>Excuse me, how do I get to</span> the train station?\"", tts:[{text:"Excuse me, how do I get to the train station?"}], target:"Directions", q:"Why start with 'Excuse me'?", opts:[{t:"To apologize for being late", r:false},{t:"To politely get their attention", r:true},{t:"Because you sneezed", r:false}], fbR:"Yes, always use it before stopping a stranger.", fbW:"It's the polite way to interrupt someone." },
+      { type:"CHAT", where:"coffee shop table", lines:[{who:"You", side:"left", t:"<span class='target'>Do you mind if I</span> sit here?"}, {who:"Stranger", side:"right", t:"No, go ahead. It's free."}], tts:[{who:"You", text:"Do you mind if I sit here?"}, {who:"Stranger", text:"No, go ahead. It's free."}], target:"Permission", q:"'Do you mind if I...' is asking for...", opts:[{t:"directions", r:false},{t:"permission", r:true},{t:"money", r:false}], fbR:"Right, it's a very polite way to ask.", fbW:"It asks if your action will bother them." },
+      { type:"LINE", where:"loud restaurant", text:"Your friend mumbled something. You say: \"Sorry, <span class='target'>could you say that again, please?</span>\"", tts:[{text:"Sorry, could you say that again, please?"}], target:"Repeating", q:"This is better than saying...", opts:[{t:"'What?'", r:true},{t:"'Excuse me?'", r:false},{t:"'Pardon?'", r:false}], fbR:"Yes, 'What?' can sound rude or aggressive.", fbW:"Saying just 'What?' can sound rude." },
+      { type:"YOU", where:"finished eating at a restaurant", text:"The waiter is walking by and you want to pay.", tts:[{text:"The waiter is walking by and you want to pay."}], target:"Bill", q:"You wave and ask:", opts:[{t:"Give me the money!", r:false},{t:"Excuse me, could we get the check, please?", r:true},{t:"How do I get to the check?", r:false}], fbR:"Perfect, polite and direct.", fbW:"Ask for 'the check' or 'the bill'." },
+      { type:"CHAT", where:"networking event", lines:[{who:"You", side:"left", t:"I'm sorry, <span class='target'>what was your name again?</span>"}, {who:"New guy", side:"right", t:"Oh, it's David!"}], tts:[{who:"You", text:"I'm sorry, what was your name again?"}, {who:"New guy", text:"Oh, it's David!"}], target:"Name", q:"Adding 'again' at the end implies:", opts:[{t:"You never met them", r:false},{t:"They told you, but you forgot", r:true},{t:"They have two names", r:false}], fbR:"Yes, it softens the fact that you forgot.", fbW:"It shows you know they already told you." },
+      { type:"YOU", where:"inside a mall", text:"You need to find the restrooms.", tts:[{text:"You need to find the restrooms."}], target:"Directions", q:"You ask a guard:", opts:[{t:"Excuse me, where are the restrooms?", r:true},{t:"Do you mind if I use the restroom?", r:false},{t:"What was the restroom again?", r:false}], fbR:"Simple and polite.", fbW:"Start with 'Excuse me, where are...'." },
+      { type:"LINE", where:"office", text:"You need to borrow a pen from a coworker's desk. \"Hey, <span class='target'>is it okay if I</span> borrow this?\"", tts:[{text:"Hey, is it okay if I borrow this?"}], target:"Permission", q:"'Is it okay if I...' means the same as:", opts:[{t:"Do you mind if I...", r:true},{t:"How do I get to...", r:false},{t:"Could you say that again...", r:false}], fbR:"Yes, both ask for permission.", fbW:"It's another way to ask 'Do you mind if I...'." },
+      { type:"CHAT", where:"phone call with bad signal", lines:[{who:"Client", side:"left", t:"So the meeting is at *static* on Tuesday."}, {who:"You", side:"right", t:"<span class='target'>I didn't quite catch that.</span> What time?"}], tts:[{who:"Client", text:"So the meeting is at [static] on Tuesday."}, {who:"You", text:"I didn't quite catch that. What time?"}], target:"Repeating", q:"'I didn't quite catch that' means...", opts:[{t:"I dropped the phone.", r:false},{t:"I didn't hear/understand you clearly.", r:true},{t:"I am playing baseball.", r:false}], fbR:"Yes, very professional way to ask for a repeat.", fbW:"It means 'I didn't hear what you said'." },
+      { type:"YOU", where:"leaving a cafe", text:"You want to pay with a credit card, but you aren't sure if they only take cash.", tts:[{text:"You want to pay with a credit card, but you aren't sure if they only take cash."}], target:"Bill", q:"You ask:", opts:[{t:"Do you mind if I take your card?", r:false},{t:"Do you guys take cards?", r:true},{t:"What was your card again?", r:false}], fbR:"Very natural casual question.", fbW:"'Do you guys take cards?' is standard." },
+      { type:"LINE", where:"party", text:"You are introducing two friends but forgot one's name. \"I'm so sorry, <span class='target'>my mind just went blank</span>. What was your name again?\"", tts:[{text:"I'm so sorry, my mind just went blank. What was your name again?"}], target:"Name", q:"'My mind went blank' means:", opts:[{t:"I suddenly forgot.", r:true},{t:"I am very smart.", r:false},{t:"My brain is white.", r:false}], fbR:"Yes! Relates back to our expressions lesson.", fbW:"It means you suddenly forgot." }
+    ]
+  }
+];
+
+/* ============================================================
+   STATE MANAGEMENT
+   ============================================================ */
+let activeTabIdx = 0;
+// One state object per category
+let tabStates = CATEGORIES.map(()=>({
+  idx: 0,
+  streak: 0,
+  score: 0,
+  answered: new Set(),
+  visited: new Set(),
+  answeredState: new Map(),
+  stats: {} // dynamically track targets seen
+}));
+
+function getS(){ return tabStates[activeTabIdx]; }
+function getM(){ return CATEGORIES[activeTabIdx].moments; }
+
+let mode = 'read';
+const stage = document.getElementById('stage');
+
+/* UI Elements */
+const btnAuto = document.getElementById('btnAuto');
+const btnReplay = document.getElementById('btnReplay');
+const btnSpeed = document.getElementById('btnSpeed');
+const btnSettings = document.getElementById('btnSettings');
+const popover = document.getElementById('popover');
+const voiceSelect = document.getElementById('voiceSelect');
+const flipPrev = document.getElementById('flipPrev');
+const flipNext = document.getElementById('flipNext');
+const tabsContainer = document.getElementById('tabsContainer');
+
+/* ============================================================
+   TTS ENGINE (Upgraded Google Prioritization)
+   ============================================================ */
+const TTS = {
+  voices: [], selected: null, speed: 1.0, auto: true, loaded: false,
+
+  load(){
+    const list = speechSynthesis.getVoices();
+    if(!list || list.length === 0) return false;
+    
+    // Filter to English
+    const en = list.filter(v => /^en[-_]/i.test(v.lang) || v.lang.toLowerCase().startsWith('en'));
+    this.voices = en.length ? en : list;
+    
+    // Aggressive sorting: Heavily prioritize any voice with "Google" in name or URI
+    this.voices.sort((a,b)=>{
+      const score = v => {
+        let s = 0;
+        const n = (v.name || '').toLowerCase();
+        const uri = (v.voiceURI || '').toLowerCase();
+        
+        // Is it a Google Voice? Massive priority boost.
+        if(n.includes('google') || uri.includes('google')) s += 1000;
+        
+        // Minor boost for standard US/UK accents to ensure clarity if multiple exist
+        if(v.lang === 'en-US') s += 100;
+        if(v.lang === 'en-GB') s += 90;
+        
+        // Fallbacks for other premium engines
+        if(n.includes('neural') || n.includes('natural')) s += 50;
+        if(n.includes('microsoft')) s += 30;
+        if(v.default) s += 10;
+        
+        return s;
+      };
+      return score(b) - score(a);
+    });
+    
+    // Check if current selection is already Google
+    const isCurrentGoogle = this.selected && this.isGoogle(this.selected);
+    
+    // If we have nothing selected, OR if the current isn't Google but a Google one just loaded in, upgrade it.
+    if (!this.selected || !isCurrentGoogle) {
+        this.selected = this.voices[0] || null;
+    }
+    
+    this.loaded = true;
+    updateQualityDot();
+    return true;
+  },
+  isGoogle(v){ 
+    if(!v) return false;
+    const n = (v.name || '').toLowerCase();
+    const uri = (v.voiceURI || '').toLowerCase();
+    return n.includes('google') || uri.includes('google'); 
+  },
+  populateSelector(selectEl){
+    selectEl.innerHTML = '';
+    this.voices.forEach((v,i)=>{
+      const opt = document.createElement('option');
+      opt.value = i;
+      const n = v.name.toLowerCase();
+      let prefix = '';
+      if(this.isGoogle(v)) prefix = '[Google] ';
+      else if(n.includes('neural') || n.includes('natural')) prefix = '[Neural] ';
+      else if(n.includes('microsoft')) prefix = '[MS] ';
+      opt.textContent = prefix + v.name + ' (' + v.lang + ')';
+      if(v === this.selected) opt.selected = true;
+      selectEl.appendChild(opt);
+    });
+  },
+  speak(items, opts){
+    speechSynthesis.cancel();
+    if(!this.loaded){ if(!this.load()) return; }
+    opts = opts || {};
+    const onItemStart = opts.onItemStart || function(){};
+    const onItemEnd = opts.onItemEnd || function(){};
+    const onAllDone = opts.onAllDone || function(){};
+    let i = 0;
+    const playNext = () => {
+      if(i >= items.length){ onAllDone(); return; }
+      const item = items[i];
+      const spoken = expandForTTS(item.text);
+      const u = new SpeechSynthesisUtterance(spoken);
+      if(this.selected) u.voice = this.selected;
+      u.rate = this.speed; u.pitch = 1.0;
+      u.lang = (this.selected && this.selected.lang) || 'en-US';
+      u.onstart = () => onItemStart(i, item);
+      u.onend = () => { onItemEnd(i, item); i++; setTimeout(playNext, 220); };
+      u.onerror = () => { i++; setTimeout(playNext, 220); };
+      speechSynthesis.speak(u);
+    };
+    playNext();
+  },
+  stop(){ speechSynthesis.cancel(); }
+};
+
+function updateQualityDot(){
+  const isG = TTS.isGoogle(TTS.selected);
+  const dot = document.getElementById('qDot');
+  if(dot){
+    dot.classList.remove('google','fallback');
+    dot.classList.add(isG ? 'google' : 'fallback');
+  }
+  const legend = document.getElementById('legendDot');
+  if(legend) legend.style.background = isG ? 'var(--green-bright)' : 'var(--warn)';
+}
+
+if('speechSynthesis' in window){
+  TTS.load(); // Try initial load
+  // Listen for voiceschanged event (this is when Google voices usually pop in on Chrome)
+  speechSynthesis.onvoiceschanged = () => {
+    TTS.load();
+    const sel = document.getElementById('voiceSelect');
+    if(sel) TTS.populateSelector(sel);
+  };
+}
+
+/* ============================================================
+   EVENTS & NAVIGATION
+   ============================================================ */
+btnAuto.addEventListener('click',()=>{
+  TTS.auto = !TTS.auto;
+  btnAuto.classList.toggle('on', TTS.auto);
+});
+btnReplay.addEventListener('click', playCurrentMoment);
+
+const speeds = [0.8, 1.0, 1.2];
+let speedIdx = 1;
+btnSpeed.addEventListener('click',()=>{
+  speedIdx = (speedIdx+1) % speeds.length;
+  TTS.speed = speeds[speedIdx];
+  btnSpeed.textContent = TTS.speed.toFixed(1)+'x';
+});
+
+btnSettings.addEventListener('click',(e)=>{
+  e.stopPropagation();
+  popover.classList.toggle('open');
+  if(popover.classList.contains('open')){
+    TTS.populateSelector(voiceSelect);
+    updateQualityDot();
+  }
+});
+document.addEventListener('click',(e)=>{
+  if(!popover.contains(e.target) && e.target !== btnSettings) popover.classList.remove('open');
+});
+voiceSelect.addEventListener('change',()=>{
+  TTS.selected = TTS.voices[parseInt(voiceSelect.value)];
+  updateQualityDot();
+});
+
+document.querySelectorAll('.mode-btn').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.mode-btn').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    mode = b.dataset.mode;
+    render();
+  });
+});
+
+function goPrev(){
+  if(getS().idx > 0){ getS().idx--; render(); }
+}
+function goNext(){
+  if(getS().idx < getM().length){ getS().idx++; render(); }
+}
+flipPrev.addEventListener('click', goPrev);
+flipNext.addEventListener('click', goNext);
+
+document.addEventListener('keydown',(e)=>{
+  if(e.key === 'ArrowLeft') goPrev();
+  else if(e.key === 'ArrowRight') goNext();
+});
+
+let touchStartX = 0, touchStartY = 0;
+document.getElementById('stage').addEventListener('touchstart',(e)=>{
+  if(e.touches.length === 1){
+    touchStartX = e.touches[0].clientX;
+    touchStartY = e.touches[0].clientY;
+  }
+},{passive:true});
+document.getElementById('stage').addEventListener('touchend',(e)=>{
+  if(e.changedTouches.length !== 1) return;
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  const dy = e.changedTouches[0].clientY - touchStartY;
+  if(Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)*1.5){
+    if(dx > 0) goPrev();
+    else goNext();
+  }
+},{passive:true});
+
+function setSpeaking(on){
+  btnReplay.classList.toggle('speaking', on);
+  const bigBtn = document.querySelector('.big-replay');
+  if(bigBtn) bigBtn.classList.toggle('speaking', on);
+}
+
+function highlightItem(itemIdx, on){
+  const bubbles = stage.querySelectorAll('.bubble');
+  const narration = stage.querySelector('.narration');
+  if(bubbles.length > 0){
+    bubbles.forEach(b => b.classList.remove('now-playing'));
+    if(on && bubbles[itemIdx]) bubbles[itemIdx].classList.add('now-playing');
+  } else if(narration){
+    narration.classList.toggle('now-playing', on);
+  }
+}
+
+function playCurrentMoment(){
+  const moments = getM();
+  const m = moments[getS().idx];
+  if(!m || !m.tts) return;
+  setSpeaking(true);
+  TTS.speak(m.tts, {
+    onItemStart:(i)=>highlightItem(i,true),
+    onItemEnd:(i)=>highlightItem(i,false),
+    onAllDone:()=>setSpeaking(false)
+  });
+}
+
+function switchTab(index) {
+  activeTabIdx = index;
+  renderTabs();
+  render();
+}
+window.switchTab = switchTab; // expose for inline onclick
+
+function renderTabs() {
+  tabsContainer.innerHTML = '';
+  CATEGORIES.forEach((c, i) => {
+    const btn = document.createElement('button');
+    btn.className = `tab-btn ${i === activeTabIdx ? 'active' : ''}`;
+    btn.textContent = c.title;
+    btn.onclick = () => switchTab(i);
+    tabsContainer.appendChild(btn);
+  });
+  // auto scroll active tab into view softly
+  const activeBtn = tabsContainer.querySelector('.active');
+  if(activeBtn){
+    activeBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  }
+}
+
+/* ============================================================
+   RENDER
+   ============================================================ */
+function render(){
+  TTS.stop();
+  setSpeaking(false);
+
+  const S = getS();
+  const M = getM();
+  const total = M.length;
+  
+  document.getElementById('progressFill').style.width = (S.answered.size/total*100)+'%';
+  document.getElementById('streakBox').textContent = S.streak;
+
+  flipPrev.disabled = S.idx <= 0;
+  flipNext.disabled = S.idx >= total;
+
+  if(S.idx >= total){ renderFinal(); return; }
+
+  const m = M[S.idx];
+  
+  // Track encounters dynamically
+  if(!S.visited.has(S.idx)){
+    S.stats[m.target] = (S.stats[m.target] || 0) + 1;
+    if(m.bonus) S.stats[m.bonus] = (S.stats[m.bonus] || 0) + 1;
+    S.visited.add(S.idx);
+  }
+
+  const enc = S.stats[m.target] || 1;
+  const againBadge = enc >= 2 ? `<span class="again">again #${enc}</span>` : '';
+
+  let body = '';
+  if(mode === 'listen'){
+    body = `
+      <div class="listen-pad">
+        <div class="ear">listen</div>
+        <p>Close your eyes. Tap to play again.</p>
+        <button class="big-replay" id="bigReplay">&#9654; Play</button>
+      </div>
+    `;
+  } else {
+    if(m.type === 'LINE' || m.type === 'YOU'){
+      body = `<div class="narration">${m.text}</div>`;
+    } else if(m.type === 'CHAT'){
+      body = m.lines.map(l=>{
+        const sc = l.side==='right' ? 'right' : '';
+        return `<div class="who ${sc}">${l.who}</div><div class="bubble ${sc}">${l.t}</div>`;
+      }).join('');
+    }
+  }
+
+  const fullClass = m.type === 'YOU' ? 'full' : '';
+  const optsHTML = m.opts.map((o,oi)=>
+    `<button class="option" data-r="${o.r?1:0}" data-i="${oi}">${o.t}</button>`
+  ).join('');
+
+  let revealHTML = '';
+  if(mode === 'listen'){
+    let revealText = '';
+    if(m.type === 'LINE' || m.type === 'YOU') revealText = m.text;
+    else if(m.type === 'CHAT') revealText = m.lines.map(l=>`<b>${l.who}:</b> ${l.t}`).join('<br>');
+    revealHTML = `<div class="reveal" id="reveal">${revealText}</div>`;
+  }
+
+  // Inject download button only if Tab 1 (idx 0) and Slide 1 (idx 0)
+  let downloadBtnHTML = '';
+  if (activeTabIdx === 0 && S.idx === 0) {
+    downloadBtnHTML = `
+      <button class="download-btn" id="btnDownloadApp">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+        Download App to Play Offline
+      </button>
+    `;
+  }
+
+  stage.innerHTML = `
+    <div class="moment">
+      <div class="tag">
+        <span class="where">${m.where}</span>
+        <div class="meta">
+          <span class="scene-num">${S.idx+1} / ${total}</span>
+          ${againBadge}
+        </div>
+      </div>
+      <div class="body">
+        ${body}
+        <div class="q">${m.q}</div>
+        <div class="options ${fullClass}">${optsHTML}</div>
+        <div class="fb" id="fb"></div>
+        ${revealHTML}
+        ${downloadBtnHTML}
+      </div>
+    </div>
+  `;
+
+  stage.querySelectorAll('.option').forEach(btn=>{
+    btn.addEventListener('click',()=>handleAnswer(btn,m));
+  });
+
+  // Restore answered state
+  if(S.answeredState.has(S.idx)){
+    const st = S.answeredState.get(S.idx);
+    const all = stage.querySelectorAll('.option');
+    all.forEach(o=>o.classList.add('locked'));
+    if(st.chosen != null){
+      const chosenBtn = stage.querySelector(`.option[data-i="${st.chosen}"]`);
+      if(chosenBtn) chosenBtn.classList.add(st.right ? 'right' : 'wrong');
+      if(!st.right){
+        all.forEach(o=>{ if(o.dataset.r==='1') o.classList.add('right'); });
+      }
+    }
+    const fb = document.getElementById('fb');
+    fb.textContent = st.right ? m.fbR : m.fbW;
+    fb.classList.add('show', st.right ? 'right' : 'wrong');
+    const reveal = document.getElementById('reveal');
+    if(reveal) reveal.classList.add('show');
+  }
+
+  const bigReplay = document.getElementById('bigReplay');
+  if(bigReplay) bigReplay.addEventListener('click', playCurrentMoment);
+
+  const btnDownloadApp = document.getElementById('btnDownloadApp');
+  if(btnDownloadApp) {
+    btnDownloadApp.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: "text/html" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "Snap_English.html";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  }
+
+  updateQualityDot();
+
+  if(TTS.auto){
+    setTimeout(playCurrentMoment, 350);
+  }
+}
+
+function handleAnswer(btn, m){
+  const S = getS();
+  if(S.answeredState.has(S.idx)) return;
+
+  const all = stage.querySelectorAll('.option');
+  all.forEach(o=>o.classList.add('locked'));
+  const right = btn.dataset.r === '1';
+  const fb = document.getElementById('fb');
+  
+  if(right){
+    btn.classList.add('right');
+    S.streak++; S.score++;
+    fb.textContent = m.fbR;
+    fb.classList.add('show','right');
+  } else {
+    btn.classList.add('wrong');
+    S.streak = 0;
+    all.forEach(o=>{ if(o.dataset.r==='1') o.classList.add('right'); });
+    fb.textContent = m.fbW;
+    fb.classList.add('show','wrong');
+  }
+  
+  S.answered.add(S.idx);
+  S.answeredState.set(S.idx, { right: right, chosen: parseInt(btn.dataset.i) });
+
+  document.getElementById('streakBox').textContent = S.streak;
+  document.getElementById('progressFill').style.width = (S.answered.size/getM().length*100)+'%';
+
+  const reveal = document.getElementById('reveal');
+  if(reveal) reveal.classList.add('show');
+}
+
+function renderFinal(){
+  TTS.stop();
+  setSpeaking(false);
+  document.getElementById('progressFill').style.width = '100%';
+  flipPrev.disabled = false;
+  flipNext.disabled = true;
+  
+  const S = getS();
+  const total = getM().length;
+  let list = '';
+  Object.entries(S.stats).forEach(([k,v])=>{
+    if(v>0) list += `<div class="met-item"><span class="name">${k}</span><span class="count">${v}x</span></div>`;
+  });
+  
+  let actionBtn = '';
+  if(activeTabIdx < CATEGORIES.length - 1){
+    actionBtn = `<button class="btn-restart" onclick="switchTab(${activeTabIdx + 1})">Next Category &rarr;</button>`;
+  } else {
+    actionBtn = `<button class="btn-restart" onclick="location.reload()">Start Over</button>`;
+  }
+
+  stage.innerHTML = `
+    <div class="final">
+      <div class="final-score">${S.score}/${total}</div>
+      <h2>Category Done!</h2>
+      <p>You met these in real moments.</p>
+      <div class="met">${list}</div>
+      ${actionBtn}
+    </div>
+  `;
+}
+
+// Init
+renderTabs();
+render();
+</script>
+
+</body></html>
