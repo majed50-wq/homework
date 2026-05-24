@@ -1,0 +1,1452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Unit 12 - What Would You Do?</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --teal: #0d6e6e;
+    --teal-dark: #084848;
+    --teal-light: #14a8a8;
+    --gold: #d4a437;
+    --gold-light: #e8c468;
+    --cream: #faf6ee;
+    --paper: #fffdf8;
+    --ink: #1a2e2e;
+    --ink-soft: #4a5e5e;
+    --border: #e6dfd0;
+    --shadow: 0 4px 20px rgba(13, 110, 110, 0.08);
+    --shadow-lg: 0 12px 40px rgba(13, 110, 110, 0.15);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Sora', sans-serif;
+    background: var(--cream);
+    color: var(--ink);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 20px;
+  }
+
+  /* HEADER */
+  .header {
+    background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%);
+    color: white;
+    padding: 32px 28px;
+    border-radius: 20px;
+    margin-bottom: 24px;
+    position: relative;
+    overflow: hidden;
+    box-shadow: var(--shadow-lg);
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -20%;
+    width: 400px;
+    height: 400px;
+    background: radial-gradient(circle, var(--gold) 0%, transparent 70%);
+    opacity: 0.15;
+  }
+  .header-tag {
+    display: inline-block;
+    font-size: 13px;
+    letter-spacing: 3px;
+    color: var(--gold-light);
+    margin-bottom: 8px;
+    font-weight: 500;
+  }
+  .header h1 {
+    font-family: 'DM Serif Display', serif;
+    font-size: 42px;
+    font-weight: 400;
+    line-height: 1.1;
+    margin-bottom: 12px;
+    position: relative;
+  }
+  .header p {
+    color: rgba(255,255,255,0.85);
+    font-size: 16px;
+    max-width: 600px;
+    position: relative;
+  }
+  .header-icon {
+    position: absolute;
+    top: 24px;
+    right: 28px;
+    font-size: 64px;
+    opacity: 0.2;
+  }
+
+  /* TABS */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    background: white;
+    padding: 8px;
+    border-radius: 16px;
+    margin-bottom: 24px;
+    overflow-x: auto;
+    box-shadow: var(--shadow);
+    scrollbar-width: thin;
+  }
+  .tab {
+    flex: 1;
+    min-width: max-content;
+    padding: 12px 18px;
+    border: none;
+    background: transparent;
+    color: var(--ink-soft);
+    font-family: 'Sora', sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: all 0.25s ease;
+    white-space: nowrap;
+  }
+  .tab:hover { background: var(--cream); color: var(--teal); }
+  .tab.active {
+    background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%);
+    color: white;
+    box-shadow: 0 4px 12px rgba(13, 110, 110, 0.3);
+  }
+
+  .panel { display: none; animation: fadeIn 0.4s ease; }
+  .panel.active { display: block; }
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* CARD */
+  .card {
+    background: var(--paper);
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+    border: 1px solid var(--border);
+  }
+  .card-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    color: var(--teal-dark);
+    margin-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .card-subtitle {
+    color: var(--ink-soft);
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+
+  /* DILEMMA SECTION */
+  .dilemma-section {
+    margin-bottom: 32px;
+    padding-bottom: 24px;
+    border-bottom: 2px dashed var(--border);
+  }
+  .dilemma-section:last-child {
+    border-bottom: none;
+  }
+  .dilemma-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 26px;
+    color: white;
+    background: linear-gradient(135deg, #c44 0%, #a23 100%);
+    padding: 12px 22px;
+    border-radius: 12px;
+    margin-bottom: 18px;
+    display: inline-block;
+  }
+  .sub-section-title {
+    font-family: 'DM Serif Display', serif;
+    font-size: 20px;
+    color: var(--teal-dark);
+    margin: 24px 0 14px 0;
+    padding-left: 12px;
+    border-left: 4px solid var(--gold);
+  }
+
+  /* LISTEN TAB */
+  .audio-player {
+    background: linear-gradient(135deg, var(--teal-dark) 0%, var(--teal) 100%);
+    color: white;
+    padding: 28px;
+    border-radius: 20px;
+    margin-bottom: 20px;
+  }
+  .audio-controls {
+    display: flex;
+    gap: 14px;
+    align-items: center;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+  }
+  .play-btn {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    border: none;
+    background: var(--gold);
+    color: var(--teal-dark);
+    font-size: 24px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+    box-shadow: 0 4px 16px rgba(212, 164, 55, 0.4);
+  }
+  .play-btn:hover { transform: scale(1.05); }
+  .play-btn:active { transform: scale(0.95); }
+  .audio-select-group {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 1;
+    min-width: 200px;
+  }
+  .audio-select-group label {
+    font-size: 11px;
+    letter-spacing: 1.5px;
+    color: var(--gold-light);
+    font-weight: 500;
+  }
+  .audio-select {
+    padding: 8px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.1);
+    color: white;
+    font-family: 'Sora', sans-serif;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .audio-select option { background: var(--teal-dark); color: white; }
+  .speed-controls { display: flex; gap: 6px; }
+  .speed-btn {
+    padding: 6px 12px;
+    border-radius: 8px;
+    border: 1px solid rgba(255,255,255,0.3);
+    background: transparent;
+    color: white;
+    font-size: 12px;
+    font-family: 'Sora', sans-serif;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .speed-btn.active {
+    background: var(--gold);
+    color: var(--teal-dark);
+    border-color: var(--gold);
+    font-weight: 600;
+  }
+
+  .transcript {
+    background: rgba(255,255,255,0.08);
+    padding: 20px;
+    border-radius: 14px;
+    max-height: 360px;
+    overflow-y: auto;
+    line-height: 2;
+  }
+  .transcript-line { margin-bottom: 14px; font-size: 15px; }
+  .transcript-line .name {
+    color: var(--gold-light);
+    font-weight: 600;
+    margin-right: 8px;
+  }
+  .word {
+    transition: all 0.15s;
+    padding: 1px 2px;
+    border-radius: 3px;
+  }
+  .word.active {
+    background: var(--gold);
+    color: var(--teal-dark);
+    font-weight: 600;
+    transform: scale(1.05);
+    display: inline-block;
+  }
+  .word.spoken { color: rgba(255,255,255,0.5); }
+
+  /* DILEMMA STORY BOX */
+  .story-box {
+    background: #fef9e7;
+    border-left: 5px solid var(--gold);
+    padding: 20px 22px;
+    border-radius: 12px;
+    font-size: 15.5px;
+    line-height: 1.85;
+    color: var(--ink);
+    margin-bottom: 18px;
+  }
+  .story-box .question-prompt {
+    display: block;
+    margin-top: 14px;
+    color: var(--teal-dark);
+    font-weight: 600;
+    font-style: italic;
+  }
+
+  /* FLASHCARDS */
+  .flashcard-deck {
+    perspective: 1000px;
+    margin: 20px auto;
+    max-width: 500px;
+  }
+  .flashcard {
+    width: 100%;
+    height: 280px;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+    cursor: pointer;
+  }
+  .flashcard.flipped { transform: rotateY(180deg); }
+  .flashcard-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 30px;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+  }
+  .flashcard-front {
+    background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%);
+    color: white;
+  }
+  .flashcard-back {
+    background: linear-gradient(135deg, var(--gold) 0%, #b8862c 100%);
+    color: var(--teal-dark);
+    transform: rotateY(180deg);
+  }
+  .flashcard-label {
+    font-size: 11px;
+    letter-spacing: 3px;
+    opacity: 0.7;
+    margin-bottom: 18px;
+  }
+  .flashcard-text {
+    font-family: 'DM Serif Display', serif;
+    font-size: 28px;
+    line-height: 1.25;
+  }
+  .flashcard-back .flashcard-text { font-size: 22px; }
+  .flashcard-hint {
+    margin-top: 18px;
+    font-size: 12px;
+    opacity: 0.7;
+  }
+  .deck-controls {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 16px;
+    margin-top: 20px;
+  }
+  .nav-btn {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: 2px solid var(--teal);
+    background: white;
+    color: var(--teal);
+    font-size: 20px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-btn:hover {
+    background: var(--teal);
+    color: white;
+  }
+  .card-counter {
+    font-weight: 600;
+    color: var(--teal-dark);
+    font-size: 16px;
+  }
+
+  /* MINI FLASHCARDS */
+  .mini-deck {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+    gap: 12px;
+    margin-top: 12px;
+  }
+  .mini-card {
+    perspective: 1000px;
+    height: 130px;
+    cursor: pointer;
+  }
+  .mini-card-inner {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    transition: transform 0.6s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .mini-card.flipped .mini-card-inner { transform: rotateY(180deg); }
+  .mini-face {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 14px;
+    text-align: center;
+    font-weight: 600;
+    box-shadow: var(--shadow);
+  }
+  .mini-front {
+    background: linear-gradient(135deg, var(--teal) 0%, var(--teal-dark) 100%);
+    color: white;
+    font-family: 'DM Serif Display', serif;
+    font-size: 18px;
+  }
+  .mini-back {
+    background: linear-gradient(135deg, var(--gold) 0%, #b8862c 100%);
+    color: var(--teal-dark);
+    transform: rotateY(180deg);
+    font-size: 13.5px;
+    line-height: 1.4;
+  }
+
+  /* TRUE/FALSE */
+  .question-block {
+    background: var(--paper);
+    padding: 20px;
+    border-radius: 14px;
+    margin-bottom: 14px;
+    border: 1px solid var(--border);
+    transition: all 0.3s;
+  }
+  .question-block.correct { border-color: #2d8a2d; background: #f0fdf0; }
+  .question-block.wrong { border-color: #c44; background: #fff0f0; }
+  .question-text {
+    font-size: 15.5px;
+    margin-bottom: 14px;
+    color: var(--ink);
+  }
+  .question-text strong { color: var(--teal-dark); }
+  .tf-buttons { display: flex; gap: 10px; }
+  .tf-btn {
+    flex: 1;
+    padding: 12px;
+    border: 2px solid var(--border);
+    background: white;
+    border-radius: 10px;
+    font-family: 'Sora', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+    color: var(--ink-soft);
+  }
+  .tf-btn:hover { border-color: var(--teal); color: var(--teal); }
+  .tf-btn.selected.right { background: #2d8a2d; color: white; border-color: #2d8a2d; }
+  .tf-btn.selected.wrong { background: #c44; color: white; border-color: #c44; }
+  .tf-btn:disabled { cursor: default; }
+  .feedback { margin-top: 12px; padding: 10px 14px; border-radius: 10px; font-size: 14px; display: none; }
+  .feedback.show { display: block; }
+  .feedback.right-fb { background: #d6f0d6; color: #1a5e1a; }
+  .feedback.wrong-fb { background: #ffd6d6; color: #8a1a1a; }
+
+  /* FILL BLANKS */
+  .fill-wordbank {
+    background: linear-gradient(135deg, #fdf6e3 0%, #faecc4 100%);
+    padding: 18px;
+    border-radius: 14px;
+    margin-bottom: 20px;
+    border: 2px solid var(--gold);
+    min-height: 70px;
+  }
+  .fill-wordbank-label { display: block; font-size: 11px; letter-spacing: 2px; color: var(--teal-dark); font-weight: 700; margin-bottom: 10px; }
+  .bank-word {
+    display: inline-block; background: white; padding: 8px 16px; margin: 4px; border-radius: 22px;
+    border: 2px solid var(--teal); color: var(--teal-dark); font-weight: 600; font-size: 14.5px;
+    cursor: pointer; transition: all 0.2s; user-select: none; font-family: 'Sora', sans-serif;
+  }
+  .bank-word:hover { background: var(--teal); color: white; transform: translateY(-2px); }
+  .bank-word.used { opacity: 0; pointer-events: none; transform: scale(0.5); width: 0; padding: 0; margin: 0; border: none; }
+  .fill-q { background: var(--paper); padding: 20px; border-radius: 14px; margin-bottom: 14px; border: 1px solid var(--border); }
+  .fill-q p { font-size: 15.5px; line-height: 2.2; color: var(--ink); }
+  .fill-blank {
+    display: inline-block; min-width: 130px; padding: 6px 14px; margin: 0 4px;
+    border: 2px dashed var(--teal); border-radius: 8px; background: white; color: var(--teal-dark);
+    font-weight: 600; cursor: pointer; text-align: center; transition: all 0.2s; font-family: 'Sora', sans-serif;
+    font-size: 14.5px; vertical-align: middle;
+  }
+  .fill-blank:hover { background: var(--cream); }
+  .fill-blank.active { border-style: solid; background: var(--gold-light); color: var(--teal-dark); box-shadow: 0 0 0 3px rgba(212, 164, 55, 0.3); }
+  .fill-blank.filled { border-style: solid; background: white; }
+  .fill-blank.correct { border-color: #2d8a2d; background: #d6f0d6; color: #1a5e1a; }
+  .fill-blank.wrong { border-color: #c44; background: #ffd6d6; color: #8a1a1a; }
+  .fill-blank.placeholder { color: var(--ink-soft); font-weight: 400; opacity: 0.6; }
+
+  /* HOMEWORK QUIZ (NEW CSS) */
+  .setup-box { text-align: center; padding: 40px 20px; }
+  .student-name-input { 
+    width: 100%; max-width: 400px; padding: 16px; border: 2px solid var(--border); 
+    border-radius: 12px; font-family: 'Sora', sans-serif; font-size: 16px; 
+    margin-bottom: 20px; transition: all 0.3s;
+  }
+  .student-name-input:focus { border-color: var(--teal); outline: none; }
+  .start-btn { 
+    background: var(--teal); color: white; border: none; padding: 16px 32px; 
+    border-radius: 12px; font-size: 18px; font-weight: 600; cursor: pointer; 
+    transition: 0.2s; box-shadow: var(--shadow);
+  }
+  .start-btn:hover { background: var(--teal-dark); transform: translateY(-2px); }
+  
+  .quiz-q { background: var(--paper); padding: 22px; border-radius: 14px; margin-bottom: 16px; border: 1px solid var(--border); }
+  .quiz-q-text { font-weight: 600; color: var(--teal-dark); margin-bottom: 14px; font-size: 16px; }
+  .quiz-options { display: flex; flex-direction: column; gap: 8px; }
+  .quiz-option {
+    padding: 14px 18px; background: white; border: 2px solid var(--border);
+    border-radius: 10px; cursor: pointer; font-size: 15px; transition: all 0.2s;
+    text-align: left; font-family: 'Sora', sans-serif; color: var(--ink);
+  }
+  .quiz-option:hover { border-color: var(--teal); }
+  .quiz-option.selected-ans { background: var(--teal); color: white; border-color: var(--teal); box-shadow: 0 4px 12px rgba(13, 110, 110, 0.2); }
+
+  .submit-quiz-btn {
+    width: 100%; padding: 18px; border-radius: 12px; font-family: 'Sora', sans-serif; font-size: 18px;
+    font-weight: 600; cursor: pointer; border: none; background: var(--gold); color: var(--teal-dark);
+    transition: all 0.3s; margin-top: 10px; box-shadow: var(--shadow);
+  }
+  .submit-quiz-btn:hover { background: var(--gold-light); transform: translateY(-2px); }
+  .submit-quiz-btn:disabled { background: var(--border); color: var(--ink-soft); cursor: not-allowed; transform: none; box-shadow: none; }
+
+  .success-box { text-align: center; padding: 50px 20px; }
+  .success-icon { font-size: 64px; margin-bottom: 20px; display: inline-block;}
+  .success-title { font-family: 'DM Serif Display', serif; font-size: 32px; color: var(--teal-dark); margin-bottom: 12px;}
+
+  /* SCORE BAR */
+  .score-bar {
+    background: linear-gradient(135deg, var(--gold) 0%, #b8862c 100%); color: var(--teal-dark);
+    padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; display: flex;
+    justify-content: space-between; align-items: center; font-weight: 600; box-shadow: var(--shadow);
+  }
+  .timer-display { font-family: monospace; font-size: 22px; font-weight: 700; background: rgba(0,0,0,0.1); padding: 4px 12px; border-radius: 8px;}
+  .reset-btn { padding: 8px 16px; background: var(--teal-dark); color: white; border: none; border-radius: 8px; font-family: 'Sora', sans-serif; cursor: pointer; font-size: 13px; }
+
+  /* DILEMMA SELECTOR */
+  .dilemma-selector { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 18px; }
+  .dilemma-pill {
+    padding: 8px 16px; border-radius: 20px; border: 2px solid var(--border); background: white;
+    color: var(--ink-soft); font-family: 'Sora', sans-serif; font-size: 13px; font-weight: 600;
+    cursor: pointer; transition: all 0.2s;
+  }
+  .dilemma-pill:hover { border-color: var(--teal); color: var(--teal); }
+  .dilemma-pill.active { background: var(--teal); color: white; border-color: var(--teal); }
+
+  @media (max-width: 700px) {
+    .header h1 { font-size: 32px; }
+    .card { padding: 20px; }
+    .dilemma-title { font-size: 22px; }
+    .fill-blank { min-width: 100px; }
+    .mini-deck { grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-icon">⚖️</div>
+    <div class="header-tag">UNIT 12 · LESSON 1</div>
+    <h1>What Would You Do?</h1>
+    <p>Four moral dilemmas. Read, listen, and decide what is right and wrong.</p>
+  </div>
+
+  <!-- TABS -->
+  <div class="tabs">
+    <button class="tab active" data-tab="listen">🎧 Listen</button>
+    <button class="tab" data-tab="flashcards">🃏 Flashcards</button>
+    <button class="tab" data-tab="truefalse">✓ True/False</button>
+    <button class="tab" data-tab="fill">✏️ Fill Blanks</button>
+    <button class="tab" data-tab="quiz">📝 Homework Quiz</button>
+  </div>
+
+  <!-- LISTEN -->
+  <div class="panel active" id="listen">
+    <div class="card">
+      <h2 class="card-title">🎧 Listen to the Dilemmas</h2>
+      <p class="card-subtitle">Choose a dilemma, press play, and follow each word as it is read.</p>
+      <div class="audio-player">
+        <div class="audio-controls">
+          <button class="play-btn" id="playBtn">▶</button>
+          <div class="audio-select-group">
+            <label>VOICE</label>
+            <select class="audio-select" id="voiceSelect"></select>
+          </div>
+          <div class="audio-select-group" style="max-width: 200px;">
+            <label>SPEED</label>
+            <div class="speed-controls">
+              <button class="speed-btn" data-speed="0.75">0.75×</button>
+              <button class="speed-btn active" data-speed="1">1×</button>
+              <button class="speed-btn" data-speed="1.25">1.25×</button>
+              <button class="speed-btn" data-speed="1.5">1.5×</button>
+            </div>
+          </div>
+        </div>
+        <div class="dilemma-selector" id="dilemmaSelector"></div>
+        <div class="transcript" id="transcript"></div>
+      </div>
+      <!-- DILEMMA 1 -->
+      <div class="dilemma-section" id="dilemma-1">
+        <div class="dilemma-title">Dilemma 1 — Russ at the Airport</div>
+        <div class="story-box" id="story-1"></div>
+        <div class="sub-section-title">✓ True or False (Dilemma 1)</div>
+        <div id="tf-d1"></div>
+        <div class="sub-section-title">🃏 Vocabulary (Dilemma 1)</div>
+        <div class="mini-deck" id="mini-d1"></div>
+      </div>
+      <!-- DILEMMA 2 -->
+      <div class="dilemma-section" id="dilemma-2">
+        <div class="dilemma-title">Dilemma 2 — Mike and the Test</div>
+        <div class="story-box" id="story-2"></div>
+        <div class="sub-section-title">✓ True or False (Dilemma 2)</div>
+        <div id="tf-d2"></div>
+        <div class="sub-section-title">🃏 Vocabulary (Dilemma 2)</div>
+        <div class="mini-deck" id="mini-d2"></div>
+      </div>
+      <!-- DILEMMA 3 -->
+      <div class="dilemma-section" id="dilemma-3">
+        <div class="dilemma-title">Dilemma 3 — The Lifeboat</div>
+        <div class="story-box" id="story-3"></div>
+        <div class="sub-section-title">✓ True or False (Dilemma 3)</div>
+        <div id="tf-d3"></div>
+        <div class="sub-section-title">🃏 Vocabulary (Dilemma 3)</div>
+        <div class="mini-deck" id="mini-d3"></div>
+      </div>
+      <!-- DILEMMA 4 -->
+      <div class="dilemma-section" id="dilemma-4">
+        <div class="dilemma-title">Dilemma 4 — Mariana's Grade</div>
+        <div class="story-box" id="story-4"></div>
+        <div class="sub-section-title">✓ True or False (Dilemma 4)</div>
+        <div id="tf-d4"></div>
+        <div class="sub-section-title">🃏 Vocabulary (Dilemma 4)</div>
+        <div class="mini-deck" id="mini-d4"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLASHCARDS (GLOBAL) -->
+  <div class="panel" id="flashcards">
+    <div class="card">
+      <h2 class="card-title">🃏 Flashcards</h2>
+      <p class="card-subtitle">Tap the card to flip it. 4 vocabulary cards + 4 concept cards.</p>
+      <div class="flashcard-deck">
+        <div class="flashcard" id="flashcard">
+          <div class="flashcard-face flashcard-front">
+            <div class="flashcard-label" id="cardLabelFront">WORD</div>
+            <div class="flashcard-text" id="cardFront">tempted</div>
+            <div class="flashcard-hint">Tap to see the answer</div>
+          </div>
+          <div class="flashcard-face flashcard-back">
+            <div class="flashcard-label" id="cardLabelBack">MEANING</div>
+            <div class="flashcard-text" id="cardBack">wanting to do something you should not do</div>
+            <div class="flashcard-hint">Tap to flip back</div>
+          </div>
+        </div>
+      </div>
+      <div class="deck-controls">
+        <button class="nav-btn" id="prevCard">←</button>
+        <div class="card-counter"><span id="cardNum">1</span> / 8</div>
+        <button class="nav-btn" id="nextCard">→</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TRUE / FALSE (GLOBAL) -->
+  <div class="panel" id="truefalse">
+    <div class="card">
+      <h2 class="card-title">✓ True or False?</h2>
+      <p class="card-subtitle">General questions about all four dilemmas. (Practice)</p>
+      <div class="score-bar">
+        <span>Score: <span id="tfScore">0</span> / 4</span>
+        <button class="reset-btn" onclick="resetTF()">Reset</button>
+      </div>
+      <div id="tfQuestions"></div>
+    </div>
+  </div>
+
+  <!-- FILL BLANKS -->
+  <div class="panel" id="fill">
+    <div class="card">
+      <h2 class="card-title">✏️ Fill in the Blanks</h2>
+      <p class="card-subtitle">1) Tap a blank. 2) Tap a word. Tap a word again to remove it. (Practice)</p>
+      <div class="fill-wordbank">
+        <span class="fill-wordbank-label">WORD BANK</span>
+        <div id="fillWordBank"></div>
+      </div>
+      <div class="score-bar">
+        <span>Score: <span id="fillScore">0</span> / 6</span>
+        <button class="reset-btn" onclick="resetFill()">Reset</button>
+      </div>
+      <div id="fillQuestions"></div>
+    </div>
+  </div>
+
+  <!-- HOMEWORK QUIZ -->
+  <div class="panel" id="quiz">
+    <div class="card">
+      <h2 class="card-title">📝 Homework Quiz</h2>
+      <p class="card-subtitle">This is a graded assessment. Once you click start, you have 5 minutes to submit your answers.</p>
+
+      <!-- SETUP PHASE -->
+      <div id="quizSetup" class="setup-box">
+        <input type="text" id="studentName" class="student-name-input" placeholder="Enter your full name" required />
+        <br>
+        <button id="startQuizBtn" class="start-btn">▶ Start 5-Minute Timer</button>
+      </div>
+
+      <!-- ACTIVE PHASE -->
+      <div id="quizActive" style="display: none;">
+        <div class="score-bar">
+          <span>Time Remaining:</span>
+          <span id="quizTimerDisplay" class="timer-display">05:00</span>
+        </div>
+        <div id="quizQuestions"></div>
+        <button id="submitQuizBtn" class="submit-quiz-btn">Submit Answers</button>
+      </div>
+
+      <!-- SUCCESS PHASE -->
+      <div id="quizSuccess" style="display: none;" class="success-box">
+        <div class="success-icon">✅</div>
+        <h2 class="success-title">Submitted!</h2>
+        <p>Your answers have been securely sent to your teacher.</p>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ============= TABS ============= */
+document.querySelectorAll('.tab').forEach(tab => {
+  tab.addEventListener('click', () => {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+    if (window.speechSynthesis && window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      document.getElementById('playBtn').textContent = '▶';
+    }
+  });
+});
+
+/* ============= DILEMMAS DATA ============= */
+const dilemmas = [
+  {
+    id: 1,
+    title: "Russ at the Airport",
+    sentences: [
+      "Russ is at the airport to catch a flight.",
+      "He is going to his brother's wedding.",
+      "His flight is about to leave.",
+      "He is running through the airport to his gate.",
+      "Suddenly, an old man slips and falls in front of him.",
+      "The man cries out in pain.",
+      "Russ knows that if he stops to help the man, he will miss his flight.",
+      "If he misses his flight, he will miss his brother's wedding.",
+      "Russ runs past the man as if he did not see him.",
+      "Would you have done what Russ did?"
+    ],
+    tf: [
+      { q: "Russ is going to his brother's wedding.", a: true, fb: "Correct. The story says he is going to his brother's wedding." },
+      { q: "Russ stops to help the old man.", a: false, fb: "False. Russ runs past the man and does not help him." },
+      { q: "If Russ helps the man, he will miss his flight.", a: true, fb: "Correct. He will miss his flight if he stops." },
+      { q: "The old man falls in front of Russ.", a: true, fb: "Correct. The man slips and falls in front of him." },
+      { q: "Russ has plenty of time before his flight.", a: false, fb: "False. His flight is about to leave." }
+    ],
+    vocab: [
+      { front: "catch a flight", back: "to take a plane on time" },
+      { front: "wedding", back: "the ceremony when two people get married" },
+      { front: "slip", back: "to slide and lose your balance" },
+      { front: "cry out", back: "to shout loudly because of pain or fear" },
+      { front: "as if", back: "in a way that looks like something is true" }
+    ]
+  },
+  {
+    id: 2,
+    title: "Mike and the Test",
+    sentences: [
+      "Mike is taking a very important history test.",
+      "The test will decide if he passes the class.",
+      "Mike has been studying day and night.",
+      "He feels well prepared.",
+      "But when the test is in front of him, his mind goes blank.",
+      "He cannot remember anything.",
+      "It is as if he never studied.",
+      "Sam is the best student in the class.",
+      "Sam is sitting right next to Mike.",
+      "Sam's paper is close enough for Mike to see the answers.",
+      "The teacher is not paying attention.",
+      "Mike knows that if he copied Sam's answers, the teacher would not see.",
+      "What would you do if you were Mike?"
+    ],
+    tf: [
+      { q: "Mike is taking a math test.", a: false, fb: "False. He is taking a history test." },
+      { q: "Mike did not study for the test.", a: false, fb: "False. He studied day and night." },
+      { q: "Mike's mind goes blank during the test.", a: true, fb: "Correct. He cannot remember anything." },
+      { q: "Sam is sitting far away from Mike.", a: false, fb: "False. Sam is sitting right next to Mike." },
+      { q: "The teacher is watching Mike carefully.", a: false, fb: "False. The teacher is not paying attention." }
+    ],
+    vocab: [
+      { front: "pass the class", back: "to succeed and finish a class" },
+      { front: "well prepared", back: "ready for something" },
+      { front: "mind goes blank", back: "cannot think or remember anything" },
+      { front: "copy", back: "to write the same thing as someone else" },
+      { front: "pay attention", back: "to watch or listen carefully" }
+    ]
+  },
+  {
+    id: 3,
+    title: "The Lifeboat",
+    sentences: [
+      "A ship hits an iceberg.",
+      "Ten passengers crowd into a lifeboat.",
+      "But the lifeboat is only made for nine people.",
+      "The lifeboat slowly starts to sink because of the extra weight.",
+      "If it sinks, all ten passengers will die in the freezing water.",
+      "The captain thinks about his choices.",
+      "He decides to push the weakest person out of the lifeboat.",
+      "He thinks that if he does nothing, everyone will drown.",
+      "This way, only one person dies.",
+      "He says this person would have died anyway.",
+      "The other people on the lifeboat feel that this choice is morally wrong.",
+      "They say that if he did nothing, no one would be responsible for any death.",
+      "If you were the captain, what would you do?"
+    ],
+    tf: [
+      { q: "The lifeboat is made for ten people.", a: false, fb: "False. It is made for nine people." },
+      { q: "The lifeboat is starting to sink.", a: true, fb: "Correct. It is sinking because of the extra weight." },
+      { q: "The captain decides to push the strongest person out.", a: false, fb: "False. He decides to push the weakest person out." },
+      { q: "If the captain does nothing, everyone will be safe.", a: false, fb: "False. If he does nothing, all ten will drown." },
+      { q: "The other passengers think the captain's choice is morally wrong.", a: true, fb: "Correct. They feel his choice is morally wrong." }
+    ],
+    vocab: [
+      { front: "iceberg", back: "a very large piece of ice in the sea" },
+      { front: "lifeboat", back: "a small boat used to save people" },
+      { front: "sink", back: "to go down into the water" },
+      { front: "drown", back: "to die under the water" },
+      { front: "morally wrong", back: "not right; against good values" }
+    ]
+  },
+  {
+    id: 4,
+    title: "Mariana's Grade",
+    sentences: [
+      "Mariana has had problems in science class for years.",
+      "This year, her parents want to help her.",
+      "They told her that if she gets a B on her report card, they will help her buy a cell phone.",
+      "But Mariana has done poorly in the class.",
+      "She knows her final grade will be a D.",
+      "On the day her report card is due, Mariana arrives home from school.",
+      "Her parents greet her with hugs and smiles.",
+      "She looks at the report card and sees that her grade in science is an A.",
+      "Clearly this is a mistake.",
+      "But Mariana can keep quiet and no one will know.",
+      "The cell phone is only one reason she is tempted to say nothing.",
+      "She also dreads seeing the pride on her parents' faces vanish.",
+      "What would you do if you were Mariana?"
+    ],
+    tf: [
+      { q: "Mariana is good at science.", a: false, fb: "False. She has had problems in science for years." },
+      { q: "Mariana's real grade in science is a D.", a: true, fb: "Correct. She knows her real grade is a D." },
+      { q: "The report card shows a grade of A.", a: true, fb: "Correct. The report card shows an A by mistake." },
+      { q: "Her parents are angry when she gets home.", a: false, fb: "False. They greet her with hugs and smiles." },
+      { q: "Mariana wants her parents to be proud of her.", a: true, fb: "Correct. She dreads seeing the pride on their faces vanish." }
+    ],
+    vocab: [
+      { front: "report card", back: "a paper that shows a student's grades" },
+      { front: "tempted", back: "wanting to do something you should not do" },
+      { front: "dread", back: "to be very afraid of something" },
+      { front: "vanish", back: "to disappear" },
+      { front: "motivate", back: "to make someone want to do something" }
+    ]
+  }
+];
+
+/* ============= LISTEN: TTS ============= */
+const transcriptDiv = document.getElementById('transcript');
+let wordSpans = [];
+let fullText = '';
+const wordPositions = [];
+let activeDilemmaId = 1;
+
+function buildTranscript(dilemmaId) {
+  const dilemma = dilemmas.find(d => d.id === dilemmaId);
+  transcriptDiv.innerHTML = '';
+  wordSpans = [];
+  fullText = '';
+  wordPositions.length = 0;
+  let wordIdx = 0;
+
+  const titleDiv = document.createElement('div');
+  titleDiv.className = 'transcript-line';
+  titleDiv.style.fontWeight = '700';
+  titleDiv.style.color = 'var(--gold-light)';
+  titleDiv.textContent = '— ' + dilemma.title + ' —';
+  transcriptDiv.appendChild(titleDiv);
+
+  dilemma.sentences.forEach(sentence => {
+    const lineDiv = document.createElement('div');
+    lineDiv.className = 'transcript-line';
+
+    const words = sentence.split(/(\s+)/);
+    words.forEach(token => {
+      if (token.trim() === '') {
+        lineDiv.appendChild(document.createTextNode(token));
+        fullText += token;
+      } else {
+        const span = document.createElement('span');
+        span.className = 'word';
+        span.id = 'word-' + wordIdx;
+        span.textContent = token;
+        lineDiv.appendChild(span);
+        wordPositions.push({ start: fullText.length, end: fullText.length + token.length, idx: wordIdx });
+        wordSpans.push(span);
+        fullText += token;
+        wordIdx++;
+      }
+    });
+    transcriptDiv.appendChild(lineDiv);
+    fullText += ' ';
+  });
+}
+
+const dilemmaSelector = document.getElementById('dilemmaSelector');
+dilemmas.forEach(d => {
+  const pill = document.createElement('button');
+  pill.className = 'dilemma-pill' + (d.id === 1 ? ' active' : '');
+  pill.textContent = d.id + '. ' + d.title;
+  pill.dataset.id = d.id;
+  pill.addEventListener('click', () => {
+    if (window.speechSynthesis && window.speechSynthesis.speaking) {
+      window.speechSynthesis.cancel();
+      document.getElementById('playBtn').textContent = '▶';
+    }
+    activeDilemmaId = d.id;
+    document.querySelectorAll('.dilemma-pill').forEach(p => p.classList.remove('active'));
+    pill.classList.add('active');
+    buildTranscript(d.id);
+    document.getElementById('dilemma-' + d.id).scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+  dilemmaSelector.appendChild(pill);
+});
+
+buildTranscript(1);
+
+const voiceSelect = document.getElementById('voiceSelect');
+let availableVoices = [];
+
+function loadVoices() {
+  availableVoices = window.speechSynthesis.getVoices().filter(v => v.lang.startsWith('en'));
+  availableVoices.sort((a, b) => {
+    const score = v => {
+      if (v.name.includes('Google')) return 4;
+      if (v.name.includes('Neural') || v.name.includes('Natural')) return 3;
+      if (v.name.includes('Microsoft')) return 2;
+      return 1;
+    };
+    return score(b) - score(a);
+  });
+
+  voiceSelect.innerHTML = '';
+  availableVoices.forEach((v, i) => {
+    const opt = document.createElement('option');
+    opt.value = i;
+    let icon = '';
+    if (v.name.includes('Google')) icon = '⭐ ';
+    else if (v.name.includes('Neural') || v.name.includes('Natural')) icon = '✨ ';
+    opt.textContent = icon + v.name + ' (' + v.lang + ')';
+    voiceSelect.appendChild(opt);
+  });
+}
+
+if (window.speechSynthesis) {
+  loadVoices();
+  window.speechSynthesis.onvoiceschanged = loadVoices;
+}
+
+let currentSpeed = 1;
+document.querySelectorAll('.speed-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.speed-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    currentSpeed = parseFloat(btn.dataset.speed);
+  });
+});
+
+const playBtn = document.getElementById('playBtn');
+let utterance = null;
+
+playBtn.addEventListener('click', () => {
+  if (!window.speechSynthesis) {
+    alert('Speech synthesis is not supported in this browser.');
+    return;
+  }
+  if (window.speechSynthesis.speaking) {
+    window.speechSynthesis.cancel();
+    playBtn.textContent = '▶';
+    return;
+  }
+  wordSpans.forEach(s => s.classList.remove('active', 'spoken'));
+  utterance = new SpeechSynthesisUtterance(fullText);
+  if (availableVoices.length && voiceSelect.value !== '') {
+    utterance.voice = availableVoices[voiceSelect.value];
+  }
+  utterance.rate = currentSpeed;
+  utterance.pitch = 1;
+
+  utterance.onboundary = (e) => {
+    if (e.name === 'word' || e.charIndex !== undefined) {
+      const charIdx = e.charIndex;
+      const wp = wordPositions.find(p => charIdx >= p.start && charIdx < p.end);
+      if (wp) {
+        wordSpans.forEach((s, i) => {
+          s.classList.remove('active');
+          if (i < wp.idx) s.classList.add('spoken');
+        });
+        wordSpans[wp.idx].classList.add('active');
+        wordSpans[wp.idx].scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    }
+  };
+
+  utterance.onend = () => { playBtn.textContent = '▶'; wordSpans.forEach(s => s.classList.remove('active')); };
+  utterance.onerror = () => { playBtn.textContent = '▶'; };
+  window.speechSynthesis.speak(utterance);
+  playBtn.textContent = '⏸';
+});
+
+/* ============= RENDER STORIES, MINI TF, MINI VOCAB FOR EACH DILEMMA ============= */
+dilemmas.forEach(d => {
+  const storyEl = document.getElementById('story-' + d.id);
+  const storyText = d.sentences.slice(0, -1).join(' ');
+  const question = d.sentences[d.sentences.length - 1];
+  storyEl.innerHTML = storyText + '<span class="question-prompt">' + question + '</span>';
+
+  const tfEl = document.getElementById('tf-d' + d.id);
+  d.tf.forEach((item, i) => {
+    const block = document.createElement('div');
+    block.className = 'question-block';
+    block.innerHTML = `
+      <div class="question-text"><strong>${i + 1}.</strong> ${item.q}</div>
+      <div class="tf-buttons">
+        <button class="tf-btn" data-val="true">TRUE</button>
+        <button class="tf-btn" data-val="false">FALSE</button>
+      </div>
+      <div class="feedback"></div>
+    `;
+    tfEl.appendChild(block);
+    block.querySelectorAll('.tf-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (block.classList.contains('answered')) return;
+        block.classList.add('answered');
+        const userAns = btn.dataset.val === 'true';
+        const correct = userAns === item.a;
+        block.querySelectorAll('.tf-btn').forEach(b => b.disabled = true);
+        const fb = block.querySelector('.feedback');
+        if (correct) {
+          btn.classList.add('selected', 'right');
+          block.classList.add('correct');
+          fb.classList.add('show', 'right-fb');
+          fb.textContent = '✓ ' + item.fb;
+        } else {
+          btn.classList.add('selected', 'wrong');
+          block.classList.add('wrong');
+          fb.classList.add('show', 'wrong-fb');
+          fb.textContent = '✗ ' + item.fb;
+        }
+      });
+    });
+  });
+
+  const miniEl = document.getElementById('mini-d' + d.id);
+  d.vocab.forEach(v => {
+    const card = document.createElement('div');
+    card.className = 'mini-card';
+    card.innerHTML = `
+      <div class="mini-card-inner">
+        <div class="mini-face mini-front">${v.front}</div>
+        <div class="mini-face mini-back">${v.back}</div>
+      </div>
+    `;
+    card.addEventListener('click', () => card.classList.toggle('flipped'));
+    miniEl.appendChild(card);
+  });
+});
+
+/* ============= GLOBAL FLASHCARDS ============= */
+const flashcards = [
+  { type: 'word', label: 'WORD', front: 'tempted', back: 'wanting to do something you should not do' },
+  { type: 'word', label: 'WORD', front: 'dread', back: 'to be very afraid of something' },
+  { type: 'word', label: 'WORD', front: 'morally wrong', back: 'not right; against good values' },
+  { type: 'word', label: 'WORD', front: 'responsible', back: 'the one who must answer for an action' },
+  { type: 'concept', label: 'TRUE OR FALSE?', front: 'Russ stopped to help the old man at the airport.', back: 'FALSE — Russ ran past him and did not help.' },
+  { type: 'concept', label: 'TRUE OR FALSE?', front: 'Mike studied a lot before his history test.', back: 'TRUE — Mike studied day and night.' },
+  { type: 'concept', label: 'TRUE OR FALSE?', front: 'The lifeboat in Dilemma 3 was made for ten people.', back: 'FALSE — It was made for only nine people.' },
+  { type: 'concept', label: 'TRUE OR FALSE?', front: 'Mariana really earned an A in science class.', back: 'FALSE — Her real grade was a D. The A was a mistake.' }
+];
+
+let currentCard = 0;
+const flashcard = document.getElementById('flashcard');
+const cardFront = document.getElementById('cardFront');
+const cardBack = document.getElementById('cardBack');
+const cardLabelFront = document.getElementById('cardLabelFront');
+const cardLabelBack = document.getElementById('cardLabelBack');
+const cardNum = document.getElementById('cardNum');
+
+function showCard(i) {
+  flashcard.classList.remove('flipped');
+  cardFront.textContent = flashcards[i].front;
+  cardBack.textContent = flashcards[i].back;
+  cardLabelFront.textContent = flashcards[i].label;
+  cardLabelBack.textContent = flashcards[i].type === 'word' ? 'MEANING' : 'ANSWER';
+  cardNum.textContent = i + 1;
+}
+
+flashcard.addEventListener('click', () => { flashcard.classList.toggle('flipped'); });
+document.getElementById('nextCard').addEventListener('click', (e) => { e.stopPropagation(); currentCard = (currentCard + 1) % flashcards.length; showCard(currentCard); });
+document.getElementById('prevCard').addEventListener('click', (e) => { e.stopPropagation(); currentCard = (currentCard - 1 + flashcards.length) % flashcards.length; showCard(currentCard); });
+showCard(0);
+
+/* ============= GLOBAL TRUE / FALSE ============= */
+const tfData = [
+  { q: "Russ misses his chance to help the old man because he is in a hurry.", a: true, fb: "Correct. He runs past the man so he will not miss his flight." },
+  { q: "Mike is sure he will fail because he never studied for the test.", a: false, fb: "False. Mike studied day and night, but his mind went blank." },
+  { q: "The captain in the lifeboat story decides to do nothing.", a: false, fb: "False. He decides to push the weakest person out of the lifeboat." },
+  { q: "Mariana is tempted to keep quiet about the wrong grade.", a: true, fb: "Correct. She is tempted because of the cell phone and her parents' pride." }
+];
+
+const tfDiv = document.getElementById('tfQuestions');
+let tfScore = 0;
+function renderTF() {
+  tfDiv.innerHTML = '';
+  tfScore = 0;
+  document.getElementById('tfScore').textContent = '0';
+  tfData.forEach((item, i) => {
+    const block = document.createElement('div');
+    block.className = 'question-block';
+    block.innerHTML = `
+      <div class="question-text"><strong>${i + 1}.</strong> ${item.q}</div>
+      <div class="tf-buttons">
+        <button class="tf-btn" data-val="true">TRUE</button>
+        <button class="tf-btn" data-val="false">FALSE</button>
+      </div>
+      <div class="feedback" id="tfFb${i}"></div>
+    `;
+    tfDiv.appendChild(block);
+    block.querySelectorAll('.tf-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (block.classList.contains('answered')) return;
+        block.classList.add('answered');
+        const userAns = btn.dataset.val === 'true';
+        const correct = userAns === item.a;
+        block.querySelectorAll('.tf-btn').forEach(b => b.disabled = true);
+        const fb = document.getElementById('tfFb' + i);
+        if (correct) {
+          btn.classList.add('selected', 'right');
+          block.classList.add('correct');
+          fb.classList.add('show', 'right-fb');
+          fb.textContent = '✓ ' + item.fb;
+          tfScore++;
+          document.getElementById('tfScore').textContent = tfScore;
+        } else {
+          btn.classList.add('selected', 'wrong');
+          block.classList.add('wrong');
+          fb.classList.add('show', 'wrong-fb');
+          fb.textContent = '✗ ' + item.fb;
+        }
+      });
+    });
+  });
+}
+function resetTF() { renderTF(); }
+renderTF();
+
+/* ============= FILL BLANKS ============= */
+const fillData = [
+  { parts: ["Russ runs past the old man because he does not want to ", " his flight."], answer: 'miss' },
+  { parts: ["When Mike sees the test, his ", " goes blank."], answer: 'mind' },
+  { parts: ["The lifeboat starts to ", " because of the extra weight."], answer: 'sink' },
+  { parts: ["The other passengers think the captain's choice is ", " wrong."], answer: 'morally' },
+  { parts: ["Mariana is ", " to keep quiet about the wrong grade."], answer: 'tempted' },
+  { parts: ["Mariana ", " seeing the pride on her parents' faces disappear."], answer: 'dreads' }
+];
+
+const fillDiv = document.getElementById('fillQuestions');
+const fillWordBank = document.getElementById('fillWordBank');
+let fillScore = 0;
+let activeBlank = null;
+let blankStates = []; 
+
+function renderFill() {
+  fillDiv.innerHTML = '';
+  fillWordBank.innerHTML = '';
+  fillScore = 0;
+  activeBlank = null;
+  blankStates = fillData.map(() => null);
+  document.getElementById('fillScore').textContent = '0';
+
+  const allWords = fillData.map(f => f.answer);
+  const shuffled = [...allWords].sort(() => Math.random() - 0.5);
+
+  shuffled.forEach((word, idx) => {
+    const chip = document.createElement('span');
+    chip.className = 'bank-word';
+    chip.textContent = word;
+    chip.dataset.word = word;
+    chip.dataset.bankId = 'bank-' + idx;
+    chip.addEventListener('click', () => handleBankClick(chip));
+    fillWordBank.appendChild(chip);
+  });
+
+  fillData.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'fill-q';
+    div.innerHTML = `<p><strong>${i + 1}.</strong> ${item.parts[0]}<span class="fill-blank placeholder" data-blank-id="${i}">_____</span>${item.parts[1]}</p>`;
+    fillDiv.appendChild(div);
+    const blank = div.querySelector('.fill-blank');
+    blank.addEventListener('click', () => handleBlankClick(blank, i));
+  });
+}
+
+function handleBlankClick(blank, idx) {
+  if (blankStates[idx]) { returnWordToBank(idx); return; }
+  document.querySelectorAll('.fill-blank').forEach(b => b.classList.remove('active'));
+  blank.classList.add('active');
+  activeBlank = idx;
+}
+
+function handleBankClick(chip) {
+  if (chip.classList.contains('used')) return;
+  if (activeBlank === null) return; 
+
+  const idx = activeBlank;
+  const word = chip.dataset.word;
+  const bankId = chip.dataset.bankId;
+
+  if (blankStates[idx]) returnWordToBank(idx, false);
+
+  const blank = document.querySelector(`.fill-blank[data-blank-id="${idx}"]`);
+  blank.textContent = word;
+  blank.classList.remove('placeholder', 'active', 'correct', 'wrong');
+  blank.classList.add('filled');
+  blankStates[idx] = { word: word, bankId: bankId };
+  chip.classList.add('used');
+  checkBlank(idx);
+
+  activeBlank = null;
+  blank.classList.remove('active');
+}
+
+function returnWordToBank(idx, recount = true) {
+  const state = blankStates[idx];
+  if (!state) return;
+  const chip = document.querySelector(`.bank-word[data-bank-id="${state.bankId}"]`);
+  if (chip) chip.classList.remove('used');
+
+  const blank = document.querySelector(`.fill-blank[data-blank-id="${idx}"]`);
+  blank.textContent = '_____';
+  blank.classList.remove('filled', 'correct', 'wrong', 'active');
+  blank.classList.add('placeholder');
+
+  if (recount && blank.dataset.wasCorrect === 'true') {
+    fillScore = Math.max(0, fillScore - 1);
+    document.getElementById('fillScore').textContent = fillScore;
+  }
+  blank.dataset.wasCorrect = 'false';
+  blankStates[idx] = null;
+}
+
+function checkBlank(idx) {
+  const blank = document.querySelector(`.fill-blank[data-blank-id="${idx}"]`);
+  const state = blankStates[idx];
+  if (!state) return;
+
+  const correctAnswer = fillData[idx].answer.toLowerCase();
+  if (state.word.toLowerCase() === correctAnswer) {
+    blank.classList.remove('wrong');
+    blank.classList.add('correct');
+    if (blank.dataset.wasCorrect !== 'true') {
+      fillScore++;
+      document.getElementById('fillScore').textContent = fillScore;
+      blank.dataset.wasCorrect = 'true';
+    }
+  } else {
+    blank.classList.remove('correct');
+    blank.classList.add('wrong');
+    blank.dataset.wasCorrect = 'false';
+  }
+}
+function resetFill() { renderFill(); }
+renderFill();
+
+/* ============= HOMEWORK QUIZ (SECURE SUBMISSION) ============= */
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxZxJi382ulDmIGSSKpwPkGi7hq-P6FTIJQhTy7wbYZrkYFDJB8wWWPehA1YXOc4ne3/exec"; 
+
+const quizData = [
+  { q: "Why does Russ run past the old man?", options: ["He does not see him", "He does not want to miss his flight to his brother's wedding", "He is afraid of the man", "He is calling for help"], a: 1 },
+  { q: "What happens to Mike when he sees the test?", options: ["He smiles because the test is easy", "He starts to cry", "His mind goes blank", "He leaves the room"], a: 2 },
+  { q: "What does the captain in the lifeboat decide to do?", options: ["He swims away from the boat", "He pushes the weakest person out of the lifeboat", "He calls for another ship", "He does nothing and waits"], a: 1 },
+  { q: "Why is Mariana tempted to say nothing about her grade?", options: ["She wants the cell phone and does not want her parents to feel sad", "She wants to fail the class", "She does not care about the grade", "She is angry with her parents"], a: 0 },
+  { q: "What do all four stories show?", options: ["Travel is dangerous", "School is hard", "Sometimes it is not easy to know what is right or wrong", "Animals are smarter than people"], a: 2 }
+];
+
+let quizTimeLeft = 300; // 5 minutes in seconds
+let quizTimerInterval = null;
+let quizIsSending = false;
+let studentAnswers = {};
+
+const quizSetupDiv = document.getElementById('quizSetup');
+const quizActiveDiv = document.getElementById('quizActive');
+const quizSuccessDiv = document.getElementById('quizSuccess');
+const studentNameInput = document.getElementById('studentName');
+const startQuizBtn = document.getElementById('startQuizBtn');
+const submitQuizBtn = document.getElementById('submitQuizBtn');
+const quizTimerDisplay = document.getElementById('quizTimerDisplay');
+const quizDiv = document.getElementById('quizQuestions');
+
+function renderHomeworkQuiz() {
+  quizDiv.innerHTML = '';
+  quizData.forEach((item, i) => {
+    const div = document.createElement('div');
+    div.className = 'quiz-q';
+    let optionsHTML = '';
+    item.options.forEach((opt, j) => {
+      // Adding A, B, C, D to options
+      optionsHTML += `<button class="quiz-option" data-q="${i}" data-opt="${j}">${String.fromCharCode(65 + j)}. ${opt}</button>`;
+    });
+    div.innerHTML = `
+      <div class="quiz-q-text">${i + 1}. ${item.q}</div>
+      <div class="quiz-options">${optionsHTML}</div>
+    `;
+    quizDiv.appendChild(div);
+  });
+
+  // Handle clicking options (acting like radio buttons)
+  quizDiv.querySelectorAll('.quiz-option').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if (quizTimeLeft <= 0 || quizIsSending) return; // Locked if time is up or sending
+      
+      const qIndex = btn.dataset.q;
+      const optIndex = btn.dataset.opt;
+      const parent = btn.parentElement;
+      
+      // Remove selection from others, add to clicked
+      parent.querySelectorAll('.quiz-option').forEach(b => b.classList.remove('selected-ans'));
+      btn.classList.add('selected-ans');
+      
+      // Save their answer as the letter (A, B, C, D)
+      studentAnswers[qIndex] = String.fromCharCode(65 + parseInt(optIndex)); 
+    });
+  });
+}
+
+// Start Timer Button
+startQuizBtn.addEventListener('click', () => {
+  if (!studentNameInput.value.trim()) {
+    alert("Please enter your name first!");
+    return;
+  }
+  
+  quizSetupDiv.style.display = 'none';
+  quizActiveDiv.style.display = 'block';
+  renderHomeworkQuiz();
+
+  quizTimerInterval = setInterval(() => {
+    quizTimeLeft--;
+    const m = Math.floor(quizTimeLeft / 60).toString().padStart(2, '0');
+    const s = (quizTimeLeft % 60).toString().padStart(2, '0');
+    quizTimerDisplay.textContent = `${m}:${s}`;
+
+    // Turn red in last 10 seconds
+    if (quizTimeLeft <= 10) {
+      quizTimerDisplay.style.color = '#c44';
+    }
+
+    // When time is up
+    if (quizTimeLeft <= 0) {
+      clearInterval(quizTimerInterval);
+      submitQuizBtn.textContent = "Time is up! Form Locked.";
+      submitQuizBtn.disabled = true;
+    }
+  }, 1000);
+});
+
+// Submit Answers Button
+submitQuizBtn.addEventListener('click', () => {
+  if (quizTimeLeft <= 0 || quizIsSending) return;
+
+  quizIsSending = true;
+  submitQuizBtn.textContent = "Sending securely...";
+  submitQuizBtn.style.opacity = '0.7';
+
+  const correctLetterAnswers = quizData.map(item => String.fromCharCode(65 + item.a)); 
+  let score = 0;
+  let formattedAnswers = [];
+
+  quizData.forEach((_, i) => {
+    const ans = studentAnswers[i] || "No Answer";
+    if (ans === correctLetterAnswers[i]) {
+      score++;
+    }
+    formattedAnswers.push(`Q${i+1}: ${ans}`);
+  });
+
+  const combinedAnswerString = `Score: ${score}/5 | ` + formattedAnswers.join(' | ');
+
+  const data = new FormData();
+  data.append('studentName', studentNameInput.value.trim());
+  data.append('answer', combinedAnswerString);
+
+  fetch(GOOGLE_SCRIPT_URL, {
+    method: 'POST',
+    body: data,
+    mode: 'no-cors'
+  }).then(() => {
+    clearInterval(quizTimerInterval); 
+    quizActiveDiv.style.display = 'none';
+    quizSuccessDiv.style.display = 'block';
+  }).catch(err => {
+    console.error(err);
+    alert("There was an issue sending your assignment. Please check your connection and try again.");
+    quizIsSending = false;
+    submitQuizBtn.textContent = "Submit Answers";
+    submitQuizBtn.style.opacity = '1';
+  });
+});
+
+</script>
+</body>
+</html>
