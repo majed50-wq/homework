@@ -1,0 +1,2172 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>الاحتكار - لعبة العقارات الكلاسيكية</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&family=Reem+Kufi:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --felt:#f4f6f8; --felt2:#e7eaee; --felt3:#fbfcfd;
+  --paper:#d6dade; --paper2:#c7ccd2; --ink:#152019;
+  --gold:#5e6772; --gold2:#454d58;
+  --chance:#e8821e; --chest:#2f6fb0;
+  --line:#1b1b1b;
+  --brown:#7b4a2b; --lblue:#9bd2ec; --pink:#cf3d7a; --orange:#e8821e;
+  --red:#d62828; --yellow:#f2c200; --green:#2f9e44; --dblue:#1f4e9c;
+  --rail:#2b2b2b; --util:#5b6470;
+  --p0:#e63946; --p1:#1d8cf2; --p2:#9b3fd1; --p3:#f0a500;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:'Cairo','Tajawal','Segoe UI',Tahoma,sans-serif;
+  background:
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='140' height='140'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix type='saturate' values='0'/></filter><rect width='140' height='140' filter='url(%23n)' opacity='0.05'/></svg>") repeat,
+    radial-gradient(1100px 650px at 50% -6%, #dfe2e6 0%, transparent 58%),
+    linear-gradient(160deg,#cbcfd4 0%,#b8bdc4 55%,#a6abb4 100%);
+  color:#262a30;
+  min-height:100vh;
+  -webkit-text-size-adjust:100%;
+}
+h1,h2,h3{font-family:'Reem Kufi','Cairo',serif;margin:0;font-weight:700;}
+button{font-family:inherit;cursor:pointer;}
+
+/* ---------- TOP BAR ---------- */
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 14px;
+  background:#e7ecf2;
+  border-bottom:2px solid var(--gold);
+  position:sticky;top:0;z-index:30;
+  backdrop-filter:blur(4px);
+}
+.brand{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;}
+.brand h1{
+  font-size:clamp(20px,5vw,30px);color:var(--gold);letter-spacing:1px;
+  text-shadow:0 1px 0 rgba(0,0,0,.12);
+}
+.brand .sub{font-size:clamp(10px,2.6vw,13px);color:#737a84;opacity:.95;}
+.topbtns{display:flex;gap:8px;}
+.btn{
+  border:1px solid #d6d6dc;background:#eaeef4;color:#2a2e34;
+  padding:8px 12px;border-radius:10px;font-size:13px;font-weight:700;
+  transition:transform .08s, background .15s;
+}
+.btn:hover{background:#dde3eb;}
+.btn:active{transform:scale(.96);}
+.btn.gold{background:linear-gradient(180deg,var(--gold),var(--gold2));color:#fff;border-color:var(--gold2);}
+.btn.danger{background:#7a1f1f;border-color:#a33;}
+.btn.ghost{background:transparent;}
+.btn:disabled{opacity:.4;cursor:not-allowed;}
+.btn.lg{padding:12px 14px;font-size:15px;width:100%;}
+
+/* ---------- LAYOUT ---------- */
+.main{
+  display:flex;gap:16px;align-items:flex-start;
+  padding:14px;max-width:1180px;margin:0 auto;
+}
+.board-wrap{
+  flex:0 0 auto;
+  position:relative;
+  overflow:hidden;
+  align-self:center;
+  width:min(94vw, 68vh, 680px);
+  height:min(94vw, 68vh, 680px);
+  border:6px solid #5e6772;
+  border-radius:12px;
+  background:var(--felt2);
+  box-shadow:0 18px 50px rgba(30,40,60,.22), inset 0 0 0 2px #f1f3f7;
+  touch-action:pan-y;
+}
+.side{flex:1 1 320px;min-width:280px;display:flex;flex-direction:column;gap:12px;}
+@media(max-width:880px){
+  .main{flex-direction:column;align-items:stretch;padding:10px;}
+  .board-wrap{align-self:center;}
+  .side{width:100%;}
+}
+
+/* ---------- BOARD ---------- */
+#board{
+  position:relative;
+  direction:ltr;
+  width:100%;height:100%;
+  display:grid;
+  grid-template-columns:repeat(11,1fr);
+  grid-template-rows:repeat(11,1fr);
+  background:var(--felt);
+  gap:0;
+  transform-origin:0 0;
+  transition:transform .40s cubic-bezier(.2,.62,.3,1);
+  will-change:transform;
+}
+
+/* ---------- CAMERA HUD (dice + current turn, stays fixed over the zoomed board) ---------- */
+.cam-hud{
+  position:absolute;top:8px;left:8px;right:8px;z-index:14;
+  display:none;align-items:center;justify-content:space-between;gap:10px;
+  pointer-events:none;direction:rtl;
+}
+#boardCam.zoomed .cam-hud{display:flex;}
+.cam-hud .ch-turn:empty{display:none;}
+
+/* floating money +/- indicators */
+.fx-layer{position:absolute;inset:0;z-index:13;pointer-events:none;overflow:hidden;direction:rtl;}
+.fx-card{position:absolute;left:50%;top:46%;transform:translate(-50%,-50%);display:flex;flex-direction:column;gap:7px;align-items:center;opacity:1;transition:transform 1.5s ease-out, opacity 1.5s ease-out;}
+.fx-card.fx-go{transform:translate(-50%,-150%);opacity:0;}
+.fx-line{display:flex;align-items:center;gap:10px;background:rgba(238,242,247,.97);border:1px solid #dcdce2;border-radius:24px;padding:6px 15px;box-shadow:0 8px 22px rgba(20,25,35,.28);font-weight:800;white-space:nowrap;}
+.fx-line .fx-nm{color:#3a3e44;font-size:13px;}
+.fx-line .fx-d{font-size:18px;}
+.fx-line .fx-d.pos{color:#16a34a;}
+.fx-line .fx-d.neg{color:#dc2626;}
+
+/* fullscreen layout (iPad / desktop) */
+body.fs .board-wrap{width:min(90vw,84vh,880px);height:min(90vw,84vh,880px);}
+body.fs .brand .sub{display:none;}
+body.fs .main{max-width:1500px;}
+.cam-hud .ch-turn{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(231,236,242,.95);border:1px solid var(--gold);
+  border-radius:30px;padding:6px 12px;backdrop-filter:blur(6px);
+  box-shadow:0 4px 14px rgba(20,25,35,.22);
+}
+.cam-hud .ch-turn .dot{width:18px;height:18px;border-radius:50%;border:2px solid #fff;box-shadow:0 0 0 1px #ccc;display:flex;align-items:center;justify-content:center;font-size:11px;}
+.cam-hud .ch-turn .nm{font-size:13px;font-weight:800;color:#26292f;}
+.cam-hud .ch-turn .bal{font-size:13px;font-weight:800;color:#4a525e;}
+.cam-hud .ch-dice{display:flex;gap:6px;background:rgba(231,236,242,.95);border:1px solid var(--gold2);border-radius:12px;padding:5px;backdrop-filter:blur(6px);box-shadow:0 4px 14px rgba(20,25,35,.22);}
+.die.sm{width:30px;height:30px;border-radius:7px;padding:3px;box-shadow:0 2px 6px rgba(0,0,0,.4);}
+
+/* ---------- ZOOM CONTROLS (below the board) ---------- */
+.board-col{flex:0 0 auto;align-self:center;display:flex;flex-direction:column;align-items:center;gap:10px;}
+.cam-ctrl{
+  display:flex;flex-direction:row;gap:12px;justify-content:center;align-items:center;
+}
+.cam-ctrl button{
+  width:46px;height:42px;border-radius:11px;
+  border:1px solid #d6d6dc;background:#eaeef4;color:#2a2e34;
+  font-size:20px;font-weight:900;line-height:1;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 3px 10px rgba(20,25,35,.16);
+}
+.cam-ctrl button:active{transform:scale(.92);background:#dce2ea;}
+
+.space{
+  position:relative;background:var(--paper);
+  border:1px solid var(--line);
+  overflow:hidden;
+  font-size:clamp(6px,1.6vw,11px);
+  line-height:1.08;
+  display:flex;
+}
+.space .content{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-start;
+  text-align:center;padding:2px 1px;gap:1px;width:100%;
+}
+.space .nm{direction:rtl;color:#0c1119;font-weight:800;font-family:'Cairo';}
+.space .pr{direction:ltr;color:#242a32;font-weight:800;font-size:.92em;}
+.space .band{position:absolute;background:var(--bc,#999);border-bottom:1px solid var(--line);}
+.space.bottom .band{top:0;left:0;right:0;height:20%;border-bottom:1px solid var(--line);}
+.space.top    .band{bottom:0;left:0;right:0;height:20%;border-top:1px solid var(--line);border-bottom:none;}
+.space.left   .band{top:0;bottom:0;right:0;width:20%;border-left:1px solid var(--line);border-bottom:none;}
+.space.right  .band{top:0;bottom:0;left:0;width:20%;border-right:1px solid var(--line);border-bottom:none;}
+.space.bottom .content{padding-top:21%;}
+.space.top    .content{padding-bottom:21%;justify-content:flex-end;}
+.space.left   .content{padding-right:21%;}
+.space.right  .content{padding-left:21%;}
+
+.space .icon{font-size:1.9em;line-height:1;}
+.space.special .nm{font-size:1.05em;}
+
+/* corners */
+.space.corner{font-size:clamp(8px,1.95vw,13px);}
+.space.corner .content{justify-content:center;padding:3px;}
+.corner .cbig{font-weight:900;font-family:'Reem Kufi';color:#10160f;font-size:1.25em;}
+.corner .csm{color:#444;font-size:.85em;}
+#sp0{background:linear-gradient(135deg,#d6dade 55%,#c2c8cf 55%);}
+#sp0 .cbig{color:#c0392b;}
+#sp0 .arrow{font-size:1.5em;color:#c0392b;}
+#sp10{background:linear-gradient(135deg,#ffd9d9 0 38%,#d6dade 38%);}
+#sp20{background:radial-gradient(circle at 50% 40%,#cfe9ff,#d6dade 70%);}
+#sp30 .cbig{color:#8a1414;}
+
+/* houses / hotels on band */
+.houses{position:absolute;display:flex;gap:1px;align-items:center;justify-content:center;}
+.space.bottom .houses,.space.top .houses{top:50%;left:0;right:0;transform:translateY(-50%);flex-direction:row;}
+.space.left .houses,.space.right .houses{top:0;bottom:0;width:20%;flex-direction:column;}
+.space.left .houses{right:0;} .space.right .houses{left:0;}
+.hpip{width:4px;height:4px;background:#0a7a2a;border:.5px solid #034d18;border-radius:1px;}
+.hotel{width:7px;height:5px;background:#c01818;border:.5px solid #6b0a0a;border-radius:1px;}
+
+/* owner stripe */
+.ownmark{position:absolute;width:7px;height:7px;border-radius:50%;border:1.5px solid #fff;box-shadow:0 0 0 1px #000;}
+.space.bottom .ownmark{bottom:1px;left:1px;}
+.space.top .ownmark{top:1px;left:1px;}
+.space.left .ownmark{bottom:1px;left:1px;}
+.space.right .ownmark{bottom:1px;right:1px;}
+.mortgaged{background:repeating-linear-gradient(45deg,#e7dcc2,#e7dcc2 4px,#cdbf9c 4px,#cdbf9c 8px)!important;}
+.mortgaged .content{opacity:.55;}
+
+/* tokens */
+.tokens{position:absolute;display:flex;flex-wrap:wrap;gap:1px;justify-content:center;align-items:center;pointer-events:none;z-index:6;}
+.space.bottom .tokens,.space.top .tokens{left:2px;right:2px;}
+.space.bottom .tokens{bottom:1px;} .space.top .tokens{bottom:1px;}
+.space.left .tokens,.space.right .tokens{bottom:1px;left:2px;right:2px;}
+.space.corner .tokens{position:absolute;bottom:2px;left:2px;right:2px;}
+.token{
+  width:21px;height:21px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:12px;line-height:1;color:#fff;font-weight:900;
+  border:2.5px solid #fff;
+  box-shadow:0 2px 5px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.35);
+}
+.token.cur{
+  width:28px;height:28px;font-size:16px;
+  border:3px solid #fff;
+  outline:3px solid var(--gold);outline-offset:2px;
+  box-shadow:0 0 0 4px rgba(94,103,114,.45), 0 3px 7px rgba(0,0,0,.6);
+  z-index:7;position:relative;
+  animation:bob .55s infinite alternate;
+}
+@keyframes bob{from{transform:translateY(0)}to{transform:translateY(-5px)}}
+.space.hot .content{animation:flash .5s 2;}
+@keyframes flash{50%{background:#fff6cf;}}
+
+/* ---------- CENTER ---------- */
+.center{
+  grid-row:2/11;grid-column:2/11;
+  background:
+    repeating-linear-gradient(118deg, rgba(120,130,148,0) 0 20px, rgba(120,130,148,.10) 22px, rgba(120,130,148,0) 25px),
+    repeating-linear-gradient(64deg, rgba(135,145,160,0) 0 30px, rgba(135,145,160,.07) 31px, rgba(135,145,160,0) 34px),
+    linear-gradient(135deg,#d3d8de 0%,#c6ccd3 40%,#d0d5db 62%,#bcc2ca 100%);
+  border:2px solid #b3bac3;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:10px;padding:10px;position:relative;direction:rtl;
+}
+.center .logo{
+  transform:rotate(-7deg);
+  text-align:center;
+}
+.center .logo .big{font-family:'Reem Kufi';font-size:clamp(26px,6.4vw,52px);color:#3d4654;text-shadow:2px 2px 0 rgba(255,255,255,.5),0 0 16px rgba(94,103,114,.25);letter-spacing:2px;}
+.center .logo .tag{font-size:clamp(9px,2.2vw,13px);color:#4a525e;letter-spacing:1px;}
+.decks{display:flex;gap:clamp(10px,4vw,34px);}
+.deck{
+  width:clamp(54px,15vw,96px);height:clamp(34px,9vw,58px);
+  border-radius:7px;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  color:#fff;font-weight:800;text-align:center;font-size:clamp(8px,2vw,12px);
+  box-shadow:0 5px 0 rgba(0,0,0,.35),0 8px 14px rgba(0,0,0,.4);
+  border:2px solid rgba(255,255,255,.5);
+}
+.deck.chance{background:linear-gradient(150deg,#f3a13f,#d4730a);transform:rotate(4deg);}
+.deck.chest{background:linear-gradient(150deg,#4a90d9,#235a96);transform:rotate(-4deg);}
+.deck .di{font-size:1.7em;}
+.dice-area{display:flex;gap:12px;align-items:center;}
+.die{
+  width:clamp(34px,8vw,46px);height:clamp(34px,8vw,46px);
+  background:#fafafa;border-radius:10px;border:1px solid #9aa0ab;
+  box-shadow:0 4px 10px rgba(30,40,60,.28),inset 0 -3px 0 rgba(0,0,0,.08);
+  display:grid;grid-template-columns:repeat(3,1fr);grid-template-rows:repeat(3,1fr);
+  padding:5px;gap:1px;
+}
+.die.rolling{animation:shake .4s linear;}
+@keyframes shake{0%,100%{transform:translateY(0) rotate(0)}25%{transform:translateY(-6px) rotate(-12deg)}75%{transform:translateY(-4px) rotate(12deg)}}
+.pip{width:100%;height:100%;border-radius:50%;background:transparent;}
+.pip.on{background:#1a1a1a;align-self:center;justify-self:center;width:7px;height:7px;}
+.center .nowturn{font-size:clamp(11px,2.6vw,15px);color:#fff;font-weight:800;background:rgba(0,0,0,.3);padding:5px 12px;border-radius:20px;}
+
+/* ---------- SIDE PANELS ---------- */
+.panel{background:#e3e9f0;border:1px solid #dde0e5;border-radius:14px;padding:12px;box-shadow:0 4px 16px rgba(30,35,45,.07);}
+.turn-card{background:#e3e9f0;border:1px solid var(--gold);border-radius:14px;padding:12px;box-shadow:0 4px 16px rgba(30,35,45,.07);}
+.turn-card .who{display:flex;align-items:center;gap:10px;}
+.turn-card .av{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;border:2px solid #fff;}
+.turn-card .who b{font-size:17px;}
+.turn-card .bal{margin-top:6px;font-size:15px;color:var(--gold);font-weight:800;}
+.actions{display:flex;flex-direction:column;gap:8px;}
+.actions .row{display:flex;gap:8px;}
+.actions .row .btn{flex:1;}
+.hint{font-size:12px;color:#5f5640;opacity:.95;text-align:center;min-height:16px;font-weight:600;}
+
+#playersList{display:flex;flex-direction:column;gap:7px;}
+.prow{display:flex;align-items:center;gap:9px;background:rgba(255,255,255,.05);border-radius:10px;padding:7px 9px;border:1px solid rgba(255,255,255,.08);}
+.prow.active{border-color:var(--gold);background:rgba(94,103,114,.14);}
+.prow.dead{opacity:.4;filter:grayscale(1);}
+.prow .av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;border:2px solid #fff;flex:0 0 auto;}
+.prow .info{flex:1;min-width:0;}
+.prow .info .n{font-weight:700;font-size:13px;}
+.prow .info .m{font-size:12px;color:var(--gold);font-weight:800;}
+.prow .cnt{font-size:11px;color:#f3e2cc;}
+
+.log{height:150px;overflow-y:auto;display:flex;flex-direction:column;gap:4px;font-size:12.5px;direction:rtl;}
+.log .l{background:#f4f4f7;padding:5px 8px;border-radius:8px;border-right:3px solid var(--gold2);}
+.log .l.good{border-right-color:#16a34a;} .log .l.bad{border-right-color:#dc2626;}
+.panel h3{font-size:14px;color:var(--gold);margin-bottom:8px;}
+
+/* ---------- MODALS ---------- */
+#overlay{position:fixed;inset:0;background:rgba(0,0,0,.66);display:none;align-items:center;justify-content:center;z-index:60;padding:14px;}
+#overlay.show{display:flex;}
+.modal{
+  background:#eef2f7;
+  border:2px solid var(--gold);border-radius:18px;
+  width:min(520px,96vw);max-height:92vh;overflow-y:auto;
+  box-shadow:0 24px 60px rgba(20,25,35,.35);
+  padding:18px;
+}
+.modal h2{color:var(--gold);font-size:21px;margin-bottom:6px;text-align:center;}
+.modal .mbody{font-size:14.5px;line-height:1.7;color:#3a3e44;}
+.modal .mbtns{display:flex;gap:9px;flex-wrap:wrap;margin-top:16px;}
+.modal .mbtns .btn{flex:1;min-width:120px;}
+
+/* title deed card */
+.deed{background:var(--paper);color:#1a1a1a;border-radius:10px;border:2px solid #111;overflow:hidden;margin:6px auto;max-width:300px;}
+.deed .head{padding:8px;text-align:center;font-weight:900;color:#fff;font-family:'Reem Kufi';font-size:16px;}
+.deed .rows{padding:9px 12px;font-size:13.5px;}
+.deed .rows .r{display:flex;justify-content:space-between;padding:2px 0;border-bottom:1px dashed #bbb;}
+.deed .rows .r:last-child{border-bottom:none;}
+
+/* draw card */
+.drawcard{border-radius:14px;padding:18px;text-align:center;color:#fff;margin:4px auto;max-width:340px;box-shadow:0 10px 24px rgba(0,0,0,.4);}
+.drawcard.chance{background:linear-gradient(150deg,#f3a13f,#cf6c08);}
+.drawcard.chest{background:linear-gradient(150deg,#4a90d9,#21538c);}
+.drawcard .ci{font-size:40px;}
+.drawcard .ct{font-size:16px;font-weight:800;margin-top:8px;line-height:1.7;}
+
+/* setup */
+.setup-players{display:flex;flex-direction:column;gap:10px;margin-top:8px;}
+.pset{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);padding:8px;border-radius:10px;}
+.pset input{flex:1;padding:9px;border-radius:8px;border:1px solid #cfcfd6;background:#eef2f7;color:#222;font-family:inherit;font-size:14px;}
+.tokpick{display:flex;gap:4px;}
+.tokpick button{width:34px;height:34px;border-radius:8px;border:2px solid #d6d6dc;background:#e6ebf1;font-size:18px;}
+.tokpick button.sel{border-color:var(--gold);background:linear-gradient(180deg,var(--gold),var(--gold2));}
+.count-pick{display:flex;gap:8px;justify-content:center;margin:10px 0;}
+.count-pick button{width:48px;height:48px;border-radius:12px;font-size:20px;font-weight:900;border:2px solid #d6d6dc;background:#e6ebf1;color:#333;}
+.count-pick button.sel{background:linear-gradient(180deg,var(--gold),var(--gold2));color:#fff;}
+
+/* bot turn indicator */
+.bot-think{
+  text-align:center;padding:14px 12px;color:#5b6470;font-weight:800;font-size:15px;
+  background:linear-gradient(180deg,#e9eef4,#dce3ec);border:1px solid var(--gold);border-radius:12px;
+  animation:botpulse 1s infinite alternate;
+}
+@keyframes botpulse{from{opacity:.7}to{opacity:1}}
+
+/* setup player cards + bot toggles */
+.pcard{background:#e6ebf1;border:1px solid #e4e4ea;border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:8px;margin-bottom:2px;}
+.pcard .pset{background:transparent;padding:0;}
+.pmeta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.seg.sm{margin:0;flex:0 0 auto;}
+.seg.sm button{padding:6px 9px;font-size:12px;flex:0 0 auto;}
+
+/* save / restore */
+.codebox{width:100%;min-height:84px;padding:8px;border-radius:8px;border:1px solid var(--gold2);background:#eef2f7;color:#333;font-family:monospace;font-size:11px;resize:vertical;direction:ltr;word-break:break-all;}
+@media(max-width:520px){
+  .topbar{padding:8px 10px;gap:6px;}
+  .topbtns{gap:5px;}
+  .topbtns .btn{padding:7px 8px;font-size:11.5px;}
+  .brand .sub{display:none;}
+}
+
+/* manage / trade lists */
+.mlist{display:flex;flex-direction:column;gap:6px;margin:6px 0;}
+.mitem{display:flex;align-items:center;gap:8px;background:#e6ebf1;padding:7px 9px;border-radius:9px;border:1px solid #e6e6ec;}
+.mitem .sw{width:14px;height:14px;border-radius:3px;border:1px solid #000;flex:0 0 auto;}
+.mitem .mn{flex:1;font-size:13.5px;font-weight:700;}
+.mitem .ma{font-size:12px;color:#7a7a82;}
+.mitem .mb{display:flex;gap:5px;}
+.mitem .mb button{padding:5px 9px;font-size:12px;border-radius:7px;border:1px solid #d6d6dc;background:#eef2f7;color:#333;}
+.mitem.pickable{cursor:pointer;}
+.mitem.picked{border-color:var(--gold);background:rgba(94,103,114,.16);}
+.seg{display:flex;gap:6px;margin-bottom:8px;}
+.seg button{flex:1;padding:8px;border-radius:9px;border:1px solid #d6d6dc;background:#e6ebf1;color:#333;font-weight:700;font-size:13px;}
+.seg button.sel{background:linear-gradient(180deg,var(--gold),var(--gold2));color:#fff;}
+.trade-cols{display:flex;gap:10px;}
+.trade-cols .col{flex:1;background:rgba(0,0,0,.2);border-radius:10px;padding:8px;}
+.trade-cols .col h4{font-size:13px;color:var(--gold);margin:0 0 6px;text-align:center;}
+.cashrow{display:flex;align-items:center;gap:6px;margin-top:6px;}
+.cashrow input{width:100%;padding:7px;border-radius:7px;border:1px solid #cfcfd6;background:#eef2f7;color:#222;font-family:inherit;}
+.small{font-size:12px;color:#f3e2cc;opacity:.85;}
+.center-msg{text-align:center;padding:20px;}
+.win-emoji{font-size:60px;}
+hr.sep{border:none;border-top:1px solid rgba(94,103,114,.28);margin:12px 0;}
+.bidbox{text-align:center;font-size:18px;font-weight:800;color:var(--gold);margin:8px 0;}
+.rules-list{font-size:13.5px;line-height:1.8;}
+.rules-list b{color:var(--gold);}
+.toast{position:fixed;bottom:18px;right:50%;transform:translateX(50%);background:#2b2e34;border:1px solid var(--gold);color:#fff;padding:10px 16px;border-radius:30px;z-index:90;font-size:13px;box-shadow:0 8px 20px rgba(0,0,0,.5);opacity:0;transition:opacity .25s, transform .25s;}
+.toast.show{opacity:1;transform:translateX(50%) translateY(-4px);}
+</style>
+</head>
+<body>
+<div class="topbar">
+  <div class="brand">
+    <h1>الاحتكار</h1>
+    <span class="sub">لعبة العقارات الكلاسيكية</span>
+  </div>
+  <div class="topbtns">
+    <button class="btn" id="fsBtn" onclick="toggleFullscreen()">&#9974; ملء الشاشة</button>
+    <button class="btn" onclick="saveGame()">&#128190; حفظ</button>
+    <button class="btn" onclick="openRules()">القواعد</button>
+    <button class="btn gold" onclick="openSetup()">لعبة جديدة</button>
+  </div>
+</div>
+
+<div class="main">
+  <div class="board-col">
+    <div class="board-wrap" id="boardCam">
+      <div id="board"></div>
+    <div class="fx-layer" id="fxLayer"></div>
+      <div class="cam-hud" id="camHud">
+        <div class="ch-turn" id="chTurn"></div>
+        <div class="ch-dice"><div class="die sm" id="hdie0"></div><div class="die sm" id="hdie1"></div></div>
+      </div>
+    </div>
+    <div class="cam-ctrl" id="camCtrl">
+      <button onclick="camZoom(1)" title="تكبير">+</button>
+      <button onclick="camToggleFit()" title="عرض كامل / متابعة">&#9974;</button>
+      <button onclick="camZoom(-1)" title="تصغير">&#8722;</button>
+    </div>
+  </div>
+  <aside class="side">
+    <div id="turnCard" class="turn-card"></div>
+    <div id="actions" class="actions"></div>
+    <div class="hint" id="hint"></div>
+    <div class="panel">
+      <h3>اللاعبون</h3>
+      <div id="playersList"></div>
+    </div>
+    <div class="panel">
+      <h3>سجل اللعبة</h3>
+      <div id="log" class="log"></div>
+    </div>
+  </aside>
+</div>
+
+<div id="overlay"><div class="modal" id="modalBox"></div></div>
+<div id="toast" class="toast"></div>
+
+<script>
+/* =========================================================================
+   الاحتكار  -  classic property-trading board game (Arabic)
+   Original property names + original card text; classic mechanics replicated.
+   ========================================================================= */
+'use strict';
+
+/* ---------- helpers ---------- */
+const $ = (id)=>document.getElementById(id);
+const sleep = (ms)=>new Promise(r=>setTimeout(r,ms));
+const fmt = (n)=> Math.round(n).toLocaleString('en-US') + ' ريال';
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+const clamp = (v,a,b)=>Math.max(a,Math.min(b,v));
+
+/* =========================================================================
+   CAMERA  -  zoom + follow the active token (great for iPhone / iPad)
+   ========================================================================= */
+const CAM = { device:'desktop', scale:1, baseScale:1, fit:false, pos:0 };
+
+function detectDevice(){
+  const ua = navigator.userAgent || '';
+  const touch = (navigator.maxTouchPoints||0) > 0;
+  const isIPhone = /iPhone|iPod/.test(ua);
+  const isIPad = /iPad/.test(ua) || (/Macintosh/.test(ua) && touch); // iPadOS reports as Mac
+  const w = Math.min(window.innerWidth, window.innerHeight);
+  if(isIPhone) return 'phone';
+  if(isIPad)   return 'tablet';
+  if(touch && w < 760) return 'phone';
+  if(touch)            return 'tablet';
+  return (window.innerWidth < 760) ? 'phone' : 'desktop';
+}
+
+function deviceBaseScale(){
+  // how many board columns (of 11) to show across the viewport
+  const cols = CAM.device==='phone' ? 3.3 : CAM.device==='tablet' ? 5.6 : 11;
+  return clamp(11/cols, 1, 4.5);
+}
+
+function initCamera(){
+  CAM.device   = detectDevice();
+  CAM.baseScale= deviceBaseScale();
+  CAM.fit      = (CAM.device==='desktop');   // desktop shows the whole board by default
+  CAM.scale    = CAM.fit ? 1 : CAM.baseScale;
+  focusCamera(CAM.pos, true);
+}
+
+function focusCamera(pos, instant){
+  const board=$('board'), wrap=$('boardCam');
+  if(!board||!wrap) return;
+  if(pos!=null) CAM.pos = pos;
+  const S = CAM.fit ? 1 : CAM.scale;
+  wrap.classList.toggle('zoomed', S>1.001);
+  if(instant){ board.style.transition='none'; }
+  if(S<=1.001){
+    board.style.transform='none';
+    if(instant) requestAnimationFrame(()=>{ board.style.transition=''; });
+    return;
+  }
+  const cell = $('sp'+CAM.pos);
+  if(!cell){ if(instant) requestAnimationFrame(()=>{ board.style.transition=''; }); return; }
+  const cx = cell.offsetLeft + cell.offsetWidth/2;
+  const cy = cell.offsetTop  + cell.offsetHeight/2;
+  const Vw = wrap.clientWidth, Vh = wrap.clientHeight;
+  const W  = board.offsetWidth, H = board.offsetHeight;
+  let tx = Vw/(2*S) - cx;
+  let ty = Vh/(2*S) - cy;
+  const minTx = Vw/S - W, minTy = Vh/S - H;
+  tx = (minTx>0) ? minTx/2 : clamp(tx, minTx, 0);
+  ty = (minTy>0) ? minTy/2 : clamp(ty, minTy, 0);
+  board.style.transform = `scale(${S}) translate(${tx}px,${ty}px)`;
+  if(instant) requestAnimationFrame(()=>{ board.style.transition=''; });
+}
+
+function camZoom(dir){
+  CAM.fit=false;
+  CAM.scale = clamp((CAM.scale||1) + dir*0.4, 1, 4.5);
+  focusCamera();
+}
+function camToggleFit(){
+  CAM.fit = !CAM.fit;
+  if(!CAM.fit && CAM.scale<=1.001){ CAM.scale = Math.max(CAM.baseScale, 1.8); }
+  focusCamera();
+}
+window.addEventListener('resize', ()=>{
+  const d=detectDevice();
+  if(d!==CAM.device){ CAM.device=d; CAM.baseScale=deviceBaseScale(); if(!CAM.fit) CAM.scale=CAM.baseScale; }
+  clearTimeout(window.__camRz);
+  window.__camRz=setTimeout(()=>focusCamera(null,true), 120);
+});
+
+/* ---------- FULLSCREEN (best on iPad / desktop) ---------- */
+function isFsSupported(){
+  try{
+    const el=document.documentElement;
+    return !!((el && (el.requestFullscreen || el.webkitRequestFullscreen)) || document.fullscreenEnabled || document.webkitFullscreenEnabled);
+  }catch(e){ return false; }
+}
+function inFullscreen(){ return !!(document.fullscreenElement || document.webkitFullscreenElement); }
+function toggleFullscreen(){
+  const el=document.documentElement;
+  if(!inFullscreen()){
+    const req = el.requestFullscreen || el.webkitRequestFullscreen;
+    if(req){
+      try{ const r=req.call(el); if(r && r.catch) r.catch(()=>toast('تعذّر تفعيل ملء الشاشة هنا')); }
+      catch(e){ toast('تعذّر تفعيل ملء الشاشة هنا'); }
+    } else { toast('ملء الشاشة غير مدعوم على هذا الجهاز'); }
+  } else {
+    const ex = document.exitFullscreen || document.webkitExitFullscreen;
+    if(ex){ try{ ex.call(document); }catch(e){} }
+  }
+}
+function onFsChange(){
+  const on=inFullscreen();
+  document.body.classList.toggle('fs', on);
+  const b=$('fsBtn'); if(b) b.innerHTML = on ? '&#10005; خروج' : '&#9974; ملء الشاشة';
+  clearTimeout(window.__fsRz); window.__fsRz=setTimeout(()=>focusCamera(null,true), 160);
+}
+document.addEventListener('fullscreenchange', onFsChange);
+document.addEventListener('webkitfullscreenchange', onFsChange);
+
+/* ---------- group colours ---------- */
+const COL = {
+  brown:'var(--brown)', lblue:'var(--lblue)', pink:'var(--pink)', orange:'var(--orange)',
+  red:'var(--red)', yellow:'var(--yellow)', green:'var(--green)', dblue:'var(--dblue)',
+  rail:'var(--rail)', util:'var(--util)'
+};
+const COLHEX = {
+  brown:'#7b4a2b', lblue:'#9bd2ec', pink:'#cf3d7a', orange:'#e8821e',
+  red:'#d62828', yellow:'#f2c200', green:'#2f9e44', dblue:'#1f4e9c',
+  rail:'#2b2b2b', util:'#5b6470'
+};
+const GROUP_NAME = {
+  brown:'البني', lblue:'الأزرق الفاتح', pink:'الوردي', orange:'البرتقالي',
+  red:'الأحمر', yellow:'الأصفر', green:'الأخضر', dblue:'الأزرق الغامق'
+};
+
+/* ---------- the 40 spaces (classic structure, original names) ---------- */
+function P(name,group,price,rent,house,mort){return {type:'prop',name,group,price,rent,house,mort};}
+const BOARD = [
+  {type:'go',name:'البداية'},                                                   //0
+  P('جازان','brown',60,[2,10,30,90,160,250],50,30),                              //1
+  {type:'chest',name:'صندوق المجتمع'},                                          //2
+  P('نجران','brown',60,[4,20,60,180,320,450],50,30),                            //3
+  {type:'tax',name:'ضريبة الدخل',amount:200},                                   //4
+  {type:'rail',name:'محطة الشمال',price:200,mort:100},                          //5
+  P('عرعر','lblue',100,[6,30,90,270,400,550],50,50),                            //6
+  {type:'chance',name:'فرصة'},                                                  //7
+  P('سكاكا','lblue',100,[6,30,90,270,400,550],50,50),                           //8
+  P('حائل','lblue',120,[8,40,100,300,450,600],50,60),                           //9
+  {type:'jail',name:'السجن'},                                                   //10
+  P('الباحة','pink',140,[10,50,150,450,625,750],100,70),                        //11
+  {type:'util',name:'شركة الكهرباء',price:150,mort:75},                         //12
+  P('خميس مشيط','pink',140,[10,50,150,450,625,750],100,70),                     //13
+  P('أبها','pink',160,[12,60,180,500,700,900],100,80),                          //14
+  {type:'rail',name:'محطة الجنوب',price:200,mort:100},                          //15
+  P('حفر الباطن','orange',180,[14,70,200,550,750,950],100,90),                  //16
+  {type:'chest',name:'صندوق المجتمع'},                                          //17
+  P('عنيزة','orange',180,[14,70,200,550,750,950],100,90),                       //18
+  P('بريدة','orange',200,[16,80,220,600,800,1000],100,100),                     //19
+  {type:'parking',name:'موقف مجاني'},                                           //20
+  P('تبوك','red',220,[18,90,250,700,875,1050],150,110),                         //21
+  {type:'chance',name:'فرصة'},                                                  //22
+  P('ينبع','red',220,[18,90,250,700,875,1050],150,110),                         //23
+  P('الطائف','red',240,[20,100,300,750,925,1100],150,120),                      //24
+  {type:'rail',name:'محطة الشرق',price:200,mort:100},                           //25
+  P('الأحساء','yellow',260,[22,110,330,800,975,1150],150,130),                  //26
+  P('الخبر','yellow',260,[22,110,330,800,975,1150],150,130),                    //27
+  {type:'util',name:'شركة المياه',price:150,mort:75},                           //28
+  P('الظهران','yellow',280,[24,120,360,850,1025,1200],150,140),                 //29
+  {type:'tojail',name:'اذهب إلى السجن'},                                        //30
+  P('العلا','green',300,[26,130,390,900,1100,1275],200,150),                    //31
+  P('نيوم','green',300,[26,130,390,900,1100,1275],200,150),                     //32
+  {type:'chest',name:'صندوق المجتمع'},                                          //33
+  P('الدمام','green',320,[28,150,450,1000,1200,1400],200,160),                  //34
+  {type:'rail',name:'محطة الغرب',price:200,mort:100},                           //35
+  {type:'chance',name:'فرصة'},                                                  //36
+  P('جدة','dblue',350,[35,175,500,1100,1300,1500],200,175),                     //37
+  {type:'tax',name:'ضريبة الكماليات',amount:100},                              //38
+  P('الرياض','dblue',400,[50,200,600,1400,1700,2000],200,200)                   //39
+];
+const RAILS = [5,15,25,35];
+const UTILS = [12,28];
+
+/* group -> [space ids] */
+const GROUPS = {};
+BOARD.forEach((s,i)=>{ if(s.type==='prop'){ (GROUPS[s.group]=GROUPS[s.group]||[]).push(i); } });
+
+/* ---------- chance cards (original wording) ---------- */
+const CHANCE = [
+  {t:'تقدّم إلى خانة البداية واقبض 200 ريال.', f:{k:'goto',to:0}},
+  {t:'انطلق إلى الرياض. إن مررت بالبداية فاقبض 200 ريال.', f:{k:'goto',to:39}},
+  {t:'سافر إلى جدة. إن مررت بالبداية فاقبض 200 ريال.', f:{k:'goto',to:37}},
+  {t:'توجّه إلى أقرب محطة قطار وادفع لمالكها ضِعف الإيجار، فإن كانت شاغرة جاز لك شراؤها.', f:{k:'nearRail'}},
+  {t:'توجّه إلى أقرب شركة خدمات. إن كانت مملوكة فادفع عشرة أضعاف ما يظهر على النرد.', f:{k:'nearUtil'}},
+  {t:'ارجع ثلاث خانات إلى الوراء.', f:{k:'back',n:3}},
+  {t:'مخالفة سرعة! ادفع غرامة قدرها 15 ريالاً.', f:{k:'money',amt:-15}},
+  {t:'فاز سهمك بأرباح. اقبض 50 ريالاً من البنك.', f:{k:'money',amt:50}},
+  {t:'أعمال صيانة على عقاراتك: ادفع 25 ريالاً لكل منزل و100 ريال لكل فندق.', f:{k:'repairs',h:25,o:100}},
+  {t:'تبرّع خيري: ادفع 50 ريالاً لكل لاعب آخر.', f:{k:'each',amt:-50}},
+  {t:'اذهب إلى السجن مباشرة. لا تمرّ بالبداية ولا تقبض 200 ريال.', f:{k:'jail'}},
+  {t:'بطاقة الخروج من السجن مجاناً. احتفظ بها حتى تحتاجها.', f:{k:'getout'}}
+];
+/* ---------- community chest cards (original wording) ---------- */
+const CHEST = [
+  {t:'تقدّم إلى خانة البداية واقبض 200 ريال.', f:{k:'goto',to:0}},
+  {t:'خطأ مصرفي في صالحك. اقبض 200 ريال.', f:{k:'money',amt:200}},
+  {t:'أتعاب الطبيب. ادفع 50 ريالاً.', f:{k:'money',amt:-50}},
+  {t:'استرداد ضريبي. اقبض 75 ريالاً.', f:{k:'money',amt:75}},
+  {t:'نضجت وديعتك الاستثمارية. اقبض 100 ريال.', f:{k:'money',amt:100}},
+  {t:'يوم ميلادك! اقبض 10 ريالات من كل لاعب آخر.', f:{k:'each',amt:10}},
+  {t:'فاتورة المستشفى. ادفع 100 ريال.', f:{k:'money',amt:-100}},
+  {t:'رسوم دراسية. ادفع 50 ريالاً.', f:{k:'money',amt:-50}},
+  {t:'أتعاب استشارة قدّمتها. اقبض 25 ريالاً.', f:{k:'money',amt:25}},
+  {t:'وصلك ميراث. اقبض 100 ريال.', f:{k:'money',amt:100}},
+  {t:'اذهب إلى السجن مباشرة. لا تمرّ بالبداية ولا تقبض 200 ريال.', f:{k:'jail'}},
+  {t:'بطاقة الخروج من السجن مجاناً. احتفظ بها حتى تحتاجها.', f:{k:'getout'}}
+];
+
+/* ---------- token pieces ---------- */
+const PIECES = ['🚗','🐎','🚢','🐈','🎩','👞'];
+const PCOLORS = ['var(--p0)','var(--p1)','var(--p2)','var(--p3)'];
+
+/* =========================================================================
+   STATE
+   ========================================================================= */
+let G = null;  // game state
+
+function newGameState(players){
+  return {
+    players,                 // [{id,name,piece,color,money,pos,jail,jailTurns,getout,bankrupt}]
+    cur:0,
+    owner:new Array(40).fill(null),   // space id -> player id
+    houses:new Array(40).fill(0),     // 0..5 (5 = hotel)
+    mort:new Array(40).fill(false),
+    chanceDeck:shuffle([...Array(CHANCE.length).keys()]),
+    chestDeck:shuffle([...Array(CHEST.length).keys()]),
+    doubles:0,
+    rolledThisTurn:false,
+    busy:false,
+    over:false,
+    debt:null,        // {debtor,amount,creditor,resolve}
+    started:true
+  };
+}
+
+/* =========================================================================
+   BOARD RENDER
+   ========================================================================= */
+function cellRC(i){
+  if(i===0) return {r:11,c:11};
+  if(i<=9)  return {r:11,c:11-i};
+  if(i===10)return {r:11,c:1};
+  if(i<=19) return {r:11-(i-10),c:1};
+  if(i===20)return {r:1,c:1};
+  if(i<=29) return {r:1,c:(i-20)+1};
+  if(i===30)return {r:1,c:11};
+  return {r:(i-30)+1,c:11};
+}
+function sideClass(i){
+  if([0,10,20,30].includes(i)) return 'corner';
+  const {r,c}=cellRC(i);
+  if(r===11) return 'bottom';
+  if(c===1)  return 'left';
+  if(r===1)  return 'top';
+  return 'right';
+}
+
+function buildBoard(){
+  const board=$('board');
+  board.innerHTML='';
+  for(let i=0;i<40;i++){
+    const s=BOARD[i];
+    const {r,c}=cellRC(i);
+    const side=sideClass(i);
+    const el=document.createElement('div');
+    el.className='space '+side;
+    el.id='sp'+i;
+    el.style.gridRow=r; el.style.gridColumn=c;
+
+    if(side==='corner'){
+      el.classList.add('corner');
+      el.innerHTML = cornerHTML(i);
+    } else if(s.type==='prop'){
+      el.innerHTML =
+        `<div class="band" style="--bc:${COL[s.group]}"><div class="houses" id="h${i}"></div></div>`+
+        `<div class="content"><div class="nm">${s.name}</div><div class="pr">${s.price}</div></div>`+
+        `<div class="tokens" id="tk${i}"></div>`+
+        `<div class="ownmark" id="ow${i}" style="display:none"></div>`;
+    } else if(s.type==='rail'){
+      el.innerHTML =
+        `<div class="content special"><div class="icon">🚂</div><div class="nm">${s.name}</div><div class="pr">${s.price}</div></div>`+
+        `<div class="tokens" id="tk${i}"></div><div class="ownmark" id="ow${i}" style="display:none"></div>`;
+    } else if(s.type==='util'){
+      const ic = i===12?'💡':'🚰';
+      el.innerHTML =
+        `<div class="content special"><div class="icon">${ic}</div><div class="nm">${s.name}</div><div class="pr">${s.price}</div></div>`+
+        `<div class="tokens" id="tk${i}"></div><div class="ownmark" id="ow${i}" style="display:none"></div>`;
+    } else if(s.type==='chance'){
+      el.innerHTML = `<div class="content special"><div class="icon" style="color:var(--chance)">❓</div><div class="nm">${s.name}</div></div><div class="tokens" id="tk${i}"></div>`;
+    } else if(s.type==='chest'){
+      el.innerHTML = `<div class="content special"><div class="icon" style="color:var(--chest)">🎁</div><div class="nm">${s.name}</div></div><div class="tokens" id="tk${i}"></div>`;
+    } else if(s.type==='tax'){
+      const ic = i===4?'💵':'💎';
+      el.innerHTML = `<div class="content special"><div class="icon">${ic}</div><div class="nm">${s.name}</div><div class="pr">${s.amount}</div></div><div class="tokens" id="tk${i}"></div>`;
+    }
+    board.appendChild(el);
+  }
+  // center
+  const center=document.createElement('div');
+  center.className='center'; center.id='centerCell';
+  center.innerHTML =
+    `<div class="logo"><div class="big">الاحتكار</div><div class="tag">من البداية إلى الثراء</div></div>`+
+    `<div class="decks">
+        <div class="deck chance"><div class="di">❓</div><div>فرصة</div></div>
+        <div class="deck chest"><div class="di">🎁</div><div>صندوق المجتمع</div></div>
+     </div>`+
+    `<div class="dice-area"><div class="die" id="die0"></div><div class="die" id="die1"></div></div>`+
+    `<div class="nowturn" id="nowturn"></div>`;
+  board.appendChild(center);
+  setDice(1,1);
+}
+
+function cornerHTML(i){
+  if(i===0)  return `<div class="content"><div class="cbig">البداية</div><div class="arrow">⬅</div><div class="csm">اقبض 200</div></div>`;
+  if(i===10) return `<div class="content"><div class="cbig">السجن</div><div class="csm">زيارة فقط</div></div><div class="tokens" id="tk10"></div>`;
+  if(i===20) return `<div class="content"><div class="cbig">موقف</div><div class="cbig">مجاني</div></div><div class="tokens" id="tk20"></div>`;
+  if(i===30) return `<div class="content"><div class="cbig">اذهب</div><div class="cbig">للسجن</div></div>`;
+  return '';
+}
+
+/* dice pips */
+const PIP = {1:[4],2:[0,8],3:[0,4,8],4:[0,2,6,8],5:[0,2,4,6,8],6:[0,2,3,5,6,8]};
+function setDie(el,v){
+  let h='';
+  for(let k=0;k<9;k++){ h+=`<div class="pip ${PIP[v].includes(k)?'on':''}"></div>`; }
+  el.innerHTML=h;
+}
+function setDice(a,b){
+  setDie($('die0'),a); setDie($('die1'),b);
+  const h0=$('hdie0'), h1=$('hdie1');
+  if(h0) setDie(h0,a); if(h1) setDie(h1,b);
+}
+
+/* =========================================================================
+   RENDER tokens / owners / houses
+   ========================================================================= */
+function renderTokens(){
+  for(let i=0;i<40;i++){ const t=$('tk'+i); if(t) t.innerHTML=''; }
+  G.players.forEach((p,idx)=>{
+    if(p.bankrupt) return;
+    const t=$('tk'+p.pos); if(!t) return;
+    const cls = idx===G.cur ? 'token cur':'token';
+    t.innerHTML += `<div class="${cls}" style="background:${p.color}" title="${p.name}">${p.piece}</div>`;
+  });
+}
+function renderOwners(){
+  for(let i=0;i<40;i++){
+    const ow=$('ow'+i);
+    if(ow){
+      if(G.owner[i]==null){ ow.style.display='none'; }
+      else { ow.style.display='block'; ow.style.background=G.players[G.owner[i]].color; }
+    }
+    const sp=$('sp'+i);
+    if(sp){ sp.classList.toggle('mortgaged', !!G.mort[i]); }
+    const hc=$('h'+i);
+    if(hc){
+      const h=G.houses[i];
+      if(h===5){ hc.innerHTML='<div class="hotel"></div>'; }
+      else { let s=''; for(let k=0;k<h;k++)s+='<div class="hpip"></div>'; hc.innerHTML=s; }
+    }
+  }
+}
+
+/* =========================================================================
+   SIDE PANEL render
+   ========================================================================= */
+function netWorth(p){
+  let w=p.money;
+  for(let i=0;i<40;i++){
+    if(G.owner[i]===p.id){
+      const s=BOARD[i];
+      w += G.mort[i]? (s.mort||0) : (s.price|| (s.type==='prop'?s.price:0));
+      if(s.type==='prop'){ w += G.houses[i]*(s.house/2); }
+    }
+  }
+  return w;
+}
+function renderPanel(){
+  const p=G.players[G.cur];
+  $('turnCard').innerHTML =
+    `<div class="who"><div class="av" style="background:${p.color}">${p.piece}</div>`+
+    `<div><b>${p.name}</b><div class="small">دورك الآن</div></div></div>`+
+    `<div class="bal">${fmt(p.money)}</div>`;
+
+  // players list
+  let h='';
+  G.players.forEach((pl,idx)=>{
+    let cnt=0; for(let i=0;i<40;i++) if(G.owner[i]===idx) cnt++;
+    h+=`<div class="prow ${idx===G.cur?'active':''} ${pl.bankrupt?'dead':''}">`+
+       `<div class="av" style="background:${pl.color}">${pl.piece}</div>`+
+       `<div class="info"><div class="n">${pl.name}${pl.bankrupt?' (مُفلِس)':''}</div>`+
+       `<div class="m">${fmt(pl.money)}</div></div>`+
+       `<div class="cnt">${cnt} عقار${pl.getout?' • بطاقة خروج':''}</div></div>`;
+  });
+  $('playersList').innerHTML=h;
+  $('nowturn').textContent = 'الدور: '+p.name;
+  const ct=$('chTurn');
+  if(ct){ ct.innerHTML = `<span class="dot" style="background:${p.color}">${p.piece}</span>`+
+    `<span class="nm">${p.name}</span><span class="bal">${fmt(p.money)}</span>`; }
+  renderTokens();
+  if(NET.on && !NET.applying && !NET.passive) netBroadcast();
+}
+
+function log(msg,cls=''){
+  const l=$('log');
+  const d=document.createElement('div');
+  d.className='l '+cls; d.innerHTML=msg;
+  l.prepend(d);
+  while(l.children.length>40) l.removeChild(l.lastChild);
+}
+function toast(msg){
+  const t=$('toast'); t.textContent=msg; t.classList.add('show');
+  clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1800);
+}
+
+/* floating +amount (green) / -amount (red) indicators over the board */
+function moneyFx(list){
+  const layer=$('fxLayer'); if(!layer) return;
+  const card=document.createElement('div'); card.className='fx-card';
+  (list||[]).forEach(it=>{
+    if(!it || !it.delta) return;
+    const pos=it.delta>0;
+    const line=document.createElement('div'); line.className='fx-line';
+    line.innerHTML=`<span class="fx-nm">${it.name}</span><span class="fx-d ${pos?'pos':'neg'}">${pos?'+':'-'}${fmt(Math.abs(Math.round(it.delta)))}</span>`;
+    card.appendChild(line);
+  });
+  if(!card.children || !card.children.length) return;
+  layer.appendChild(card);
+  requestAnimationFrame(()=>card.classList.add('fx-go'));
+  setTimeout(()=>{ try{card.remove();}catch(e){} }, 1700);
+}
+
+/* =========================================================================
+   ACTIONS (buttons) render
+   ========================================================================= */
+function setActions(html){ $('actions').innerHTML=html; }
+function setHint(t){ $('hint').textContent=t||''; }
+
+function showTurnStart(){
+  const p=G.players[G.cur];
+  if(p.bankrupt){ nextPlayer(); return; }
+  G.doubles=0; G.rolledThisTurn=false;
+  renderPanel(); renderOwners(); focusCamera(p.pos);
+  autoSave();
+  if(NET.on && !ownsSeat(G.cur)){ netBroadcast(); netEnterPassive(p); return; }
+  if(NET.on) netBroadcast();
+  if(p.bot){
+    setActions(`<div class="bot-think">&#129302; دور ${p.name}&hellip;</div>`);
+    setHint(p.jail ? (p.name+' في السجن...') : (p.name+' يفكّر...'));
+    botSoon(()=>{ if(G.over) return; p.jail ? botJailTurn() : onRoll(); }, 850);
+    return;
+  }
+  if(p.jail){ showJailActions(); return; }
+  setActions(
+    `<button class="btn gold lg" onclick="onRoll()">🎲 ارمِ النرد</button>`+
+    `<div class="row">`+
+      `<button class="btn" onclick="openManage()">إدارة العقارات</button>`+
+      `<button class="btn" onclick="openTrade()">مقايضة</button>`+
+    `</div>`
+  );
+  setHint('ارمِ النرد لتبدأ دورك');
+}
+
+function showJailActions(){
+  const p=G.players[G.cur];
+  let btns=`<button class="btn gold lg" onclick="onRoll()">🎲 حاول رمي زوج</button>`;
+  btns+=`<div class="row"><button class="btn" onclick="payJail()" ${p.money<50?'disabled':''}>ادفع 50 للخروج</button>`;
+  if(p.getout) btns+=`<button class="btn" onclick="useGetOut()">استخدم بطاقة الخروج</button>`;
+  btns+=`</div>`;
+  btns+=`<div class="row"><button class="btn" onclick="openManage()">إدارة العقارات</button><button class="btn" onclick="openTrade()">مقايضة</button></div>`;
+  setActions(btns);
+  setHint('أنت في السجن (محاولة '+(p.jailTurns+1)+' من 3). ارمِ زوجاً للخروج، أو ادفع 50.');
+}
+
+function showEndTurn(){
+  setActions(
+    `<button class="btn gold lg" onclick="nextPlayer()">إنهاء الدور ▶</button>`+
+    `<div class="row"><button class="btn" onclick="openManage()">إدارة العقارات</button><button class="btn" onclick="openTrade()">مقايضة</button></div>`
+  );
+  setHint('انتهى تحرّكك. أنهِ دورك أو أدِر عقاراتك.');
+}
+
+/* =========================================================================
+   TURN FLOW
+   ========================================================================= */
+async function onRoll(){
+  if(G.busy||G.over) return;
+  G.busy=true; setActions(''); setHint('');
+  const p=G.players[G.cur];
+
+  // animate dice
+  $('die0').classList.add('rolling'); $('die1').classList.add('rolling');
+  $('hdie0').classList.add('rolling'); $('hdie1').classList.add('rolling');
+  for(let k=0;k<8;k++){ setDice(1+Math.floor(Math.random()*6),1+Math.floor(Math.random()*6)); await sleep(55); }
+  const d1=1+Math.floor(Math.random()*6), d2=1+Math.floor(Math.random()*6);
+  setDice(d1,d2);
+  $('die0').classList.remove('rolling'); $('die1').classList.remove('rolling');
+  $('hdie0').classList.remove('rolling'); $('hdie1').classList.remove('rolling');
+  const sum=d1+d2, isDouble=d1===d2;
+
+  if(p.jail){ await handleJailRoll(d1,d2); G.busy=false; if(p.bot && !G.over) botEndTurn(); return; }
+
+  log(`<b>${p.name}</b> رمى ${d1} و ${d2}` + (isDouble?' (زوج!)':''));
+  if(isDouble){
+    G.doubles++;
+    if(G.doubles===3){
+      log(`${p.name} رمى ثلاثة أزواج متتالية ودخل السجن!`,'bad');
+      sendToJail(p); renderTokens(); renderPanel();
+      G.busy=false; await sleep(400); showEndTurn(); if(p.bot) botEndTurn(); return;
+    }
+  }
+  await moveBy(p,sum);
+  await resolveLanding(p,sum);
+  if(G.over){ G.busy=false; return; }
+  G.busy=false;
+  // re-roll on doubles (unless jailed during resolve)
+  if(isDouble && !p.jail && !p.bankrupt){ G.rolledThisTurn=true; renderPanel(); renderOwners();
+    setActions(`<button class="btn gold lg" onclick="onRoll()">🎲 زوج! ارمِ مرة أخرى</button>`+
+      `<div class="row"><button class="btn" onclick="openManage()">إدارة العقارات</button><button class="btn" onclick="openTrade()">مقايضة</button></div>`);
+    setHint('رميت زوجاً، لك رمية إضافية.');
+    if(p.bot){ setActions(`<div class="bot-think">&#129302; ${p.name} رمى زوجاً&hellip;</div>`); botReroll(); }
+  } else {
+    renderPanel(); renderOwners(); showEndTurn();
+    if(p.bot) botEndTurn();
+  }
+}
+
+async function handleJailRoll(d1,d2){
+  const p=G.players[G.cur];
+  if(d1===d2){
+    log(`${p.name} رمى زوجاً (${d1}) وخرج من السجن.`,'good');
+    p.jail=false; p.jailTurns=0;
+    await moveBy(p,d1+d2);
+    await resolveLanding(p,d1+d2);
+    if(G.over) return;
+    renderPanel(); renderOwners(); showEndTurn();   // no extra roll after leaving jail by doubles
+  } else {
+    p.jailTurns++;
+    log(`${p.name} لم يرمِ زوجاً (محاولة ${p.jailTurns}).`);
+    if(p.jailTurns>=3){
+      log(`${p.name} استنفد محاولاته، دفع 50 ريالاً وخرج.`);
+      const ok = await charge(p,50,null);
+      if(G.over) return;
+      p.jail=false; p.jailTurns=0;
+      await moveBy(p,d1+d2);
+      await resolveLanding(p,d1+d2);
+      if(G.over) return;
+    }
+    renderPanel(); renderOwners(); showEndTurn();
+  }
+}
+
+function payJail(){
+  const p=G.players[G.cur];
+  if(p.money<50) return;
+  p.money-=50; p.jail=false; p.jailTurns=0;
+  log(`${p.name} دفع 50 ريالاً للخروج من السجن.`);
+  renderPanel();
+  showTurnStartAfterJailPay();
+}
+function showTurnStartAfterJailPay(){
+  // now player rolls normally and moves
+  setActions(`<button class="btn gold lg" onclick="onRoll()">🎲 ارمِ النرد</button>`+
+    `<div class="row"><button class="btn" onclick="openManage()">إدارة العقارات</button><button class="btn" onclick="openTrade()">مقايضة</button></div>`);
+  setHint('خرجت من السجن، ارمِ النرد لتتحرك.');
+}
+function useGetOut(){
+  const p=G.players[G.cur];
+  if(!p.getout) return;
+  p.getout--; p.jail=false; p.jailTurns=0;
+  log(`${p.name} استخدم بطاقة الخروج من السجن.`,'good');
+  renderPanel();
+  showTurnStartAfterJailPay();
+}
+
+function sendToJail(p){
+  p.pos=10; p.jail=true; p.jailTurns=0; G.doubles=0;
+  if(p.id===G.cur) focusCamera(10);
+}
+
+async function moveBy(p,steps){
+  for(let k=0;k<steps;k++){
+    p.pos=(p.pos+1)%40;
+    if(p.pos===0){ p.money+=200; log(`${p.name} مرّ بالبداية وقبض 200 ريال.`,'good'); moneyFx([{name:p.name,delta:200}]); }
+    renderTokens(); focusCamera(p.pos); await sleep(steps>1?150:0);
+  }
+  renderPanel(); focusCamera(p.pos);
+  const sp=$('sp'+p.pos); if(sp){ sp.classList.add('hot'); setTimeout(()=>sp.classList.remove('hot'),700); }
+}
+async function moveBackward(p,steps){
+  for(let k=0;k<steps;k++){ p.pos=(p.pos-1+40)%40; renderTokens(); focusCamera(p.pos); await sleep(150); }
+  renderPanel(); focusCamera(p.pos);
+}
+async function moveToForward(p,target,collectGo){
+  while(p.pos!==target){
+    p.pos=(p.pos+1)%40;
+    if(p.pos===0 && collectGo){ p.money+=200; log(`${p.name} مرّ بالبداية وقبض 200 ريال.`,'good'); moneyFx([{name:p.name,delta:200}]); }
+    renderTokens(); focusCamera(p.pos); await sleep(120);
+  }
+  renderPanel(); focusCamera(p.pos);
+}
+
+/* =========================================================================
+   LANDING resolution
+   ========================================================================= */
+async function resolveLanding(p,dice){
+  const i=p.pos, s=BOARD[i];
+  if(s.type==='prop'||s.type==='rail'||s.type==='util'){
+    const ow=G.owner[i];
+    if(ow==null){
+      await offerBuy(p,i);
+    } else if(ow!==p.id){
+      if(G.mort[i]){ log(`${BOARD[i].name} مرهون، لا إيجار.`); }
+      else {
+        const r=rentOf(i,dice);
+        const owner=G.players[ow];
+        log(`${p.name} توقّف في ${s.name} (ملك ${owner.name}) ودفع إيجاراً ${fmt(r)}.`,'bad');
+        await charge(p,r,owner);
+      }
+    } else {
+      log(`${p.name} توقّف في عقاره ${s.name}.`);
+    }
+  } else if(s.type==='tax'){
+    log(`${p.name} توقّف على ${s.name} ودفع ${fmt(s.amount)}.`,'bad');
+    await charge(p,s.amount,null);
+  } else if(s.type==='chance'){
+    await drawCard('chance',p,dice);
+  } else if(s.type==='chest'){
+    await drawCard('chest',p,dice);
+  } else if(s.type==='tojail'){
+    log(`${p.name} أُرسل إلى السجن!`,'bad');
+    sendToJail(p); renderTokens(); renderPanel();
+  } else if(s.type==='parking'){
+    log(`${p.name} يستريح في الموقف المجاني.`);
+  } else if(s.type==='go'){
+    log(`${p.name} حطّ على البداية.`);
+  } // jail (visiting) -> nothing
+}
+
+/* rent */
+function rentOf(i,dice,opts={}){
+  const s=BOARD[i], ow=G.owner[i];
+  if(ow==null||G.mort[i]) return 0;
+  if(s.type==='prop'){
+    const h=G.houses[i];
+    let r=s.rent[h];
+    if(h===0 && ownsFullGroup(ow,s.group)) r=s.rent[0]*2;
+    return r;
+  }
+  if(s.type==='rail'){
+    let n=0; RAILS.forEach(x=>{ if(G.owner[x]===ow) n++; });
+    let r=25*Math.pow(2,n-1);
+    if(opts.railDouble) r*=2;
+    return r;
+  }
+  if(s.type==='util'){
+    let n=0; UTILS.forEach(x=>{ if(G.owner[x]===ow) n++; });
+    let mult = opts.utilForce10 ? 10 : (n===2?10:4);
+    return mult*dice;
+  }
+  return 0;
+}
+function ownsFullGroup(pid,group){
+  return GROUPS[group].every(i=>G.owner[i]===pid && !G.mort[i]);
+}
+function countGroup(pid,group){ return GROUPS[group].filter(i=>G.owner[i]===pid).length; }
+
+/* =========================================================================
+   BUY / AUCTION
+   ========================================================================= */
+function deedHTML(i){
+  const s=BOARD[i];
+  if(s.type==='prop'){
+    const gn=GROUP_NAME[s.group];
+    return `<div class="deed"><div class="head" style="background:${COLHEX[s.group]};${s.group==='lblue'||s.group==='yellow'?'color:#222':''}">${s.name}<div style="font-size:11px;font-weight:600">المجموعة ${gn}</div></div>`+
+      `<div class="rows">`+
+      `<div class="r"><span>الإيجار الأساسي</span><b>${s.rent[0]}</b></div>`+
+      `<div class="r"><span>مع منزل واحد</span><b>${s.rent[1]}</b></div>`+
+      `<div class="r"><span>مع منزلين</span><b>${s.rent[2]}</b></div>`+
+      `<div class="r"><span>مع 3 منازل</span><b>${s.rent[3]}</b></div>`+
+      `<div class="r"><span>مع 4 منازل</span><b>${s.rent[4]}</b></div>`+
+      `<div class="r"><span>مع فندق</span><b>${s.rent[5]}</b></div>`+
+      `<div class="r"><span>تكلفة المنزل/الفندق</span><b>${s.house}</b></div>`+
+      `<div class="r"><span>قيمة الرهن</span><b>${s.mort}</b></div>`+
+      `</div></div>`;
+  }
+  if(s.type==='rail'){
+    return `<div class="deed"><div class="head" style="background:#2b2b2b">${s.name}</div><div class="rows">`+
+      `<div class="r"><span>محطة واحدة</span><b>25</b></div>`+
+      `<div class="r"><span>محطتان</span><b>50</b></div>`+
+      `<div class="r"><span>ثلاث محطات</span><b>100</b></div>`+
+      `<div class="r"><span>أربع محطات</span><b>200</b></div>`+
+      `<div class="r"><span>قيمة الرهن</span><b>100</b></div></div></div>`;
+  }
+  return `<div class="deed"><div class="head" style="background:#5b6470">${s.name}</div><div class="rows">`+
+    `<div class="r"><span>إن مَلَكت واحدة</span><b>4 × النرد</b></div>`+
+    `<div class="r"><span>إن مَلَكت الاثنتين</span><b>10 × النرد</b></div>`+
+    `<div class="r"><span>قيمة الرهن</span><b>75</b></div></div></div>`;
+}
+
+function offerBuy(p,i){
+  return new Promise(resolve=>{
+    const s=BOARD[i];
+    if(p.bot){
+      botSoon(()=>{
+        if(botWantsBuy(p,i)){
+          p.money-=s.price; G.owner[i]=p.id;
+          log(`<b>${p.name}</b> اشترى ${s.name} بـ ${fmt(s.price)}.`,'good');
+          moneyFx([{name:p.name,delta:-s.price}]);
+          renderOwners(); renderPanel(); resolve();
+        } else {
+          log(`${p.name} لم يشترِ ${s.name} — يُعرض في المزاد.`);
+          startAuction(i,resolve);
+        }
+      }, 650);
+      return;
+    }
+    const canAfford = p.money>=s.price;
+    openModal('عقار شاغر',
+      deedHTML(i)+`<p class="mbody" style="text-align:center">سعر الشراء: <b style="color:var(--gold)">${fmt(s.price)}</b><br>رصيدك: ${fmt(p.money)}</p>`,
+      [
+        {label:`اشترِ بـ ${s.price}`, cls:'gold', disabled:!canAfford, fn:()=>{
+          p.money-=s.price; G.owner[i]=p.id;
+          log(`<b>${p.name}</b> اشترى ${s.name} بـ ${fmt(s.price)}.`,'good');
+          moneyFx([{name:p.name,delta:-s.price}]);
+          closeModal(); renderOwners(); renderPanel(); resolve();
+        }},
+        {label:'عرض في المزاد', cls:'', fn:()=>{ closeModal(); startAuction(i,resolve); }}
+      ]
+    );
+  });
+}
+
+/* ---- Auction ---- */
+function startAuction(i,resolve){
+  const s=BOARD[i];
+  const inAuction = G.players.map((p,idx)=>({idx,active:!p.bankrupt}));
+  let bid=0, leader=-1;
+  // turn order starts at current player
+  let order=[]; for(let k=0;k<G.players.length;k++){ const id=(G.cur+k)%G.players.length; if(!G.players[id].bankrupt) order.push(id); }
+  const passed=new Set();
+  let ptr=0;
+
+  function alive(){ return order.filter(id=>!passed.has(id)); }
+  function render(){
+    const a=alive();
+    if(a.length===0){ // nobody bought
+      closeModal(); log(`لم يشترِ أحد ${s.name} في المزاد.`); resolve(); return;
+    }
+    if(a.length===1 && leader!==-1){
+      // winner
+      const w=G.players[leader];
+      w.money-=bid; G.owner[i]=leader;
+      log(`<b>${w.name}</b> فاز بمزاد ${s.name} بـ ${fmt(bid)}.`,'good');
+      moneyFx([{name:w.name,delta:-bid}]);
+      closeModal(); renderOwners(); renderPanel(); resolve(); return;
+    }
+    if(a.length===1 && leader===-1){ // only one left, no bids yet -> they can take at min 1 or pass
+    }
+    // find next bidder (skip passed)
+    while(passed.has(order[ptr%order.length])) ptr++;
+    const cur=order[ptr%order.length];
+    const cp=G.players[cur];
+    const minBid=bid+ (bid<50?5:10);
+    if(cp.bot){
+      const cap=botBidCap(cp,i);
+      if(cp.money>=minBid && cap>=minBid){
+        bid=minBid; leader=cur; ptr++;
+        toast(`${cp.name} زايد بـ ${fmt(minBid)}`);
+        setTimeout(render, 650);
+      } else {
+        passed.add(cur); ptr++;
+        toast(`${cp.name} انسحب من المزاد`);
+        setTimeout(render, 450);
+      }
+      return;
+    }
+    const body=
+      deedHTML(i)+
+      `<div class="bidbox">أعلى مزايدة: ${bid>0?fmt(bid)+' ('+G.players[leader].name+')':'لا يوجد'}</div>`+
+      `<p class="mbody" style="text-align:center">الدور على <b style="color:${cp.color}">${cp.name}</b> (الرصيد ${fmt(cp.money)})</p>`+
+      `<div class="cashrow"><input type="number" id="bidInput" min="${minBid}" max="${cp.money}" value="${Math.min(minBid,cp.money)}" ${cp.money<minBid?'disabled':''}></div>`+
+      `<div class="small" style="text-align:center">أقل مزايدة ${minBid} ريال</div>`;
+    openModal('مزاد علني',body,[
+      {label:'زايد', cls:'gold', disabled:cp.money<minBid, fn:()=>{
+        const v=parseInt($('bidInput').value,10);
+        if(isNaN(v)||v<minBid||v>cp.money){ toast('مزايدة غير صالحة'); return; }
+        bid=v; leader=cur; ptr++; render();
+      }},
+      {label:'انسحاب', cls:'', fn:()=>{ passed.add(cur); ptr++; render(); }}
+    ],true);
+  }
+  render();
+}
+
+/* =========================================================================
+   CARDS
+   ========================================================================= */
+function drawCard(kind,p,dice){
+  return new Promise(async resolve=>{
+    const deck = kind==='chance'?G.chanceDeck:G.chestDeck;
+    const list = kind==='chance'?CHANCE:CHEST;
+    const idx = deck.shift();
+    const card = list[idx];
+    const isGetout = card.f.k==='getout';
+    if(!isGetout) deck.push(idx);   // get-out cards leave the deck until used
+
+    let done=false;
+    const apply=async()=>{ if(done)return; done=true; closeModal(); await applyCard(p,card.f,dice); resolve(); };
+    openModal(kind==='chance'?'فرصة':'صندوق المجتمع',
+      `<div class="drawcard ${kind==='chance'?'chance':'chest'}"><div class="ci">${kind==='chance'?'❓':'🎁'}</div><div class="ct">${card.t}</div></div>`,
+      [{label:'تطبيق', cls:'gold', fn:apply}]
+    );
+    if(p.bot) setTimeout(apply, 1150);
+  });
+}
+
+async function applyCard(p,f,dice){
+  switch(f.k){
+    case 'goto':
+      await moveToForward(p,f.to,true);
+      await resolveLanding(p,dice); break;
+    case 'back':
+      await moveBackward(p,f.n);
+      await resolveLanding(p,dice); break;
+    case 'money':
+      if(f.amt>=0){ p.money+=f.amt; log(`${p.name} قبض ${fmt(f.amt)}.`,'good'); moneyFx([{name:p.name,delta:f.amt}]); renderPanel(); }
+      else { await charge(p,-f.amt,null); }
+      break;
+    case 'each':
+      if(f.amt>=0){
+        let tot=0;
+        G.players.forEach(o=>{ if(o.id!==p.id && !o.bankrupt){ const amt=Math.min(f.amt,o.money); o.money-=amt; tot+=amt; } });
+        p.money+=tot; log(`${p.name} قبض ${fmt(tot)} من اللاعبين.`,'good'); moneyFx([{name:p.name,delta:tot}]); renderPanel();
+      } else {
+        const each=-f.amt;
+        for(const o of G.players){ if(o.id!==p.id && !o.bankrupt){ await charge(p,each,o); if(G.over)return; } }
+      }
+      break;
+    case 'repairs':{
+      let h=0,o=0;
+      for(let i=0;i<40;i++){ if(G.owner[i]===p.id){ if(G.houses[i]===5)o++; else h+=G.houses[i]; } }
+      const cost=h*f.h+o*f.o;
+      if(cost>0){ log(`${p.name} يدفع صيانة ${fmt(cost)} (${h} منزل، ${o} فندق).`,'bad'); await charge(p,cost,null); }
+      else log(`${p.name}: لا عقارات مبنية، لا تكاليف صيانة.`);
+      break; }
+    case 'jail':
+      sendToJail(p); renderTokens(); renderPanel(); break;
+    case 'getout':
+      p.getout=(p.getout||0)+1; log(`${p.name} حصل على بطاقة الخروج من السجن.`,'good'); renderPanel(); break;
+    case 'nearRail':{
+      let t=RAILS.find(x=>x>p.pos); if(t===undefined)t=RAILS[0];
+      await moveToForward(p,t,true);
+      const ow=G.owner[t];
+      if(ow==null){ await offerBuy(p,t); }
+      else if(ow!==p.id && !G.mort[t]){ const r=rentOf(t,dice,{railDouble:true}); log(`${p.name} يدفع ضعف الإيجار ${fmt(r)} لـ ${G.players[ow].name}.`,'bad'); await charge(p,r,G.players[ow]); }
+      break; }
+    case 'nearUtil':{
+      let t=UTILS.find(x=>x>p.pos); if(t===undefined)t=UTILS[0];
+      await moveToForward(p,t,true);
+      const ow=G.owner[t];
+      if(ow==null){ await offerBuy(p,t); }
+      else if(ow!==p.id && !G.mort[t]){ const r=rentOf(t,dice,{utilForce10:true}); log(`${p.name} يدفع ${fmt(r)} (10 × النرد) لـ ${G.players[ow].name}.`,'bad'); await charge(p,r,G.players[ow]); }
+      break; }
+  }
+  renderOwners();
+}
+
+/* =========================================================================
+   CHARGING / DEBT / BANKRUPTCY
+   ========================================================================= */
+function charge(p,amount,creditor){
+  return new Promise(resolve=>{
+    amount=Math.round(amount);
+    if(p.money>=amount){
+      p.money-=amount; if(creditor) creditor.money+=amount;
+      moneyFx(creditor?[{name:p.name,delta:-amount},{name:creditor.name,delta:amount}]:[{name:p.name,delta:-amount}]);
+      renderPanel(); resolve(true); return;
+    }
+    // not enough -> debt flow
+    if(p.bot){
+      botRaiseFunds(p, amount);
+      if(p.money>=amount){
+        p.money-=amount; if(creditor) creditor.money+=amount;
+        moneyFx(creditor?[{name:p.name,delta:-amount},{name:creditor.name,delta:amount}]:[{name:p.name,delta:-amount}]);
+        renderOwners(); renderPanel(); resolve(true); return;
+      }
+      G.debt={debtor:p,amount,creditor,resolve};
+      doBankrupt();
+      return;
+    }
+    G.debt={debtor:p,amount,creditor,resolve};
+    openDebtModal();
+  });
+}
+
+function openDebtModal(){
+  const {debtor:p,amount,creditor}=G.debt;
+  const canPay = p.money>=amount;
+  const to = creditor? creditor.name : 'البنك';
+  openModal('عليك دفع مستحقات',
+    `<p class="mbody" style="text-align:center">${p.name}، أنت مدين بـ <b style="color:var(--gold)">${fmt(amount)}</b> إلى ${to}.<br>رصيدك الحالي: ${fmt(p.money)}</p>`+
+    `<p class="small" style="text-align:center">ارهن عقاراتك أو بِع المباني لجمع المال، أو أعلن إفلاسك.</p>`,
+    [
+      {label:'ادفع الآن', cls:'gold', disabled:!canPay, fn:()=>{
+        p.money-=amount; if(creditor) creditor.money+=amount;
+        moneyFx(creditor?[{name:p.name,delta:-amount},{name:creditor.name,delta:amount}]:[{name:p.name,delta:-amount}]);
+        const r=G.debt.resolve; G.debt=null; closeModal(); renderPanel(); renderOwners(); r(true);
+      }},
+      {label:'إدارة العقارات', cls:'', fn:()=>{ closeModal(); openManage(true); }},
+      {label:'أعلن الإفلاس', cls:'danger', fn:()=>{ doBankrupt(); }}
+    ],true
+  );
+}
+
+function doBankrupt(){
+  const {debtor:p,creditor}=G.debt;
+  log(`<b>${p.name}</b> أعلن إفلاسه!`,'bad');
+  if(creditor){
+    // transfer cash + properties to creditor
+    creditor.money += p.money;
+    for(let i=0;i<40;i++){
+      if(G.owner[i]===p.id){
+        G.owner[i]=creditor.id;
+        // creditor must immediately pay 10% interest on mortgaged ones is a rule; simplify: keep mortgaged state
+      }
+    }
+  } else {
+    // to bank: properties become unowned, houses removed (bank would auction; simplified to release)
+    for(let i=0;i<40;i++){ if(G.owner[i]===p.id){ G.owner[i]=null; G.houses[i]=0; G.mort[i]=false; } }
+  }
+  p.money=0; p.bankrupt=true;
+  for(let i=0;i<40;i++){ if(G.owner[i]===p.id){} }
+  // if creditor took mortgaged props they keep them mortgaged; fine.
+  const r=G.debt.resolve; G.debt=null; closeModal();
+  renderOwners(); renderPanel();
+  // check game over
+  const alive=G.players.filter(x=>!x.bankrupt);
+  if(alive.length<=1){ r(false); endGame(alive[0]); return; }
+  r(false);
+}
+
+/* =========================================================================
+   MANAGE (build / sell / mortgage)
+   ========================================================================= */
+let manageFromDebt=false;
+function openManage(fromDebt=false){
+  manageFromDebt=fromDebt;
+  renderManage('build');
+}
+function renderManage(tab){
+  const p=G.players[G.cur];
+  let body=`<div class="seg">`+
+    `<button class="${tab==='build'?'sel':''}" onclick="renderManage('build')">بناء / بيع المنازل</button>`+
+    `<button class="${tab==='mort'?'sel':''}" onclick="renderManage('mort')">الرهن</button>`+
+    `</div>`;
+  if(tab==='build') body+=buildList(p);
+  else body+=mortList(p);
+
+  const btns=[{label:'إغلاق', cls:'gold', fn:()=>{ closeModal(); if(manageFromDebt && G.debt) openDebtModal(); }}];
+  openModal('إدارة العقارات — '+p.name, body, btns, true);
+}
+
+function buildList(p){
+  // groups fully owned & unmortgaged -> can build evenly
+  let h='<div class="mlist">';
+  let any=false;
+  Object.keys(GROUPS).forEach(g=>{
+    if(!ownsFullGroup(p.id,g)) return;
+    const ids=GROUPS[g];
+    ids.forEach(i=>{
+      any=true;
+      const s=BOARD[i]; const hc=G.houses[i];
+      const minH=Math.min(...ids.map(x=>G.houses[x]));
+      const maxH=Math.max(...ids.map(x=>G.houses[x]));
+      const canBuild = hc<5 && hc<=minH && p.money>=s.house && ids.every(x=>!G.mort[x]);
+      const canSell  = hc>0 && hc>=maxH;
+      const label = hc===5?'فندق':(hc+' منزل');
+      h+=`<div class="mitem"><div class="sw" style="background:${COLHEX[g]}"></div>`+
+         `<div class="mn">${s.name}<div class="ma">${label} • منزل بـ ${s.house}</div></div>`+
+         `<div class="mb">`+
+         `<button onclick="sellHouse(${i})" ${canSell?'':'disabled'}>− بيع</button>`+
+         `<button onclick="buyHouse(${i})" ${canBuild?'':'disabled'}>+ بناء</button>`+
+         `</div></div>`;
+    });
+  });
+  h+='</div>';
+  if(!any) h='<p class="mbody" style="text-align:center">لا تملك مجموعة لون كاملة بعد. اجمع كل عقارات لون واحد لتبدأ البناء.</p>';
+  return h;
+}
+function buyHouse(i){
+  const p=G.players[G.cur]; const s=BOARD[i]; const g=s.group; const ids=GROUPS[g];
+  const minH=Math.min(...ids.map(x=>G.houses[x]));
+  if(!(G.houses[i]<5 && G.houses[i]<=minH && p.money>=s.house && ids.every(x=>!G.mort[x]))) return;
+  p.money-=s.house; G.houses[i]++;
+  log(`${p.name} بنى في ${s.name} (${G.houses[i]===5?'فندق':G.houses[i]+' منزل'}).`);
+  renderOwners(); renderPanel(); renderManage('build');
+}
+function sellHouse(i){
+  const p=G.players[G.cur]; const s=BOARD[i]; const ids=GROUPS[s.group];
+  const maxH=Math.max(...ids.map(x=>G.houses[x]));
+  if(!(G.houses[i]>0 && G.houses[i]>=maxH)) return;
+  G.houses[i]--; p.money+=s.house/2;
+  log(`${p.name} باع مبنى في ${s.name} وحصل على ${fmt(s.house/2)}.`);
+  renderOwners(); renderPanel(); renderManage('build');
+  if(manageFromDebt) {} // stays open
+}
+
+function mortList(p){
+  let h='<div class="mlist">'; let any=false;
+  for(let i=0;i<40;i++){
+    if(G.owner[i]!==p.id) continue;
+    const s=BOARD[i]; any=true;
+    const groupHasHouses = s.type==='prop' && GROUPS[s.group].some(x=>G.houses[x]>0);
+    const swc = s.type==='prop'?COLHEX[s.group]:(s.type==='rail'?'#2b2b2b':'#5b6470');
+    if(!G.mort[i]){
+      const canM = !groupHasHouses;
+      h+=`<div class="mitem"><div class="sw" style="background:${swc}"></div>`+
+         `<div class="mn">${s.name}<div class="ma">${canM?('قيمة الرهن '+s.mort):'بِع مباني المجموعة أولاً'}</div></div>`+
+         `<div class="mb"><button onclick="mortgage(${i})" ${canM?'':'disabled'}>ارهن +${s.mort}</button></div></div>`;
+    } else {
+      const cost=Math.ceil(s.mort*1.1);
+      h+=`<div class="mitem mortgaged" ><div class="sw" style="background:${swc}"></div>`+
+         `<div class="mn">${s.name}<div class="ma">مرهون • فك الرهن بـ ${cost}</div></div>`+
+         `<div class="mb"><button onclick="unmortgage(${i})" ${p.money>=cost?'':'disabled'}>فك −${cost}</button></div></div>`;
+    }
+  }
+  h+='</div>';
+  if(!any) h='<p class="mbody" style="text-align:center">لا تملك أي عقار بعد.</p>';
+  return h;
+}
+function mortgage(i){
+  const p=G.players[G.cur]; const s=BOARD[i];
+  if(G.owner[i]!==p.id||G.mort[i]) return;
+  if(s.type==='prop' && GROUPS[s.group].some(x=>G.houses[x]>0)) return;
+  G.mort[i]=true; p.money+=s.mort;
+  log(`${p.name} رهن ${s.name} وحصل على ${fmt(s.mort)}.`);
+  renderOwners(); renderPanel(); renderManage('mort');
+}
+function unmortgage(i){
+  const p=G.players[G.cur]; const s=BOARD[i];
+  const cost=Math.ceil(s.mort*1.1);
+  if(G.owner[i]!==p.id||!G.mort[i]||p.money<cost) return;
+  G.mort[i]=false; p.money-=cost;
+  log(`${p.name} فكّ رهن ${s.name} بـ ${fmt(cost)}.`);
+  renderOwners(); renderPanel(); renderManage('mort');
+}
+
+/* =========================================================================
+   TRADE
+   ========================================================================= */
+let trade=null;
+function openTrade(){
+  if(NET.on){ toast('المقايضة غير متاحة في اللعب عبر الشبكة حالياً'); return; }
+  const others=G.players.filter(p=>!p.bankrupt && p.id!==G.cur);
+  if(others.length===0){ toast('لا يوجد لاعب آخر للمقايضة'); return; }
+  trade={partner:others[0].id, give:new Set(), get:new Set(), giveCash:0, getCash:0};
+  renderTrade();
+}
+function renderTrade(){
+  const me=G.players[G.cur];
+  const others=G.players.filter(p=>!p.bankrupt && p.id!==G.cur);
+  const partner=G.players[trade.partner];
+
+  let psel='<div class="seg">';
+  others.forEach(o=>{ psel+=`<button class="${o.id===trade.partner?'sel':''}" onclick="tradePartner(${o.id})">${o.name}</button>`; });
+  psel+='</div>';
+
+  function side(owner,set,who){
+    let h=`<div class="col"><h4>${who}</h4><div class="mlist">`;
+    let any=false;
+    for(let i=0;i<40;i++){
+      if(G.owner[i]!==owner.id) continue;
+      if(BOARD[i].type==='prop' && GROUPS[BOARD[i].group].some(x=>G.houses[x]>0)){ continue; } // can't trade with houses up
+      any=true;
+      const s=BOARD[i];
+      const swc = s.type==='prop'?COLHEX[s.group]:(s.type==='rail'?'#2b2b2b':'#5b6470');
+      h+=`<div class="mitem pickable ${set.has(i)?'picked':''}" onclick="tradeToggle('${who===me.name?'give':'get'}',${i})">`+
+         `<div class="sw" style="background:${swc}"></div><div class="mn">${s.name}${G.mort[i]?' (مرهون)':''}</div></div>`;
+    }
+    if(!any) h+='<div class="small">لا عقارات قابلة للمقايضة</div>';
+    h+='</div></div>';
+    return h;
+  }
+  const body=psel+
+    `<div class="trade-cols">${side(me,trade.give,me.name)}${side(partner,trade.get,partner.name)}</div>`+
+    `<div class="cashrow"><span class="small">نقد تدفعه:</span><input type="number" id="giveCash" min="0" max="${me.money}" value="${trade.giveCash}" oninput="trade.giveCash=Math.max(0,Math.min(${me.money},+this.value||0))"></div>`+
+    `<div class="cashrow"><span class="small">نقد تستلمه:</span><input type="number" id="getCash" min="0" max="${partner.money}" value="${trade.getCash}" oninput="trade.getCash=Math.max(0,Math.min(${partner.money},+this.value||0))"></div>`;
+
+  openModal('مقايضة مع لاعب', body, [
+    {label:'اعرض الصفقة', cls:'gold', fn:proposeTrade},
+    {label:'إلغاء', cls:'', fn:()=>closeModal()}
+  ], true);
+}
+function tradePartner(id){ trade.partner=id; trade.get=new Set(); renderTrade(); }
+function tradeToggle(side,i){ const set=trade[side]; if(set.has(i))set.delete(i); else set.add(i); renderTrade(); }
+
+function proposeTrade(){
+  const me=G.players[G.cur]; const partner=G.players[trade.partner];
+  if(trade.give.size===0&&trade.get.size===0&&trade.giveCash===0&&trade.getCash===0){ toast('الصفقة فارغة'); return; }
+  if(trade.giveCash>me.money){ toast('لا تملك هذا النقد'); return; }
+  if(trade.getCash>partner.money){ toast('الطرف الآخر لا يملك هذا النقد'); return; }
+  const giveNames=[...trade.give].map(i=>BOARD[i].name);
+  const getNames=[...trade.get].map(i=>BOARD[i].name);
+  let summary=`<p class="mbody"><b>${me.name}</b> يعطي: ${giveNames.length?giveNames.join('، '):'—'}${trade.giveCash?` + ${fmt(trade.giveCash)}`:''}</p>`+
+    `<p class="mbody"><b>${partner.name}</b> يعطي: ${getNames.length?getNames.join('، '):'—'}${trade.getCash?` + ${fmt(trade.getCash)}`:''}</p>`+
+    `<p class="small" style="text-align:center">هل يوافق ${partner.name} على الصفقة؟</p>`;
+  openModal('عرض مقايضة', summary, [
+    {label:`يوافق ${partner.name}`, cls:'gold', fn:execTrade},
+    {label:'يرفض', cls:'danger', fn:()=>{ closeModal(); toast('رُفضت الصفقة'); }}
+  ], true);
+  if(partner.bot){
+    setTimeout(()=>{
+      // from the partner's view: it receives what `me` gives, and gives what `me` gets
+      const ok=botEvaluateTrade(partner, [...trade.give], [...trade.get], trade.giveCash, trade.getCash);
+      if(ok){ toast(`${partner.name} وافق على الصفقة!`); execTrade(); }
+      else { closeModal(); toast(`${partner.name} رفض الصفقة`); }
+    }, 1200);
+  }
+}
+function execTrade(){
+  const me=G.players[G.cur]; const partner=G.players[trade.partner];
+  trade.give.forEach(i=>{ G.owner[i]=partner.id; });
+  trade.get.forEach(i=>{ G.owner[i]=me.id; });
+  me.money += trade.getCash - trade.giveCash;
+  partner.money += trade.giveCash - trade.getCash;
+  log(`تمّت مقايضة بين ${me.name} و ${partner.name}.`,'good');
+  closeModal(); renderOwners(); renderPanel();
+}
+
+/* =========================================================================
+   BOT AI  (easy / medium / hard)
+   ========================================================================= */
+function botSoon(fn,delay){ setTimeout(()=>{ if(!G.over) fn(); }, delay==null?700:delay); }
+
+function botCur(){ return G.players[G.cur]; }
+
+function botReroll(){ botSoon(()=>{ if(!G.over && botCur().bot) onRoll(); }, 850); }
+
+function botEndTurn(){
+  botSoon(()=>{
+    const p=botCur();
+    if(p && !p.bankrupt) botManage(p);
+    botSoon(()=>{ if(!G.over) nextPlayer(); }, 500);
+  }, 650);
+}
+
+function botJailTurn(){
+  const p=botCur();
+  if(p.getout){ useGetOut(); botSoon(()=>onRoll(), 600); return; }
+  if(p.level==='hard' && p.money>320 && p.jailTurns===0){ payJail(); botSoon(()=>onRoll(), 600); return; }
+  onRoll();   // attempt to roll a double; handleJailRoll covers the 3-strike auto-pay
+}
+
+/* raise cash to cover a debt: sell houses evenly, then mortgage */
+function botRaiseFunds(p,target){
+  let guard=0;
+  while(p.money<target && guard++<500){
+    let sold=false;
+    for(let i=0;i<40;i++){
+      if(G.owner[i]!==p.id) continue;
+      const s=BOARD[i]; if(s.type!=='prop' || G.houses[i]===0) continue;
+      const ids=GROUPS[s.group]; const maxH=Math.max(...ids.map(x=>G.houses[x]));
+      if(G.houses[i]>=maxH){ G.houses[i]--; p.money+=s.house/2; sold=true; if(p.money>=target)break; }
+    }
+    if(!sold) break;
+  }
+  for(let i=0;i<40 && p.money<target;i++){
+    if(G.owner[i]!==p.id || G.mort[i]) continue;
+    const s=BOARD[i];
+    if(s.type==='prop' && GROUPS[s.group].some(x=>G.houses[x]>0)) continue;
+    G.mort[i]=true; p.money+=s.mort;
+    log(`${p.name} رهن ${s.name} لتغطية الدين.`);
+  }
+  renderOwners();
+}
+
+/* build houses / unmortgage with spare cash, evenly across owned monopolies */
+function botManage(p){
+  if(!p || p.bankrupt) return;
+  const reserve = p.level==='easy'?340 : p.level==='medium'?220 : 150;
+  // unmortgage cheaply when flush (hard/medium)
+  if(p.level!=='easy'){
+    for(let i=0;i<40;i++){
+      if(G.owner[i]!==p.id || !G.mort[i]) continue;
+      const cost=Math.ceil(BOARD[i].mort*1.1);
+      if(p.money-cost>=reserve){ G.mort[i]=false; p.money-=cost; }
+    }
+  }
+  let progress=true, guard=0;
+  while(progress && guard++<200){
+    progress=false;
+    for(const g of Object.keys(GROUPS)){
+      if(!ownsFullGroup(p.id,g)) continue;
+      const ids=GROUPS[g];
+      if(ids.some(x=>G.mort[x])) continue;
+      const minH=Math.min(...ids.map(x=>G.houses[x]));
+      if(minH>=5) continue;
+      const target=ids.find(x=>G.houses[x]===minH);
+      if(target==null) continue;
+      const cost=BOARD[target].house;
+      if(p.money-cost < reserve) continue;
+      p.money-=cost; G.houses[target]++; progress=true;
+      log(`${p.name} بنى في ${BOARD[target].name} (${G.houses[target]===5?'فندق':G.houses[target]+' منزل'}).`);
+    }
+  }
+  renderOwners(); renderPanel();
+}
+
+/* should a bot buy an unowned property it landed on? */
+function botWantsBuy(p,i){
+  const s=BOARD[i];
+  if(p.money < s.price) return false;
+  const reserve = p.level==='easy'?70 : p.level==='medium'?130 : 160;
+  let eager=0;
+  if(s.type==='prop'){ eager = countGroup(p.id,s.group)*0.45; }
+  else if(s.type==='rail'){ eager=0.4; }
+  else if(s.type==='util'){ eager=0.15; }
+  let buy = (p.money - s.price) >= reserve*(1-Math.min(eager,0.9));
+  if(p.level==='hard' && s.type==='prop' && countGroup(p.id,s.group)>=1 && p.money-s.price>=20) buy=true;
+  if(p.level==='easy' && Math.random()<0.2) buy=false;
+  return buy;
+}
+
+/* max a bot will pay at auction for property i */
+function botBidCap(bot,i){
+  const s=BOARD[i];
+  let base=s.price;
+  if(s.type==='prop'){
+    const owned=countGroup(bot.id,s.group);
+    if(owned>=1) base*=1.35;
+    if(owned===GROUPS[s.group].length-1) base*=1.55;
+  } else if(s.type==='rail'){ base*=1.2; }
+  const f = bot.level==='easy'?0.6 : bot.level==='medium'?0.95 : 1.25;
+  let cap=Math.floor(base*f);
+  cap=Math.min(cap, bot.money - (bot.level==='hard'?40:90));
+  return Math.max(0,cap);
+}
+
+/* worth of a property to a bot, used for trade evaluation. sign>0 = receiving */
+function propWorth(i, bot, sign){
+  const s=BOARD[i];
+  let w = s.price + (s.type==='prop'? G.houses[i]*(s.house/2) : 0);
+  if(G.mort[i]) w -= s.mort*0.3;
+  if(s.type==='prop'){
+    const ids=GROUPS[s.group];
+    const owned=ids.filter(x=>G.owner[x]===bot.id).length;
+    if(sign>0){
+      if(owned===ids.length-1) w += s.price*1.6;
+      else if(owned>=1) w += s.price*0.4;
+    } else {
+      if(owned===ids.length) w += s.price*1.3;
+    }
+  }
+  return w;
+}
+function botEvaluateTrade(bot, recvIds, giveIds, recvCash, giveCash){
+  if(giveCash>bot.money) return false;
+  let v = recvCash - giveCash;
+  recvIds.forEach(i=> v += propWorth(i,bot,+1));
+  giveIds.forEach(i=> v -= propWorth(i,bot,-1));
+  const margin = bot.level==='easy'? -70 : bot.level==='medium'? 25 : 90;
+  return v >= margin;
+}
+
+/* =========================================================================
+   NEXT PLAYER / GAME OVER
+   ========================================================================= */
+function nextPlayer(){
+  if(G.over) return;
+  const alive=G.players.filter(p=>!p.bankrupt);
+  if(alive.length<=1){ endGame(alive[0]); return; }
+  do{ G.cur=(G.cur+1)%G.players.length; } while(G.players[G.cur].bankrupt);
+  showTurnStart();
+}
+
+function endGame(winner){
+  G.over=true;
+  clearLocalSave();
+  if(NET.on){ netSend(netState()); }
+  openModal('انتهت اللعبة',
+    `<div class="center-msg"><div class="win-emoji">🏆</div>`+
+    `<h2 style="color:var(--gold)">الفائز: ${winner?winner.name:'—'}</h2>`+
+    `<p class="mbody">احتكر السوق وأفلس جميع منافسيه!</p></div>`,
+    [{label:'لعبة جديدة', cls:'gold', fn:()=>{ if(NET.on) netReset(); closeModal(); openSetup(); }}]
+  );
+  log(`🏆 ${winner?winner.name:''} فاز باللعبة!`,'good');
+}
+
+/* =========================================================================
+   GENERIC MODAL
+   ========================================================================= */
+function openModal(title, bodyHTML, buttons, keepOnBackdrop){
+  const box=$('modalBox');
+  let bh='<div class="mbtns">';
+  (buttons||[]).forEach((b,k)=>{ bh+=`<button class="btn ${b.cls||''}" data-k="${k}" ${b.disabled?'disabled':''}>${b.label}</button>`; });
+  bh+='</div>';
+  box.innerHTML=`<h2>${title}</h2><div class="mbody-wrap">${bodyHTML}</div>${bh}`;
+  (buttons||[]).forEach((b,k)=>{ box.querySelector(`[data-k="${k}"]`).onclick=b.fn; });
+  $('overlay').classList.add('show');
+  $('overlay')._keep = !!keepOnBackdrop;
+}
+function closeModal(){ $('overlay').classList.remove('show'); }
+$('overlay').addEventListener('click',e=>{ if(e.target.id==='overlay' && !$('overlay')._keep) closeModal(); });
+
+/* =========================================================================
+   RULES
+   ========================================================================= */
+function openRules(){
+  openModal('قواعد اللعبة',
+    `<div class="rules-list">`+
+    `<p><b>الهدف:</b> كن آخر لاعب لم يُفلس بعد شراء العقارات وتحصيل الإيجارات.</p>`+
+    `<p><b>التحرّك:</b> ارمِ النردين وتحرّك بمجموعهما. عند المرور بـ<b>البداية</b> تقبض 200 ريال. إن رميت زوجاً تلعب مرة أخرى، وثلاثة أزواج متتالية تُدخلك السجن.</p>`+
+    `<p><b>الشراء:</b> إن توقفت على عقار شاغر فاشترِه بسعره، أو اعرضه في <b>مزاد</b> علني لجميع اللاعبين.</p>`+
+    `<p><b>الإيجار:</b> إن توقفت على عقار مملوك دفعت إيجاره لصاحبه. امتلاك كل عقارات اللون (احتكار) يضاعف الإيجار الأساسي ويتيح البناء.</p>`+
+    `<p><b>البناء:</b> ببناء المنازل (ثم فندق بعد 4 منازل) يرتفع الإيجار. يجب البناء بالتساوي على عقارات اللون.</p>`+
+    `<p><b>المحطات:</b> الإيجار 25 / 50 / 100 / 200 حسب عدد ما تملك. <b>شركات الخدمات:</b> 4× أو 10× النرد.</p>`+
+    `<p><b>السجن:</b> للخروج ارمِ زوجاً، أو ادفع 50 ريالاً، أو استخدم بطاقة الخروج.</p>`+
+    `<p><b>الرهن والمقايضة:</b> ارهن عقاراتك مقابل المال وقت الحاجة، وقايض العقارات والنقد مع اللاعبين.</p>`+
+    `<p><b>فرصة وصندوق المجتمع:</b> اسحب بطاقة ونفّذ ما فيها.</p>`+
+    `</div>`,
+    [{label:'فهمت', cls:'gold', fn:()=>closeModal()}]
+  );
+}
+
+/* =========================================================================
+   SAVE / RESUME  (complete later)
+   ========================================================================= */
+const SAVE_KEY='ihtikar_save_v1';
+function lsAvailable(){ try{ const k='__t'; localStorage.setItem(k,'1'); localStorage.removeItem(k); return true; }catch(e){ return false; } }
+function hasLocalSave(){ try{ return !!localStorage.getItem(SAVE_KEY); }catch(e){ return false; } }
+function writeLocalSave(json){ try{ localStorage.setItem(SAVE_KEY,json); return true; }catch(e){ return false; } }
+function readLocalSave(){ try{ return localStorage.getItem(SAVE_KEY); }catch(e){ return null; } }
+function clearLocalSave(){ try{ localStorage.removeItem(SAVE_KEY); }catch(e){} }
+function encodeState(json){ try{ return btoa(unescape(encodeURIComponent(json))); }catch(e){ return ''; } }
+function decodeState(code){ try{ return decodeURIComponent(escape(atob(String(code).trim()))); }catch(e){ return null; } }
+
+function serializeGame(){
+  if(!G || !G.started) return null;
+  return JSON.stringify({
+    v:1,
+    players:G.players, cur:G.cur,
+    owner:G.owner, houses:G.houses, mort:G.mort,
+    chanceDeck:G.chanceDeck, chestDeck:G.chestDeck,
+    doubles:G.doubles, rolledThisTurn:G.rolledThisTurn, over:G.over
+  });
+}
+
+/* silent snapshot at every turn boundary so closing the app never loses progress */
+function autoSave(){
+  if(!G || !G.started || G.over) return;
+  const json=serializeGame(); if(json) writeLocalSave(json);
+}
+
+function saveGame(){
+  if(!G || !G.started){ toast('ابدأ لعبة أولاً'); return; }
+  if(G.over){ toast('انتهت اللعبة بالفعل'); return; }
+  if(G.busy){ toast('انتظر حتى ينتهي التحريك'); return; }
+  if($('overlay').classList.contains('show')){ toast('أغلق النافذة المفتوحة أولاً'); return; }
+  const json=serializeGame();
+  if(!json){ toast('تعذّر الحفظ'); return; }
+  const okLS=writeLocalSave(json);
+  const code=encodeState(json);
+  openModal('حفظ اللعبة',
+    `<p class="mbody" style="text-align:center">${okLS
+      ? 'تم حفظ اللعبة على هذا الجهاز. أغلق اللعبة وعُد لاحقاً، ثم اضغط «متابعة اللعبة المحفوظة» من شاشة البداية.'
+      : 'تعذّر الحفظ التلقائي هنا. انسخ رمز الحفظ أدناه واحتفظ به، وألصقه لاحقاً عبر «استعادة لعبة محفوظة».'}</p>`+
+    `<p class="small" style="text-align:center">نسخة احتياطية محمولة — انسخ هذا الرمز:</p>`+
+    `<textarea id="saveCode" class="codebox" readonly>${code}</textarea>`,
+    [ {label:'نسخ الرمز', cls:'', fn:copySaveCode},
+      {label:'تم', cls:'gold', fn:closeModal} ], true);
+}
+
+function copySaveCode(){
+  const ta=$('saveCode'); if(!ta) return;
+  try{ ta.focus(); ta.select(); ta.setSelectionRange(0,ta.value.length); }catch(e){}
+  let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(ta.value).then(()=>toast('نُسخ الرمز')).catch(()=>toast(ok?'نُسخ الرمز':'حدّد الرمز وانسخه يدوياً'));
+  } else { toast(ok?'نُسخ الرمز':'حدّد الرمز وانسخه يدوياً'); }
+}
+
+function resumeSaved(){
+  const json=readLocalSave();
+  if(!json){ toast('لا توجد لعبة محفوظة على هذا الجهاز'); return; }
+  loadGameFromJSON(json);
+}
+function restoreFromCode(){
+  const el=$('restoreCodeInput');
+  const code=el?el.value:'';
+  if(!code || !code.trim()){ toast('ألصق رمز الحفظ أولاً'); return; }
+  const json=decodeState(code);
+  if(!json){ toast('رمز الحفظ غير صالح'); return; }
+  loadGameFromJSON(json);
+}
+function applyStateObject(s, opts){
+  opts=opts||{};
+  G=newGameState(s.players);
+  G.cur = s.cur||0;
+  G.owner = s.owner;
+  G.houses = Array.isArray(s.houses)? s.houses : new Array(40).fill(0);
+  G.mort = Array.isArray(s.mort)? s.mort : new Array(40).fill(false);
+  if(Array.isArray(s.chanceDeck)) G.chanceDeck=s.chanceDeck;
+  if(Array.isArray(s.chestDeck)) G.chestDeck=s.chestDeck;
+  G.doubles = s.doubles||0;
+  G.over=!!opts.keepOver && !!s.over; G.busy=false; G.debt=null;
+  G.rolledThisTurn=!!s.rolledThisTurn;
+}
+function loadGameFromJSON(json){
+  let s;
+  try{ s=JSON.parse(json); }catch(e){ toast('بيانات الحفظ تالفة'); return false; }
+  if(!s || !Array.isArray(s.players) || !Array.isArray(s.owner)){ toast('بيانات الحفظ غير صالحة'); return false; }
+  closeModal();
+  applyStateObject(s);
+  G.over=false;
+  $('log').innerHTML='';
+  buildBoard(); initCamera(); renderOwners(); renderPanel();
+  log('تم استئناف اللعبة المحفوظة. بالتوفيق!','good');
+  if(s.rolledThisTurn){ nextPlayer(); } else { showTurnStart(); }
+  return true;
+}
+
+function openRestore(){
+  const hasS=hasLocalSave();
+  openModal('استعادة لعبة محفوظة',
+    (hasS
+      ? `<p class="mbody" style="text-align:center">توجد لعبة محفوظة على هذا الجهاز.</p>`
+      : `<p class="small" style="text-align:center">لا توجد لعبة محفوظة على هذا الجهاز.</p>`)+
+    `<p class="small" style="text-align:center;margin-top:8px">أو ألصق رمز حفظ محفوظ مسبقاً:</p>`+
+    `<textarea id="restoreCodeInput" class="codebox" placeholder="ألصق رمز الحفظ هنا"></textarea>`,
+    [
+      ...(hasS?[{label:'متابعة المحفوظة', cls:'gold', fn:resumeSaved}]:[]),
+      {label:'استعادة بالرمز', cls:(hasS?'':'gold'), fn:restoreFromCode},
+      {label:'رجوع', cls:'', fn:renderSetup}
+    ], true);
+}
+
+/* =========================================================================
+   NETWORK PLAY  (two devices on the same WiFi, via WebRTC / PeerJS)
+   - Model: exactly one device is "active" at a time (the one owning the
+     current player). It runs the real engine and broadcasts the full state;
+     the other device mirrors it. Control follows the turn.
+   ========================================================================= */
+const NET = { on:false, role:null, pc:null, dc:null, seat:0, passive:false, applying:false, _bt:null, connected:false };
+
+function ownsSeat(idx){
+  const pl=G.players[idx]; if(!pl) return true;
+  if(pl.bot) return NET.role==='host';   // bots are run by the host
+  return idx===NET.seat;                  // each device owns its own human seat
+}
+
+function netSend(obj){ try{ if(NET.dc && NET.dc.readyState==='open') NET.dc.send(JSON.stringify(obj)); }catch(e){} }
+function netState(){ return { t:'state', s: JSON.parse(serializeGame()), log:(($('log')||{}).innerHTML||'') }; }
+function netBroadcast(){
+  if(!NET.on || !NET.dc || NET.dc.readyState!=='open') return;
+  clearTimeout(NET._bt);
+  NET._bt=setTimeout(()=>{ netSend(netState()); }, 70);
+}
+function copyEl(id){
+  const ta=$(id); if(!ta) return;
+  try{ ta.focus(); ta.select(); ta.setSelectionRange(0,(ta.value||'').length); }catch(e){}
+  let ok=false; try{ ok=document.execCommand('copy'); }catch(e){}
+  if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(ta.value).then(()=>toast('تم نسخ الرمز')).catch(()=>toast(ok?'تم نسخ الرمز':'حدّد الرمز وانسخه')); }
+  else toast(ok?'تم نسخ الرمز':'حدّد الرمز وانسخه');
+}
+function netEnterPassive(p){
+  NET.passive=true;
+  setActions(`<div class="bot-think">&#9203; دور ${p?p.name:'اللاعب الآخر'} على الجهاز الآخر</div>`);
+  setHint('بانتظار اللاعب الآخر...');
+}
+function netApplyState(msg){
+  if(!msg || !msg.s) return;
+  NET.applying=true;
+  applyStateObject(msg.s, {keepOver:true});
+  if(typeof msg.log==='string'){ const lg=$('log'); if(lg) lg.innerHTML=msg.log; }
+  buildBoardIfNeeded();
+  renderOwners(); renderPanel(); renderTokens();
+  const p=G.players[G.cur]; if(p) focusCamera(p.pos);
+  NET.applying=false;
+  if(G.over){
+    const w=G.players.find(x=>!x.bankrupt);
+    openModal('انتهت اللعبة',
+      `<div class="center-msg"><div class="win-emoji">🏆</div><h2 style="color:var(--gold)">الفائز: ${w?w.name:'—'}</h2></div>`,
+      [{label:'لعبة جديدة', cls:'gold', fn:()=>{ netReset(); closeModal(); openSetup(); }}], true);
+    return;
+  }
+  if(ownsSeat(G.cur)){
+    if(NET.passive){ NET.passive=false; showTurnStart(); }
+  } else {
+    netEnterPassive(p);
+  }
+}
+let __boardBuilt=false;
+function buildBoardIfNeeded(){ if(!__boardBuilt){ buildBoard(); initCamera(); __boardBuilt=true; } }
+
+function netMsg(msg){
+  if(!msg || !msg.t) return;
+  if(msg.t==='hello'){ /* guest connected */ if(NET.role==='host'){ NET.guestReady=true; onGuestJoined(); } return; }
+  if(msg.t==='init'){ // guest receives the starting game
+    NET.seat=1; NET.role='guest'; NET.on=true;
+    closeModal();
+    $('log').innerHTML='';
+    netApplyState(msg);
+    toast('بدأت اللعبة عبر الشبكة!');
+    return;
+  }
+  if(msg.t==='state'){ netApplyState(msg); return; }
+  if(msg.t==='bye'){ toast('غادر اللاعب الآخر'); NET.on=false; return; }
+}
+
+function netReset(){
+  try{ if(NET.dc) NET.dc.close(); }catch(e){}
+  try{ if(NET.pc) NET.pc.close(); }catch(e){}
+  NET.on=false; NET.role=null; NET.pc=null; NET.dc=null; NET.passive=false; NET.connected=false;
+}
+
+function rtcOK(){ return typeof RTCPeerConnection!=='undefined'; }
+function makePC(){ return new RTCPeerConnection({iceServers:[{urls:'stun:stun.l.google.com:19302'},{urls:'stun:stun1.l.google.com:19302'}]}); }
+function waitIce(pc){
+  return new Promise(res=>{
+    if(pc.iceGatheringState==='complete') return res();
+    let done=false; const fin=()=>{ if(done) return; done=true; res(); };
+    pc.addEventListener('icegatheringstatechange', ()=>{ if(pc.iceGatheringState==='complete') fin(); });
+    setTimeout(fin, 2600);
+  });
+}
+function encSig(desc){ try{ return btoa(unescape(encodeURIComponent(JSON.stringify({t:desc.type,s:desc.sdp})))); }catch(e){ return ''; } }
+function decSig(code){ try{ const o=JSON.parse(decodeURIComponent(escape(atob(String(code).trim())))); if(!o.t||!o.s) return null; return {type:o.t, sdp:o.s}; }catch(e){ return null; } }
+function setupDC(dc){
+  NET.dc=dc;
+  dc.onopen=()=>{ NET.connected=true; onLinkOpen(); };
+  dc.onmessage=(e)=>{ let m; try{ m=JSON.parse(e.data); }catch(_){ return; } netMsg(m); };
+  dc.onclose=()=>{ toast('انقطع الاتصال باللاعب الآخر'); };
+}
+function onLinkOpen(){
+  if(NET.role==='host'){ onGuestJoined(); }
+  else { NET.on=true; showNetInfo('تم الاتصال! بانتظار بدء المضيف...'); }
+}
+
+/* ---- HOST ---- */
+async function netHost(){
+  if(!rtcOK()){ showNetError('متصفحك لا يدعم الاتصال المباشر.'); return; }
+  netReset(); NET.role='host'; NET.seat=0;
+  showNetInfo('جارٍ إنشاء رمز الدعوة...');
+  try{
+    const pc=makePC(); NET.pc=pc;
+    pc.onconnectionstatechange=()=>{ if(pc.connectionState==='failed') toast('فشل الاتصال — حاولا مجدداً'); };
+    const dc=pc.createDataChannel('game',{ordered:true}); setupDC(dc);
+    const offer=await pc.createOffer(); await pc.setLocalDescription(offer);
+    await waitIce(pc);
+    showHostOffer(encSig(pc.localDescription));
+  }catch(e){ showNetError('تعذّر إنشاء الدعوة.'); }
+}
+async function netHostConnect(){
+  const el=$('ansIn'); const ans=el?decSig(el.value):null;
+  if(!ans){ toast('الصق رمز الرد الصحيح'); return; }
+  try{ await NET.pc.setRemoteDescription(ans); showNetInfo('جارٍ الاتصال باللاعب الآخر...'); }
+  catch(e){ toast('رمز الرد غير صالح'); }
+}
+function onGuestJoined(){
+  __boardBuilt=false;
+  const players=[
+    {id:0,name:'المضيف',piece:PIECES[0],color:PCOLORS[0],money:1500,pos:0,jail:false,jailTurns:0,getout:0,bankrupt:false,bot:false,level:'medium'},
+    {id:1,name:'الضيف',piece:PIECES[1],color:PCOLORS[1],money:1500,pos:0,jail:false,jailTurns:0,getout:0,bankrupt:false,bot:false,level:'medium'}
+  ];
+  G=newGameState(players);
+  NET.on=true; NET.seat=0; NET.passive=false;
+  $('log').innerHTML='';
+  buildBoardIfNeeded(); renderOwners(); renderPanel();
+  log('بدأت اللعبة عبر الشبكة! أنت المضيف (اللاعب 1).','good');
+  closeModal();
+  netSend(Object.assign({t:'init'}, netState()));
+  showTurnStart();
+}
+
+/* ---- GUEST ---- */
+async function netJoinProcess(){
+  if(!rtcOK()){ showNetError('متصفحك لا يدعم الاتصال المباشر.'); return; }
+  const el=$('offIn'); const off=el?decSig(el.value):null;
+  if(!off){ toast('الصق رمز الدعوة الصحيح'); return; }
+  netReset(); NET.role='guest'; NET.seat=1;
+  showNetInfo('جارٍ إنشاء رمز الرد...');
+  try{
+    const pc=makePC(); NET.pc=pc;
+    pc.onconnectionstatechange=()=>{ if(pc.connectionState==='failed') toast('فشل الاتصال — حاولا مجدداً'); };
+    pc.ondatachannel=(e)=>{ setupDC(e.channel); };
+    await pc.setRemoteDescription(off);
+    const ans=await pc.createAnswer(); await pc.setLocalDescription(ans);
+    await waitIce(pc);
+    showGuestAnswer(encSig(pc.localDescription));
+  }catch(e){ showNetError('رمز الدعوة غير صالح.'); }
+}
+
+/* ---- NET MODALS ---- */
+function openNet(){
+  if(!rtcOK()){ openModal('لعب عبر الشبكة', `<p class="mbody" style="text-align:center">متصفحك لا يدعم الاتصال المباشر بين الأجهزة.</p>`, [{label:'حسناً', cls:'gold', fn:openSetup}], true); return; }
+  openModal('لعب عبر شبكة الواي فاي',
+    `<p class="mbody" style="text-align:center">العبا على جهازين بنفس الشبكة — بدون خادم. تتبادلان رمزين مرة واحدة (انسخ الرمز وأرسله عبر AirDrop أو الرسائل).</p>`+
+    `<p class="small" style="text-align:center">جهاز «يستضيف» وينشئ رمز دعوة، والآخر «ينضم» ويعيد رمز رد.</p>`,
+    [ {label:'استضافة (إنشاء دعوة)', cls:'gold', fn:netHost},
+      {label:'انضمام (لديّ دعوة)', cls:'', fn:openJoin},
+      {label:'رجوع', cls:'', fn:openSetup} ], true);
+}
+function showHostOffer(code){
+  openModal('استضافة — الخطوة 1',
+    `<p class="small" style="text-align:center">1) انسخ «رمز الدعوة» وأرسله للاعب الآخر.</p>`+
+    `<textarea id="offOut" class="codebox" readonly>${code}</textarea>`+
+    `<div style="text-align:center;margin:6px 0"><button class="btn" onclick="copyEl('offOut')">نسخ رمز الدعوة</button></div>`+
+    `<p class="small" style="text-align:center">2) عندما يرسل لك «رمز الرد»، الصقه هنا واضغط «اتصال».</p>`+
+    `<textarea id="ansIn" class="codebox" placeholder="الصق رمز الرد هنا"></textarea>`,
+    [ {label:'اتصال', cls:'gold', fn:netHostConnect}, {label:'إلغاء', cls:'', fn:()=>{ netReset(); openSetup(); }} ], true);
+}
+function openJoin(){
+  openModal('انضمام — الخطوة 1',
+    `<p class="small" style="text-align:center">الصق «رمز الدعوة» الذي أرسله المضيف:</p>`+
+    `<textarea id="offIn" class="codebox" placeholder="الصق رمز الدعوة هنا"></textarea>`,
+    [ {label:'متابعة', cls:'gold', fn:netJoinProcess}, {label:'رجوع', cls:'', fn:openNet} ], true);
+}
+function showGuestAnswer(code){
+  openModal('انضمام — الخطوة 2',
+    `<p class="small" style="text-align:center">أرسل «رمز الرد» هذا إلى المضيف، ثم انتظر بدء اللعبة.</p>`+
+    `<textarea id="ansOut" class="codebox" readonly>${code}</textarea>`+
+    `<div style="text-align:center;margin:6px 0"><button class="btn" onclick="copyEl('ansOut')">نسخ رمز الرد</button></div>`+
+    `<p class="small" style="text-align:center">بانتظار اتصال المضيف...</p>`,
+    [ {label:'إلغاء', cls:'', fn:()=>{ netReset(); openSetup(); }} ], true);
+}
+function showNetInfo(t){
+  openModal('لعب عبر الشبكة', `<p class="mbody" style="text-align:center">${t}</p>`, [ {label:'إلغاء', cls:'', fn:()=>{ netReset(); openSetup(); }} ], true);
+}
+function showNetError(t){
+  openModal('تعذّر الاتصال', `<p class="mbody" style="text-align:center">${t}</p>`, [ {label:'رجوع', cls:'gold', fn:openNet} ], true);
+}
+
+/* =========================================================================
+   SETUP
+   ========================================================================= */
+let setupCfg = {count:2, players:[
+  {name:'اللاعب 1', piece:0, bot:false, level:'medium'},
+  {name:'الخصم 1', piece:1, bot:true, level:'medium'},
+  {name:'الخصم 2', piece:2, bot:true, level:'medium'},
+  {name:'الخصم 3', piece:3, bot:true, level:'hard'}
+]};
+function openSetup(){ renderSetup(); }
+function renderSetup(){
+  let cp='<div class="count-pick">';
+  for(let n=2;n<=4;n++){ cp+=`<button class="${setupCfg.count===n?'sel':''}" onclick="setCount(${n})">${n}</button>`; }
+  cp+='</div>';
+  let ps='<div class="setup-players">';
+  for(let k=0;k<setupCfg.count;k++){
+    const pl=setupCfg.players[k];
+    let tp='<div class="tokpick">';
+    PIECES.forEach((pc,pi)=>{ const used=setupCfg.players.slice(0,setupCfg.count).some((x,xi)=>xi!==k && x.piece===pi); tp+=`<button class="${pl.piece===pi?'sel':''}" ${used?'disabled style="opacity:.25"':''} onclick="setPiece(${k},${pi})">${pc}</button>`; });
+    tp+='</div>';
+    let kind='<div class="seg sm">'+
+      `<button class="${!pl.bot?'sel':''}" onclick="setBot(${k},false)">بشري</button>`+
+      `<button class="${pl.bot?'sel':''}" onclick="setBot(${k},true)">&#129302; بوت</button>`+
+      '</div>';
+    let lvl='';
+    if(pl.bot){
+      lvl='<div class="seg sm">'+
+        `<button class="${pl.level==='easy'?'sel':''}" onclick="setLevel(${k},'easy')">سهل</button>`+
+        `<button class="${pl.level==='medium'?'sel':''}" onclick="setLevel(${k},'medium')">متوسط</button>`+
+        `<button class="${pl.level==='hard'?'sel':''}" onclick="setLevel(${k},'hard')">صعب</button>`+
+        '</div>';
+    }
+    ps+=`<div class="pcard"><div class="pset"><span style="width:22px;height:22px;border-radius:50%;background:${PCOLORS[k]};flex:0 0 auto"></span>`+
+        `<input value="${pl.name}" oninput="setupCfg.players[${k}].name=this.value" maxlength="14">${tp}</div>`+
+        `<div class="pmeta">${kind}${lvl}</div></div>`;
+  }
+  ps+='</div>';
+  openModal('لعبة جديدة',
+    `<p class="mbody" style="text-align:center">اختر عدد اللاعبين، ومن منهم بشري أو بوت ومستواه</p>`+cp+ps,
+    [{label:'ابدأ اللعب', cls:'gold', fn:startGame},
+     {label:'&#128241; لعب عبر الشبكة', cls:'', fn:openNet},
+     {label:'استعادة لعبة محفوظة', cls:'', fn:openRestore}], true
+  );
+}
+function setCount(n){ setupCfg.count=n; renderSetup(); }
+function setPiece(k,pi){ setupCfg.players[k].piece=pi; renderSetup(); }
+function setBot(k,v){ setupCfg.players[k].bot=v; renderSetup(); }
+function setLevel(k,lv){ setupCfg.players[k].level=lv; renderSetup(); }
+
+function startGame(){
+  const players=[];
+  for(let k=0;k<setupCfg.count;k++){
+    const pl=setupCfg.players[k];
+    players.push({
+      id:k, name:(pl.name||('اللاعب '+(k+1))).trim(), piece:PIECES[pl.piece], color:PCOLORS[k],
+      money:1500, pos:0, jail:false, jailTurns:0, getout:0, bankrupt:false,
+      bot:!!pl.bot, level:pl.level||'medium'
+    });
+  }
+  G=newGameState(players);
+  NET.on=false; __boardBuilt=false;
+  closeModal();
+  $('log').innerHTML='';
+  buildBoard(); initCamera(); renderOwners(); renderPanel();
+  log('بدأت اللعبة! بالتوفيق.','good');
+  showTurnStart();
+}
+
+/* =========================================================================
+   BOOT
+   ========================================================================= */
+buildBoard();
+initCamera();
+(function(){ const b=$('fsBtn'); if(b && (CAM.device==='phone' || !isFsSupported())) b.style.display='none'; })();
+$('turnCard').innerHTML='<div class="center-msg"><h2 style="color:var(--gold)">مرحباً بك في الاحتكار</h2><p class="mbody">اضغط «لعبة جديدة» للبدء.</p></div>';
+let bootActions='<button class="btn gold lg" onclick="openSetup()">▶ لعبة جديدة</button>';
+if(hasLocalSave()) bootActions+='<button class="btn lg" onclick="resumeSaved()">&#9654; متابعة اللعبة المحفوظة</button>';
+setActions(bootActions);
+setHint('لعبة عقارات كلاسيكية لـ 2 إلى 4 لاعبين على الجهاز نفسه.');
+openSetup();
+
+</script>
+</body>
+</html>
