@@ -1,0 +1,528 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>Foldpack &mdash; ZIP Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#07181b; --ink2:#0b2227; --panel:#0f2e34; --panel2:#123940;
+  --line:#1d4c54; --teal:#2a8c95; --teal-bright:#3fb6bf; --gold:#d8ab4c;
+  --gold-soft:#e7c878; --cream:#f1ece0; --mute:#8aa9ac; --bad:#e0795f; --good:#5fc99a;
+  --r:16px; --rs:11px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  font-family:'Sora',system-ui,sans-serif; color:var(--cream);
+  background:
+    radial-gradient(1100px 700px at 78% -8%, rgba(42,140,149,.22), transparent 60%),
+    radial-gradient(900px 600px at 8% 108%, rgba(216,171,76,.10), transparent 55%),
+    var(--ink);
+  -webkit-font-smoothing:antialiased; line-height:1.5;
+  padding:env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+.wrap{max-width:880px;margin:0 auto;padding:28px 18px 64px}
+.kicker{font-size:11px;letter-spacing:.34em;text-transform:uppercase;color:var(--gold);font-weight:600}
+header h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(34px,7vw,52px);line-height:1.02;margin:8px 0 6px;letter-spacing:.5px}
+header h1 em{font-style:italic;color:var(--gold-soft)}
+.sub{color:var(--mute);max-width:48ch;font-size:14.5px}
+
+/* mode switch */
+.modes{display:inline-flex;gap:4px;background:var(--ink2);border:1px solid var(--line);padding:5px;border-radius:999px;margin:22px 0 18px}
+.modes button{
+  font:inherit;font-weight:600;font-size:13.5px;color:var(--mute);background:none;border:0;cursor:pointer;
+  padding:10px 20px;border-radius:999px;display:flex;align-items:center;gap:8px;transition:.18s;letter-spacing:.01em
+}
+.modes button svg{width:16px;height:16px}
+.modes button[aria-selected="true"]{background:linear-gradient(180deg,var(--teal),#207079);color:#fff;box-shadow:0 6px 18px rgba(42,140,149,.32)}
+
+.panel{background:linear-gradient(180deg,var(--panel),var(--ink2));border:1px solid var(--line);border-radius:var(--r);padding:20px}
+.panel + .panel{margin-top:16px}
+
+/* drop zone */
+.drop{
+  border:1.5px dashed var(--line);border-radius:var(--r);padding:38px 20px;text-align:center;cursor:pointer;
+  background:rgba(255,255,255,.012);transition:.2s;position:relative;overflow:hidden
+}
+.drop:hover,.drop:focus-visible{border-color:var(--teal-bright);background:rgba(63,182,191,.06);outline:none}
+.drop.over{border-color:var(--gold);background:rgba(216,171,76,.09);transform:translateY(-1px)}
+.drop .ico{width:54px;height:54px;margin:0 auto 14px;color:var(--gold);opacity:.95}
+.drop b{display:block;font-size:16px;font-weight:600;color:var(--cream)}
+.drop span{display:block;color:var(--mute);font-size:13px;margin-top:5px}
+.picks{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.chip{font:inherit;font-size:12.5px;font-weight:500;color:var(--cream);background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:8px 15px;cursor:pointer;display:inline-flex;align-items:center;gap:7px;transition:.16s}
+.chip:hover{border-color:var(--teal-bright);color:#fff}
+.chip svg{width:14px;height:14px;color:var(--teal-bright)}
+
+/* file list */
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.bar h2{font-family:'DM Serif Display',serif;font-weight:400;font-size:20px;letter-spacing:.3px}
+.bar .count{color:var(--mute);font-size:13px;font-weight:500}
+.list{list-style:none;max-height:340px;overflow:auto}
+.list li{display:flex;align-items:center;gap:12px;padding:11px 4px;border-bottom:1px solid rgba(29,76,84,.55)}
+.list li:last-child{border-bottom:0}
+.fico{width:34px;height:34px;flex:none;border-radius:9px;background:var(--panel2);border:1px solid var(--line);display:grid;place-items:center;color:var(--teal-bright)}
+.fico svg{width:17px;height:17px}
+.fmeta{min-width:0;flex:1}
+.fname{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fsize{font-size:11.5px;color:var(--mute);margin-top:1px}
+.badge{font-size:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;padding:3px 8px;border-radius:999px;border:1px solid var(--line);color:var(--mute)}
+.badge.def{color:var(--gold-soft);border-color:rgba(216,171,76,.4)}
+.iconbtn{font:inherit;background:none;border:1px solid var(--line);color:var(--mute);width:32px;height:32px;border-radius:9px;cursor:pointer;display:grid;place-items:center;flex:none;transition:.15s}
+.iconbtn:hover{color:#fff;border-color:var(--teal-bright)}
+.iconbtn.danger:hover{color:var(--bad);border-color:var(--bad)}
+.iconbtn svg{width:15px;height:15px}
+
+/* options */
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:560px){.opts{grid-template-columns:1fr}.modes button{padding:10px 15px}}
+label.fld{display:block}
+label.fld .lab{font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--mute);font-weight:600;margin-bottom:7px}
+.inp{width:100%;font:inherit;font-size:14px;color:var(--cream);background:var(--ink2);border:1px solid var(--line);border-radius:var(--rs);padding:11px 13px;transition:.15s}
+.inp:focus{outline:none;border-color:var(--teal-bright);box-shadow:0 0 0 3px rgba(63,182,191,.15)}
+.seg{display:flex;gap:6px}
+.seg button{flex:1;font:inherit;font-size:13px;font-weight:600;color:var(--mute);background:var(--ink2);border:1px solid var(--line);border-radius:var(--rs);padding:11px;cursor:pointer;transition:.15s}
+.seg button[aria-pressed="true"]{color:var(--ink);background:linear-gradient(180deg,var(--gold-soft),var(--gold));border-color:var(--gold)}
+
+/* stats / signature gauge */
+.gauge{display:flex;align-items:center;gap:22px;flex-wrap:wrap}
+.dial{position:relative;width:128px;height:128px;flex:none}
+.dial svg{transform:rotate(-90deg)}
+.dial .ring-bg{stroke:var(--line)}
+.dial .ring-fg{stroke:url(#gg);stroke-linecap:round;transition:stroke-dashoffset .7s cubic-bezier(.2,.8,.2,1)}
+.dial .mid{position:absolute;inset:0;display:grid;place-content:center;text-align:center}
+.dial .pct{font-family:'DM Serif Display',serif;font-size:30px;line-height:1;color:var(--gold-soft)}
+.dial .pct small{font-size:14px;color:var(--mute)}
+.dial .cap{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--mute);margin-top:5px}
+.figs{flex:1;min-width:200px;display:grid;grid-template-columns:1fr 1fr;gap:12px 18px}
+.fig .n{font-family:'DM Serif Display',serif;font-size:22px;color:var(--cream)}
+.fig .l{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--mute);margin-top:2px}
+
+/* primary action */
+.go{width:100%;font:inherit;font-weight:600;font-size:15.5px;color:#06181b;cursor:pointer;border:0;border-radius:var(--r);
+  padding:16px;margin-top:16px;background:linear-gradient(180deg,var(--gold-soft),var(--gold));
+  box-shadow:0 10px 28px rgba(216,171,76,.28);transition:.18s;display:flex;align-items:center;justify-content:center;gap:10px}
+.go:hover{transform:translateY(-1px);box-shadow:0 14px 34px rgba(216,171,76,.36)}
+.go:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none;filter:grayscale(.3)}
+.go svg{width:18px;height:18px}
+.prog{height:6px;border-radius:999px;background:var(--ink2);overflow:hidden;margin-top:14px;display:none}
+.prog.on{display:block}
+.prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal-bright),var(--gold));transition:width .25s}
+
+.empty{text-align:center;color:var(--mute);font-size:13.5px;padding:8px 0}
+.hidden{display:none!important}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,30px);background:var(--ink2);border:1px solid var(--line);
+  color:var(--cream);padding:13px 18px;border-radius:12px;font-size:13.5px;font-weight:500;opacity:0;pointer-events:none;
+  transition:.3s;z-index:60;display:flex;align-items:center;gap:10px;box-shadow:0 12px 40px rgba(0,0,0,.4);max-width:90vw}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.toast svg{width:17px;height:17px;flex:none}
+.toast.ok svg{color:var(--good)} .toast.err svg{color:var(--bad)}
+
+/* preview modal */
+.modal{position:fixed;inset:0;background:rgba(4,12,14,.78);display:none;align-items:center;justify-content:center;padding:18px;z-index:70}
+.modal.on{display:flex}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);max-width:640px;width:100%;max-height:84vh;display:flex;flex-direction:column;overflow:hidden}
+.card .top{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:15px 18px;border-bottom:1px solid var(--line)}
+.card .top b{font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.card .body{padding:16px 18px;overflow:auto}
+.card pre{font-family:ui-monospace,Menlo,Consolas,monospace;font-size:12.5px;white-space:pre-wrap;word-break:break-word;color:#cfe4e2}
+.card img{max-width:100%;border-radius:10px;display:block;margin:0 auto}
+.banner{background:rgba(224,121,95,.1);border:1px solid rgba(224,121,95,.4);color:var(--gold-soft);font-size:12.5px;padding:10px 13px;border-radius:11px;margin-bottom:14px}
+footer{text-align:center;color:var(--mute);font-size:11.5px;margin-top:30px;letter-spacing:.04em}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="kicker">Foldpack</div>
+    <h1>ZIP <em>Studio</em></h1>
+    <p class="sub">Pack files into a ZIP or crack one open &mdash; right in your browser. Nothing is uploaded; everything runs on your device.</p>
+  </header>
+
+  <div class="modes" role="tablist" aria-label="Mode">
+    <button id="mZip" role="tab" aria-selected="true" onclick="setMode('zip')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>Compress
+    </button>
+    <button id="mUnzip" role="tab" aria-selected="false" onclick="setMode('unzip')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-6m0 6l-2.5-2.5M12 18l2.5-2.5"/></svg>Extract
+    </button>
+  </div>
+
+  <div id="unsupported" class="banner hidden">Your browser cannot deflate here, so files will be stored without compression. Update to a current browser (iOS 16.4+) for full compression.</div>
+
+  <!-- ===================== COMPRESS ===================== -->
+  <section id="viewZip">
+    <div class="drop panel" id="dropZip" tabindex="0" role="button" aria-label="Add files to pack">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M12 3v13M7 8l5-5 5 5"/></svg></div>
+      <b>Drop files or folders here</b>
+      <span>or use the buttons below</span>
+      <div class="picks">
+        <button class="chip" type="button" id="pickFiles"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg>Add files</button>
+        <button class="chip" type="button" id="pickFolder"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>Add folder</button>
+      </div>
+    </div>
+    <input id="fileInput" type="file" multiple class="hidden">
+    <input id="folderInput" type="file" webkitdirectory directory multiple class="hidden">
+
+    <div class="panel" id="listPanel" style="display:none">
+      <div class="bar">
+        <h2>In the archive</h2>
+        <span class="count"><span id="zCount">0</span> &middot; <span id="zSize">0 B</span> <button class="chip" id="clearAll" style="margin-left:8px;padding:5px 11px">Clear all</button></span>
+      </div>
+      <ul class="list" id="zList"></ul>
+    </div>
+
+    <div class="panel" id="optPanel" style="display:none">
+      <div class="opts">
+        <label class="fld"><span class="lab">Archive name</span>
+          <input class="inp" id="zipName" value="archive" spellcheck="false" autocomplete="off"><span style="font-size:11px;color:var(--mute);margin-top:5px;display:block">.zip is added automatically</span>
+        </label>
+        <label class="fld"><span class="lab">Method</span>
+          <div class="seg">
+            <button type="button" id="mDeflate" aria-pressed="true" onclick="setMethod(true)">Deflate</button>
+            <button type="button" id="mStore" aria-pressed="false" onclick="setMethod(false)">Store</button>
+          </div>
+          <span style="font-size:11px;color:var(--mute);margin-top:5px;display:block">Deflate shrinks; Store is fastest.</span>
+        </label>
+      </div>
+
+      <div class="gauge" style="margin-top:20px">
+        <div class="dial">
+          <svg width="128" height="128" viewBox="0 0 128 128">
+            <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#3fb6bf"/><stop offset="1" stop-color="#d8ab4c"/></linearGradient></defs>
+            <circle class="ring-bg" cx="64" cy="64" r="54" fill="none" stroke-width="11"/>
+            <circle class="ring-fg" id="ring" cx="64" cy="64" r="54" fill="none" stroke-width="11" stroke-dasharray="339.29" stroke-dashoffset="339.29"/>
+          </svg>
+          <div class="mid"><div class="pct" id="ratioPct">&mdash;</div><div class="cap">saved</div></div>
+        </div>
+        <div class="figs">
+          <div class="fig"><div class="n" id="figOrig">0 B</div><div class="l">Original</div></div>
+          <div class="fig"><div class="n" id="figPacked">&mdash;</div><div class="l">Packed</div></div>
+          <div class="fig"><div class="n" id="figFiles">0</div><div class="l">Files</div></div>
+          <div class="fig"><div class="n" id="figSaved">&mdash;</div><div class="l">Saved</div></div>
+        </div>
+      </div>
+
+      <button class="go" id="buildBtn" disabled>
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>
+        <span>Create &amp; download ZIP</span>
+      </button>
+      <div class="prog" id="zProg"><i></i></div>
+    </div>
+  </section>
+
+  <!-- ===================== EXTRACT ===================== -->
+  <section id="viewUnzip" class="hidden">
+    <div class="drop panel" id="dropUnzip" tabindex="0" role="button" aria-label="Open a ZIP file">
+      <div class="ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 12v6m0 0l-2.5-2.5M12 18l2.5-2.5"/></svg></div>
+      <b>Drop a .zip here</b>
+      <span>or tap to choose an archive</span>
+      <div class="picks"><button class="chip" type="button" id="pickZip"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg>Choose ZIP</button></div>
+    </div>
+    <input id="zipInput" type="file" accept=".zip,application/zip" class="hidden">
+
+    <div class="panel" id="arcPanel" style="display:none">
+      <div class="gauge" style="margin-bottom:18px">
+        <div class="dial">
+          <svg width="128" height="128" viewBox="0 0 128 128">
+            <circle class="ring-bg" cx="64" cy="64" r="54" fill="none" stroke-width="11"/>
+            <circle class="ring-fg" id="uRing" cx="64" cy="64" r="54" fill="none" stroke-width="11" stroke-dasharray="339.29" stroke-dashoffset="339.29" stroke="url(#gg)"/>
+          </svg>
+          <div class="mid"><div class="pct" id="uRatio">&mdash;</div><div class="cap">packed</div></div>
+        </div>
+        <div class="figs">
+          <div class="fig"><div class="n" id="uName" style="font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:18ch">&mdash;</div><div class="l">Archive</div></div>
+          <div class="fig"><div class="n" id="uFiles">0</div><div class="l">Entries</div></div>
+          <div class="fig"><div class="n" id="uOrig">0 B</div><div class="l">Uncompressed</div></div>
+          <div class="fig"><div class="n" id="uPacked">0 B</div><div class="l">In archive</div></div>
+        </div>
+      </div>
+      <div class="bar"><h2>Contents</h2><span class="count"><button class="chip" id="dlAll" style="padding:7px 13px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>Save all</button></span></div>
+      <ul class="list" id="uList"></ul>
+      <div class="prog" id="uProg"><i></i></div>
+    </div>
+  </section>
+
+  <footer>Foldpack &middot; offline ZIP toolkit &middot; runs entirely on your device</footer>
+</div>
+
+<div class="toast" id="toast"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14M22 4 12 14.01l-3-3"/></svg><span id="toastMsg"></span></div>
+
+<div class="modal" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="card">
+    <div class="top"><b id="pvName">Preview</b><button class="iconbtn" onclick="closeModal()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18M6 6l12 12"/></svg></button></div>
+    <div class="body" id="pvBody"></div>
+  </div>
+</div>
+
+<script>
+"use strict";
+/* ---------- ZIP core (verified against system unzip) ---------- */
+var CRC_T=(function(){var t=new Uint32Array(256),c,n,k;for(n=0;n<256;n++){c=n;for(k=0;k<8;k++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[n]=c>>>0;}return t;})();
+function crc32(b){var c=0xFFFFFFFF,i;for(i=0;i<b.length;i++)c=(c>>>8)^CRC_T[(c^b[i])&0xFF];return (c^0xFFFFFFFF)>>>0;}
+var HAS_CS=typeof CompressionStream!=="undefined", HAS_DS=typeof DecompressionStream!=="undefined";
+function deflateRaw(u){var cs=new CompressionStream("deflate-raw"),w=cs.writable.getWriter();w.write(u);w.close();return new Response(cs.readable).arrayBuffer().then(function(a){return new Uint8Array(a);});}
+function inflateRaw(u){var ds=new DecompressionStream("deflate-raw"),w=ds.writable.getWriter();w.write(u);w.close();return new Response(ds.readable).arrayBuffer().then(function(a){return new Uint8Array(a);});}
+var ENC=new TextEncoder(), DEC=new TextDecoder();
+function dosDT(d){return{time:((d.getHours()&31)<<11)|((d.getMinutes()&63)<<5)|((d.getSeconds()/2|0)&31),date:(((d.getFullYear()-1980)&127)<<9)|(((d.getMonth()+1)&15)<<5)|(d.getDate()&31)};}
+
+async function buildZip(entries,useDeflate,onProg){
+  var now=new Date(),dt=dosDT(now),chunks=[],central=[],offset=0,i;
+  for(i=0;i<entries.length;i++){
+    var f=entries[i], nameB=ENC.encode(f.name), crc=crc32(f.data), method=0, comp=f.data;
+    if(useDeflate&&HAS_CS&&f.data.length>0){var d=await deflateRaw(f.data);if(d.length<f.data.length){method=8;comp=d;}}
+    var lh=new Uint8Array(30+nameB.length),dv=new DataView(lh.buffer);
+    dv.setUint32(0,0x04034b50,true);dv.setUint16(4,20,true);dv.setUint16(6,0x0800,true);
+    dv.setUint16(8,method,true);dv.setUint16(10,dt.time,true);dv.setUint16(12,dt.date,true);
+    dv.setUint32(14,crc,true);dv.setUint32(18,comp.length,true);dv.setUint32(22,f.data.length,true);
+    dv.setUint16(26,nameB.length,true);dv.setUint16(28,0,true);lh.set(nameB,30);
+    chunks.push(lh,comp);
+    var cd=new Uint8Array(46+nameB.length),cv=new DataView(cd.buffer);
+    cv.setUint32(0,0x02014b50,true);cv.setUint16(4,20,true);cv.setUint16(6,20,true);cv.setUint16(8,0x0800,true);
+    cv.setUint16(10,method,true);cv.setUint16(12,dt.time,true);cv.setUint16(14,dt.date,true);
+    cv.setUint32(16,crc,true);cv.setUint32(20,comp.length,true);cv.setUint32(24,f.data.length,true);
+    cv.setUint16(28,nameB.length,true);cv.setUint32(42,offset,true);cd.set(nameB,46);
+    central.push(cd);offset+=lh.length+comp.length;
+    if(onProg)onProg((i+1)/entries.length);
+  }
+  var cdStart=offset,cdSize=0,j;for(j=0;j<central.length;j++){chunks.push(central[j]);cdSize+=central[j].length;}
+  var eo=new Uint8Array(22),ev=new DataView(eo.buffer);
+  ev.setUint32(0,0x06054b50,true);ev.setUint16(8,entries.length,true);ev.setUint16(10,entries.length,true);
+  ev.setUint32(12,cdSize,true);ev.setUint32(16,cdStart,true);chunks.push(eo);
+  var total=0,k;for(k=0;k<chunks.length;k++)total+=chunks[k].length;
+  var out=new Uint8Array(total),p=0;for(k=0;k<chunks.length;k++){out.set(chunks[k],p);p+=chunks[k].length;}
+  return out;
+}
+
+function readZipIndex(buf){
+  var dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength),eo=-1,i;
+  for(i=buf.length-22;i>=0;i--){if(dv.getUint32(i,true)===0x06054b50){eo=i;break;}}
+  if(eo<0)throw new Error("Not a ZIP archive");
+  var count=dv.getUint16(eo+10,true),p=dv.getUint32(eo+16,true),out=[],n;
+  for(n=0;n<count;n++){
+    if(dv.getUint32(p,true)!==0x02014b50)throw new Error("Damaged central directory");
+    var method=dv.getUint16(p+10,true),compSize=dv.getUint32(p+20,true),origSize=dv.getUint32(p+24,true),
+        nameLen=dv.getUint16(p+28,true),extraLen=dv.getUint16(p+30,true),cmtLen=dv.getUint16(p+32,true),
+        lho=dv.getUint32(p+42,true),name=DEC.decode(buf.subarray(p+46,p+46+nameLen));
+    out.push({name:name,method:method,compSize:compSize,origSize:origSize,lho:lho});
+    p+=46+nameLen+extraLen+cmtLen;
+  }
+  return out;
+}
+async function extractEntry(buf,e){
+  var dv=new DataView(buf.buffer,buf.byteOffset,buf.byteLength);
+  var lNameLen=dv.getUint16(e.lho+26,true),lExtra=dv.getUint16(e.lho+28,true),start=e.lho+30+lNameLen+lExtra;
+  var comp=buf.subarray(start,start+e.compSize);
+  if(e.method===8){if(!HAS_DS)throw new Error("Cannot decompress in this browser");return await inflateRaw(comp);}
+  if(e.method!==0)throw new Error("Unsupported method "+e.method);
+  return comp.slice();
+}
+
+/* ---------- helpers ---------- */
+function fmt(b){if(b<1024)return b+" B";var k=b/1024;if(k<1024)return(k<10?k.toFixed(1):Math.round(k))+" KB";var m=k/1024;if(m<1024)return(m<10?m.toFixed(1):m.toFixed(0))+" MB";return(m/1024).toFixed(2)+" GB";}
+function baseName(p){var s=p.split("/");return s[s.length-1]||p;}
+function extOf(n){var m=/\.([a-z0-9]+)$/i.exec(n);return m?m.toLowerCase()[1]?m[1].toLowerCase():"":"";}
+function $(id){return document.getElementById(id);}
+var TEXT_EXT={txt:1,md:1,json:1,js:1,css:1,html:1,htm:1,xml:1,csv:1,svg:1,log:1,py:1,c:1,h:1,java:1,ts:1,yml:1,yaml:1,ini:1,sh:1};
+var IMG_MIME={png:"image/png",jpg:"image/jpeg",jpeg:"image/jpeg",gif:"image/gif",webp:"image/webp",bmp:"image/bmp",svg:"image/svg+xml",ico:"image/x-icon"};
+function toast(msg,kind){var t=$("toast");$("toastMsg").textContent=msg;t.className="toast on "+(kind||"ok");clearTimeout(toast._t);toast._t=setTimeout(function(){t.className="toast";},2600);}
+function download(bytes,name,mime){var blob=new Blob([bytes],{type:mime||"application/octet-stream"});var u=URL.createObjectURL(blob);var a=document.createElement("a");a.href=u;a.download=name;document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(u);},1500);}
+var CIRC=2*Math.PI*54;
+function setRing(el,frac){frac=Math.max(0,Math.min(1,frac));el.style.strokeDashoffset=(CIRC*(1-frac)).toFixed(2);}
+
+/* ---------- state ---------- */
+var files=[], useDeflate=true;
+var STORE_KEY="foldpack.prefs";
+(function(){try{var p=JSON.parse(localStorage.getItem(STORE_KEY)||"{}");if(p.name)$("zipName").value=p.name;if(p.deflate===false)setMethod(false);}catch(e){}})();
+function savePrefs(){try{localStorage.setItem(STORE_KEY,JSON.stringify({name:$("zipName").value,deflate:useDeflate}));}catch(e){}}
+
+function setMode(m){
+  var zip=m==="zip";
+  $("viewZip").classList.toggle("hidden",!zip);$("viewUnzip").classList.toggle("hidden",zip);
+  $("mZip").setAttribute("aria-selected",zip);$("mUnzip").setAttribute("aria-selected",!zip);
+}
+function setMethod(on){useDeflate=on;$("mDeflate").setAttribute("aria-pressed",on);$("mStore").setAttribute("aria-pressed",!on);savePrefs();renderStats();}
+
+/* ---------- compress: add files ---------- */
+function readBuf(f){
+  if(f.arrayBuffer)return f.arrayBuffer();
+  return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result);};r.onerror=function(){rej(r.error||new Error("read error"));};r.readAsArrayBuffer(f);});
+}
+function addFiles(fileList){
+  var arr=Array.prototype.slice.call(fileList);
+  if(!arr.length)return;
+  var chain=Promise.resolve(),added=0;
+  arr.forEach(function(f){
+    chain=chain.then(function(){
+      return readBuf(f).then(function(ab){
+        var name=f._relPath||f.webkitRelativePath||f.name;
+        files.push({name:name,data:new Uint8Array(ab),size:f.size});added++;
+      }).catch(function(){toast("Could not read "+f.name,"err");});
+    });
+  });
+  chain.then(function(){renderList();renderStats();if(added)toast(added+" file"+(added>1?"s":"")+" added","ok");});
+}
+function readEntry(entry,path,out){
+  return new Promise(function(res){
+    if(entry.isFile){entry.file(function(f){f._relPath=path+entry.name;out.push(f);res();},function(){res();});}
+    else if(entry.isDirectory){
+      var reader=entry.createReader(),all=[];
+      (function batch(){reader.readEntries(function(ents){
+        if(!ents.length){var chain=Promise.resolve(),i;for(i=0;i<all.length;i++)(function(e){chain=chain.then(function(){return readEntry(e,path+entry.name+"/",out);});})(all[i]);chain.then(res);}
+        else{all=all.concat(ents);batch();}
+      },function(){res();});})();
+    }else res();
+  });
+}
+function handleDrop(dt){
+  var items=dt.items,hasEntry=items&&items.length&&items[0].webkitGetAsEntry;
+  if(hasEntry){
+    var entries=[],i;for(i=0;i<items.length;i++){var en=items[i].webkitGetAsEntry&&items[i].webkitGetAsEntry();if(en)entries.push(en);}
+    var out=[],chain=Promise.resolve();
+    entries.forEach(function(en){chain=chain.then(function(){return readEntry(en,"",out);});});
+    chain.then(function(){addFiles(out.length?out:dt.files);});
+  }else addFiles(dt.files);
+}
+function renderList(){
+  var ul=$("zList");ul.innerHTML="";
+  files.forEach(function(f,idx){
+    var li=document.createElement("li");
+    li.innerHTML='<div class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg></div>'+
+      '<div class="fmeta"><div class="fname"></div><div class="fsize">'+fmt(f.size)+'</div></div>'+
+      '<button class="iconbtn danger" aria-label="Remove"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m3 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg></button>';
+    li.querySelector(".fname").textContent=f.name;
+    li.querySelector(".iconbtn").onclick=function(){files.splice(idx,1);renderList();renderStats();};
+    ul.appendChild(li);
+  });
+  $("listPanel").style.display=files.length?"block":"none";
+  $("optPanel").style.display=files.length?"block":"none";
+}
+function renderStats(){
+  var orig=files.reduce(function(s,f){return s+f.size;},0);
+  $("zCount").textContent=files.length;$("zSize").textContent=fmt(orig);
+  $("figFiles").textContent=files.length;$("figOrig").textContent=fmt(orig);
+  $("buildBtn").disabled=files.length===0;
+  // packed is only known after build; show estimate cleared until then
+  $("figPacked").textContent="\u2014";$("figSaved").textContent="\u2014";$("ratioPct").innerHTML="\u2014";
+  setRing($("ring"),0);
+}
+function showPacked(orig,packed){
+  $("figPacked").textContent=fmt(packed);
+  var saved=orig>0?(1-packed/orig):0;
+  $("figSaved").textContent=fmt(Math.max(0,orig-packed));
+  $("ratioPct").innerHTML=Math.round(saved*100)+'<small>%</small>';
+  setRing($("ring"),saved);
+}
+
+/* ---------- compress: build ---------- */
+$("buildBtn").onclick=function(){
+  if(!files.length)return;
+  var btn=this;btn.disabled=true;
+  var prog=$("zProg");prog.classList.add("on");var bar=prog.querySelector("i");bar.style.width="0%";
+  var orig=files.reduce(function(s,f){return s+f.size;},0);
+  buildZip(files,useDeflate,function(p){bar.style.width=Math.round(p*92)+"%";}).then(function(out){
+    bar.style.width="100%";
+    var name=($("zipName").value.trim()||"archive").replace(/\.zip$/i,"")+".zip";
+    download(out,name,"application/zip");
+    showPacked(orig,out.length);savePrefs();
+    toast("Saved "+name+" \u00b7 "+fmt(out.length),"ok");
+    setTimeout(function(){prog.classList.remove("on");btn.disabled=false;},700);
+  }).catch(function(e){toast("Pack failed: "+e.message,"err");prog.classList.remove("on");btn.disabled=false;});
+};
+$("clearAll").onclick=function(){files=[];renderList();renderStats();};
+$("zipName").oninput=savePrefs;
+
+/* ---------- extract ---------- */
+var curBuf=null, curIndex=null;
+function loadZip(file){
+  var rdr=new FileReader();
+  rdr.onload=function(){
+    try{
+      curBuf=new Uint8Array(rdr.result);
+      curIndex=readZipIndex(curBuf).filter(function(e){return !/\/$/.test(e.name);});
+      renderArchive(file.name);
+      toast("Opened "+file.name+" \u00b7 "+curIndex.length+" files","ok");
+    }catch(e){toast(e.message,"err");}
+  };
+  rdr.onerror=function(){toast("Could not read file","err");};
+  rdr.readAsArrayBuffer(file);
+}
+function renderArchive(name){
+  var orig=0,packed=0;curIndex.forEach(function(e){orig+=e.origSize;packed+=e.compSize;});
+  $("uName").textContent=name;$("uFiles").textContent=curIndex.length;
+  $("uOrig").textContent=fmt(orig);$("uPacked").textContent=fmt(packed);
+  var ratio=orig>0?packed/orig:1;$("uRatio").innerHTML=Math.round(ratio*100)+'<small>%</small>';
+  setRing($("uRing"),1-ratio);
+  var ul=$("uList");ul.innerHTML="";
+  curIndex.forEach(function(e,idx){
+    var li=document.createElement("li"),def=e.method===8;
+    li.innerHTML='<div class="fico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M13 2v7h7"/></svg></div>'+
+      '<div class="fmeta"><div class="fname"></div><div class="fsize">'+fmt(e.origSize)+'</div></div>'+
+      '<span class="badge '+(def?"def":"")+'">'+(def?"Deflate":"Store")+'</span>'+
+      '<button class="iconbtn pv" aria-label="Preview"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7S1 12 1 12z"/><circle cx="12" cy="12" r="3"/></svg></button>'+
+      '<button class="iconbtn dl" aria-label="Download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg></button>';
+    li.querySelector(".fname").textContent=e.name;
+    li.querySelector(".dl").onclick=function(){extractEntry(curBuf,e).then(function(d){download(d,baseName(e.name));}).catch(function(x){toast(x.message,"err");});};
+    li.querySelector(".pv").onclick=function(){preview(e);};
+    ul.appendChild(li);
+  });
+  $("arcPanel").style.display="block";
+}
+$("dlAll").onclick=function(){
+  if(!curIndex||!curIndex.length)return;
+  var prog=$("uProg");prog.classList.add("on");var bar=prog.querySelector("i");
+  var i=0;
+  (function next(){
+    if(i>=curIndex.length){bar.style.width="100%";setTimeout(function(){prog.classList.remove("on");},600);toast("Saved "+curIndex.length+" files","ok");return;}
+    var e=curIndex[i++];
+    extractEntry(curBuf,e).then(function(d){download(d,baseName(e.name));bar.style.width=Math.round(i/curIndex.length*100)+"%";setTimeout(next,260);})
+      .catch(function(x){toast(x.message,"err");setTimeout(next,260);});
+  })();
+};
+function preview(e){
+  extractEntry(curBuf,e).then(function(d){
+    var ext=extOf(e.name),body=$("pvBody");$("pvName").textContent=baseName(e.name);body.innerHTML="";
+    if(IMG_MIME[ext]){var u=URL.createObjectURL(new Blob([d],{type:IMG_MIME[ext]}));var img=document.createElement("img");img.src=u;img.onload=function(){};body.appendChild(img);body._u=u;}
+    else if(TEXT_EXT[ext]||d.length<200000){var pre=document.createElement("pre");var txt=DEC.decode(d.subarray(0,20000));pre.textContent=txt+(d.length>20000?"\n\n\u2026 ("+fmt(d.length)+" total)":"");body.appendChild(pre);}
+    else{var p=document.createElement("p");p.style.color="var(--mute)";p.style.fontSize="13px";p.textContent="No preview for this file type ("+fmt(d.length)+"). Use download.";body.appendChild(p);}
+    $("modal").classList.add("on");
+  }).catch(function(x){toast(x.message,"err");});
+}
+function closeModal(){var b=$("pvBody");if(b._u){URL.revokeObjectURL(b._u);b._u=null;}$("modal").classList.remove("on");b.innerHTML="";}
+
+/* ---------- wiring: inputs + drops ---------- */
+function openPicker(input){input.value="";input.click();}
+$("pickFiles").onclick=function(e){e.stopPropagation();openPicker($("fileInput"));};
+$("pickFolder").onclick=function(e){e.stopPropagation();openPicker($("folderInput"));};
+$("pickZip").onclick=function(e){e.stopPropagation();openPicker($("zipInput"));};
+$("fileInput").onchange=function(){addFiles(this.files);};
+$("folderInput").onchange=function(){addFiles(this.files);};
+$("zipInput").onchange=function(){if(this.files[0])loadZip(this.files[0]);};
+$("dropZip").onclick=function(){openPicker($("fileInput"));};
+$("dropUnzip").onclick=function(){openPicker($("zipInput"));};
+$("dropZip").onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openPicker($("fileInput"));}};
+$("dropUnzip").onkeydown=function(e){if(e.key==="Enter"||e.key===" "){e.preventDefault();openPicker($("zipInput"));}};
+
+function bindDrop(el,onFiles){
+  ["dragenter","dragover"].forEach(function(ev){el.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();el.classList.add("over");});});
+  ["dragleave","drop"].forEach(function(ev){el.addEventListener(ev,function(e){e.preventDefault();e.stopPropagation();if(ev==="dragleave"&&el.contains(e.relatedTarget))return;el.classList.remove("over");});});
+  el.addEventListener("drop",function(e){onFiles(e.dataTransfer);});
+}
+bindDrop($("dropZip"),function(dt){handleDrop(dt);});
+bindDrop($("dropUnzip"),function(dt){var f=dt.files&&dt.files[0];if(f)loadZip(f);});
+window.addEventListener("dragover",function(e){e.preventDefault();});
+window.addEventListener("drop",function(e){e.preventDefault();});
+
+if(!HAS_CS)$("unsupported").classList.remove("hidden");
+renderStats();
+</script>
+</body>
+</html>
