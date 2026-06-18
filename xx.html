@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=5">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>OCR Studio</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<!-- pdf.js (legacy UMD build, script-tag friendly) -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- Tesseract.js v5 (default LSTM models are the integerized tessdata_best) -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<style>
+  :root{
+    --bg-0:#081d1d; --bg-1:#0b2828; --panel:#0f3333; --panel-2:#103a39;
+    --teal:#15b8a6; --teal-deep:#0f766e;
+    --gold:#d8b24a; --gold-soft:#ecd089; --gold-line:rgba(216,178,74,.22);
+    --text:#eef6f3; --muted:#93b3ad; --muted-2:#6d9690;
+    --danger:#e98b6b; --ok:#7fd1b6;
+    --radius:18px; --radius-sm:12px;
+    --shadow:0 18px 50px -18px rgba(0,0,0,.7);
+  }
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Sora',system-ui,-apple-system,sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(1200px 700px at 80% -10%, rgba(21,184,166,.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 110%, rgba(216,178,74,.07), transparent 55%),
+      linear-gradient(160deg,var(--bg-0),var(--bg-1));
+    background-attachment:fixed;
+    min-height:100vh;
+    line-height:1.5;
+    padding:
+      calc(env(safe-area-inset-top) + 22px)
+      calc(env(safe-area-inset-right) + 16px)
+      calc(env(safe-area-inset-bottom) + 40px)
+      calc(env(safe-area-inset-left) + 16px);
+    -webkit-text-size-adjust:100%;
+  }
+  .wrap{max-width:880px;margin:0 auto}
+
+  /* Header */
+  header{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+  .mark{
+    width:46px;height:46px;flex:0 0 auto;border-radius:13px;
+    background:linear-gradient(155deg,var(--teal),var(--teal-deep));
+    display:grid;place-items:center;box-shadow:var(--shadow);
+    border:1px solid rgba(255,255,255,.08);
+  }
+  .mark svg{width:26px;height:26px}
+  h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:30px;margin:0;letter-spacing:.2px}
+  h1 .dot{color:var(--gold)}
+  header p{margin:2px 0 0;color:var(--muted);font-size:13.5px;font-weight:400}
+
+  /* Cards */
+  .card{
+    background:linear-gradient(180deg,var(--panel),var(--panel-2));
+    border:1px solid var(--gold-line);
+    border-radius:var(--radius);
+    padding:20px;margin-bottom:18px;box-shadow:var(--shadow);
+  }
+  .card h2{
+    font-family:'Sora';font-size:11px;font-weight:600;letter-spacing:.16em;
+    text-transform:uppercase;color:var(--gold-soft);margin:0 0 16px;
+  }
+
+  /* Settings */
+  .settings{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:560px){.settings{grid-template-columns:1fr}}
+  .field label{display:block;font-size:12px;color:var(--muted);margin-bottom:7px;font-weight:500}
+
+  .seg{display:flex;background:rgba(0,0,0,.25);border:1px solid var(--gold-line);border-radius:11px;padding:3px;gap:3px}
+  .seg button{
+    flex:1;border:0;background:transparent;color:var(--muted);
+    font-family:'Sora';font-size:13px;font-weight:600;padding:9px 4px;border-radius:8px;cursor:pointer;
+    transition:background .15s,color .15s;
+  }
+  .seg button[aria-pressed="true"]{background:linear-gradient(155deg,var(--teal),var(--teal-deep));color:#04201d}
+
+  select{
+    width:100%;appearance:none;-webkit-appearance:none;
+    background:rgba(0,0,0,.25);color:var(--text);
+    border:1px solid var(--gold-line);border-radius:11px;
+    padding:11px 38px 11px 13px;font-family:'Sora';font-size:13.5px;font-weight:500;cursor:pointer;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'><path d='M2 4l4 4 4-4' stroke='%23d8b24a' stroke-width='1.6' fill='none' stroke-linecap='round' stroke-linejoin='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 13px center;
+  }
+
+  /* Drop zone */
+  .drop{
+    margin-top:4px;border:1.5px dashed var(--gold-line);border-radius:var(--radius-sm);
+    padding:30px 18px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s;
+    background:rgba(0,0,0,.12);
+  }
+  .drop:hover,.drop.over{border-color:var(--teal);background:rgba(21,184,166,.07)}
+  .drop .big{font-size:15px;font-weight:600;margin-bottom:4px}
+  .drop .sml{font-size:12.5px;color:var(--muted)}
+  .drop svg{width:30px;height:30px;margin-bottom:10px;opacity:.85}
+
+  .files{list-style:none;margin:14px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
+  .files li{
+    display:flex;align-items:center;gap:11px;background:rgba(0,0,0,.22);
+    border:1px solid var(--gold-line);border-radius:10px;padding:10px 12px;font-size:13px;
+  }
+  .files .ic{width:18px;height:18px;flex:0 0 auto;opacity:.8}
+  .files .nm{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .files .mt{color:var(--muted);font-size:11.5px;flex:0 0 auto}
+  .files .rm{background:none;border:0;color:var(--muted);cursor:pointer;font-size:18px;line-height:1;padding:0 2px}
+  .files .rm:hover{color:var(--danger)}
+
+  /* Buttons */
+  .row{display:flex;gap:12px;margin-top:18px}
+  .btn{
+    flex:1;border:0;border-radius:13px;padding:15px;font-family:'Sora';font-size:15px;font-weight:700;
+    cursor:pointer;transition:transform .08s,filter .15s,opacity .15s;letter-spacing:.2px;
+  }
+  .btn:active{transform:translateY(1px)}
+  .btn-primary{background:linear-gradient(150deg,var(--gold-soft),var(--gold));color:#2a1f04;box-shadow:0 10px 28px -12px rgba(216,178,74,.7)}
+  .btn-ghost{flex:0 0 auto;background:rgba(0,0,0,.25);color:var(--muted);border:1px solid var(--gold-line);padding:15px 18px}
+  .btn:disabled{opacity:.4;cursor:not-allowed;filter:grayscale(.3)}
+
+  /* Progress */
+  #progress{display:none}
+  .status{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;margin-bottom:9px;gap:10px}
+  .status .lbl{color:var(--text);font-weight:500;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .status .pct{color:var(--gold-soft);font-weight:700;flex:0 0 auto;font-variant-numeric:tabular-nums}
+  .bar{height:9px;background:rgba(0,0,0,.3);border-radius:6px;overflow:hidden}
+  .bar > i{display:block;height:100%;width:0;border-radius:6px;background:linear-gradient(90deg,var(--teal),var(--gold));transition:width .25s ease}
+  .sub{font-size:12px;color:var(--muted);margin-top:9px;min-height:16px}
+
+  /* Results */
+  #results{display:none}
+  .res-tools{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
+  .stat{font-size:12px;color:var(--muted)}
+  .stat b{color:var(--text);font-weight:600}
+  .spacer{flex:1}
+  .mini{border:1px solid var(--gold-line);background:rgba(0,0,0,.22);color:var(--text);
+    border-radius:9px;padding:8px 13px;font-family:'Sora';font-size:12.5px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+  .mini:hover{border-color:var(--teal)}
+  .mini svg{width:14px;height:14px}
+
+  textarea{
+    width:100%;min-height:230px;resize:vertical;background:rgba(0,0,0,.28);
+    border:1px solid var(--gold-line);border-radius:var(--radius-sm);color:var(--text);
+    font-family:'Sora';font-size:14px;line-height:1.7;padding:15px;
+  }
+  textarea:focus{outline:none;border-color:var(--teal)}
+
+  .pages{margin-top:14px;display:flex;flex-direction:column;gap:9px}
+  details{background:rgba(0,0,0,.2);border:1px solid var(--gold-line);border-radius:10px;overflow:hidden}
+  summary{padding:12px 14px;cursor:pointer;font-size:13px;font-weight:600;display:flex;align-items:center;gap:10px;list-style:none}
+  summary::-webkit-details-marker{display:none}
+  summary .chev{transition:transform .15s;color:var(--gold);flex:0 0 auto}
+  details[open] summary .chev{transform:rotate(90deg)}
+  summary .conf{margin-left:auto;font-size:11px;color:var(--muted);font-weight:500;flex:0 0 auto}
+  .page-text{padding:0 14px 14px;font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--text)}
+
+  .note{font-size:11.5px;color:var(--muted-2);margin-top:16px;line-height:1.6}
+  .err{display:none;background:rgba(233,139,107,.1);border:1px solid rgba(233,139,107,.35);color:#f3c4b3;border-radius:10px;padding:12px 14px;font-size:13px;margin-top:14px}
+
+  @media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#eafffb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M4 7V5a1 1 0 0 1 1-1h2M17 4h2a1 1 0 0 1 1 1v2M20 17v2a1 1 0 0 1-1 1h-2M7 20H5a1 1 0 0 1-1-1v-2"/>
+        <path d="M7 9h10M7 12h10M7 15h6"/>
+      </svg>
+    </div>
+    <div>
+      <h1>OCR Studio<span class="dot">.</span></h1>
+      <p>Extract text from images and PDFs &middot; English &amp; Arabic</p>
+    </div>
+  </header>
+
+  <!-- SETTINGS -->
+  <section class="card">
+    <h2>Settings</h2>
+    <div class="settings">
+      <div class="field">
+        <label>Language</label>
+        <div class="seg" id="langSeg" role="group" aria-label="Language">
+          <button data-lang="auto" aria-pressed="true">Auto (EN+AR)</button>
+          <button data-lang="eng" aria-pressed="false">English</button>
+          <button data-lang="ara" aria-pressed="false">Arabic</button>
+        </div>
+      </div>
+      <div class="field">
+        <label for="layout">Page layout</label>
+        <select id="layout">
+          <option value="1" selected>Auto + orientation (OSD)</option>
+          <option value="3">Auto</option>
+          <option value="4">Single column</option>
+          <option value="6">Single block (exam paper)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="quality">Scan quality</label>
+        <select id="quality">
+          <option value="1800">Standard &middot; faster</option>
+          <option value="2400" selected>High &middot; recommended</option>
+          <option value="3200">Maximum &middot; slowest</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="files">Files</label>
+        <div class="drop" id="drop" tabindex="0" role="button" aria-label="Add files">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#d8b24a" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 16V4M7 9l5-5 5 5"/><path d="M5 16v3a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-3"/></svg>
+          <div class="big">Tap to add or drop files</div>
+          <div class="sml">Images (PNG, JPG, WEBP) or PDF</div>
+        </div>
+      </div>
+    </div>
+
+    <input type="file" id="input" accept="image/*,application/pdf" multiple hidden>
+    <ul class="files" id="fileList"></ul>
+
+    <div class="row">
+      <button class="btn btn-primary" id="run" disabled>Extract text</button>
+      <button class="btn btn-ghost" id="clear">Clear</button>
+    </div>
+
+    <div class="err" id="error"></div>
+
+    <p class="note" id="firstRunNote">First run downloads the OCR engine and language models (about 5&ndash;15 MB, more if orientation detection is on). They are cached in your browser afterward, so later runs start instantly and work offline.</p>
+  </section>
+
+  <!-- PROGRESS -->
+  <section class="card" id="progress">
+    <h2>Working</h2>
+    <div class="status"><span class="lbl" id="pLabel">Preparing...</span><span class="pct" id="pPct">0%</span></div>
+    <div class="bar"><i id="pBar"></i></div>
+    <div class="sub" id="pSub"></div>
+  </section>
+
+  <!-- RESULTS -->
+  <section class="card" id="results">
+    <h2>Extracted text</h2>
+    <div class="res-tools">
+      <span class="stat" id="sPages"></span>
+      <span class="stat" id="sWords"></span>
+      <span class="stat" id="sConf"></span>
+      <span class="spacer"></span>
+      <button class="mini" id="copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>Copy</button>
+      <button class="mini" id="download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>.txt</button>
+    </div>
+    <textarea id="output" dir="auto" spellcheck="false" placeholder="Extracted text will appear here..."></textarea>
+    <div class="pages" id="pages"></div>
+  </section>
+
+</div>
+
+<script>
+"use strict";
+
+/* ---------- pdf.js worker ---------- */
+const pdfjsLib = window.pdfjsLib || window["pdfjs-dist/build/pdf"];
+if (pdfjsLib) {
+  pdfjsLib.GlobalWorkerOptions.workerSrc =
+    "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+}
+
+/* ---------- DOM ---------- */
+const $ = function (id) { return document.getElementById(id); };
+const input = $("input"), drop = $("drop"), fileList = $("fileList");
+const runBtn = $("run"), clearBtn = $("clear"), errorBox = $("error");
+const progress = $("progress"), pLabel = $("pLabel"), pPct = $("pPct"), pBar = $("pBar"), pSub = $("pSub");
+const results = $("results"), output = $("output"), pagesEl = $("pages");
+const sPages = $("sPages"), sWords = $("sWords"), sConf = $("sConf");
+
+/* ---------- State ---------- */
+let files = [];                 // selected File objects
+let lang = "auto";              // auto | eng | ara
+let worker = null;              // tesseract worker
+let workerSig = "";             // signature of current worker (langs + legacy)
+let busy = false;
+let jobProgress = function () {}; // logger routes recognize progress here
+
+/* ---------- Language UI ---------- */
+$("langSeg").addEventListener("click", function (e) {
+  const b = e.target.closest("button");
+  if (!b) return;
+  lang = b.dataset.lang;
+  Array.prototype.forEach.call($("langSeg").children, function (c) {
+    c.setAttribute("aria-pressed", String(c === b));
+  });
+});
+
+/* ---------- File handling ---------- */
+function isAllowed(f) {
+  return f.type === "application/pdf" || /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|bmp|pdf)$/i.test(f.name);
+}
+function addFiles(list) {
+  for (let i = 0; i < list.length; i++) {
+    const f = list[i];
+    if (isAllowed(f)) files.push(f);
+  }
+  renderFiles();
+}
+function fmtSize(n) {
+  if (n < 1024) return n + " B";
+  if (n < 1048576) return (n / 1024).toFixed(0) + " KB";
+  return (n / 1048576).toFixed(1) + " MB";
+}
+function fileIcon(isPdf) {
+  return isPdf
+    ? '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#e98b6b" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>'
+    : '<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="#15b8a6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5L5 20"/></svg>';
+}
+function renderFiles() {
+  fileList.innerHTML = "";
+  files.forEach(function (f, idx) {
+    const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+    const li = document.createElement("li");
+    li.innerHTML =
+      fileIcon(isPdf) +
+      '<span class="nm"></span><span class="mt">' + fmtSize(f.size) + '</span>' +
+      '<button class="rm" aria-label="Remove">&times;</button>';
+    li.querySelector(".nm").textContent = f.name;
+    li.querySelector(".rm").addEventListener("click", function () {
+      files.splice(idx, 1); renderFiles();
+    });
+    fileList.appendChild(li);
+  });
+  runBtn.disabled = files.length === 0 || busy;
+}
+
+drop.addEventListener("click", function () { input.click(); });
+drop.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); input.click(); } });
+input.addEventListener("change", function () { addFiles(input.files); input.value = ""; });
+["dragenter", "dragover"].forEach(function (ev) {
+  drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.add("over"); });
+});
+["dragleave", "drop"].forEach(function (ev) {
+  drop.addEventListener(ev, function (e) { e.preventDefault(); drop.classList.remove("over"); });
+});
+drop.addEventListener("drop", function (e) { if (e.dataTransfer && e.dataTransfer.files) addFiles(e.dataTransfer.files); });
+
+clearBtn.addEventListener("click", function () {
+  if (busy) return;
+  files = []; renderFiles();
+  results.style.display = "none";
+  errorBox.style.display = "none";
+  output.value = ""; pagesEl.innerHTML = "";
+});
+
+/* ---------- Error helper ---------- */
+function showError(msg) {
+  errorBox.textContent = msg;
+  errorBox.style.display = "block";
+}
+
+/* ---------- Tesseract worker ---------- */
+function langsFor() { return lang === "auto" ? ["eng", "ara"] : [lang]; }
+
+async function ensureWorker(useLegacy) {
+  const langs = langsFor();
+  const sig = langs.join("+") + "|" + (useLegacy ? "legacy" : "lstm");
+  if (worker && sig === workerSig) return worker;
+  if (worker) { try { await worker.terminate(); } catch (e) {} worker = null; }
+
+  const opts = {
+    logger: function (m) {
+      if (m.status === "recognizing text") {
+        jobProgress(m.progress);
+      } else if (typeof m.progress === "number") {
+        // model / engine loading
+        pSub.textContent = prettyStatus(m.status) + " " + Math.round(m.progress * 100) + "%";
+      }
+    }
+  };
+  // Orientation + script detection (OSD) is a Legacy-engine feature in v5+,
+  // so it must be explicitly enabled for PSM AUTO_OSD to actually work.
+  if (useLegacy) { opts.legacyCore = true; opts.legacyLang = true; }
+
+  pSub.textContent = "Loading OCR engine...";
+  worker = await Tesseract.createWorker(langs, 1 /* LSTM, uses best models */, opts);
+  workerSig = sig;
+  return worker;
+}
+function prettyStatus(s) {
+  if (!s) return "Loading...";
+  return s.charAt(0).toUpperCase() + s.slice(1) + "...";
+}
+
+/* ---------- Rendering files to canvas ---------- */
+function loadImage(file) {
+  return new Promise(function (resolve, reject) {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = function () { URL.revokeObjectURL(url); resolve(img); };
+    img.onerror = function () { URL.revokeObjectURL(url); reject(new Error("Could not read image: " + file.name)); };
+    img.src = url;
+  });
+}
+function imageToCanvas(img, targetLong) {
+  const long = Math.max(img.width, img.height) || 1;
+  // Upscale small images for better OCR; cap large ones to protect mobile memory.
+  const scale = Math.min(targetLong / long, 4);
+  const c = document.createElement("canvas");
+  c.width = Math.max(1, Math.round(img.width * scale));
+  c.height = Math.max(1, Math.round(img.height * scale));
+  const ctx = c.getContext("2d");
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, c.width, c.height);
+  ctx.drawImage(img, 0, 0, c.width, c.height);
+  return c;
+}
+async function pdfPageToCanvas(page, targetLong) {
+  const base = page.getViewport({ scale: 1 });
+  const long = Math.max(base.width, base.height) || 1;
+  const scale = Math.min(targetLong / long, 5);
+  const vp = page.getViewport({ scale: scale });
+  const c = document.createElement("canvas");
+  c.width = Math.round(vp.width);
+  c.height = Math.round(vp.height);
+  const ctx = c.getContext("2d");
+  await page.render({ canvasContext: ctx, viewport: vp }).promise;
+  return c;
+}
+function disposeCanvas(c) { if (c) { c.width = 0; c.height = 0; } }
+
+/* ---------- Build a flat job list (so progress is accurate) ---------- */
+async function buildJobs(targetLong) {
+  const jobs = []; // {label, render: async () => canvas}
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    const isPdf = f.type === "application/pdf" || /\.pdf$/i.test(f.name);
+    if (isPdf) {
+      if (!pdfjsLib) throw new Error("PDF support failed to load. Check your connection and reload.");
+      const data = await f.arrayBuffer();
+      const doc = await pdfjsLib.getDocument({ data: data }).promise;
+      const n = doc.numPages;
+      for (let p = 1; p <= n; p++) {
+        (function (doc, p, name) {
+          jobs.push({
+            label: name + " - page " + p + "/" + n,
+            render: async function () {
+              const page = await doc.getPage(p);
+              const c = await pdfPageToCanvas(page, targetLong);
+              page.cleanup();
+              return c;
+            },
+            done: function () { if (p === n) doc.destroy(); }
+          });
+        })(doc, p, f.name);
+      }
+    } else {
+      (function (f) {
+        jobs.push({
+          label: f.name,
+          render: async function () {
+            const img = await loadImage(f);
+            return imageToCanvas(img, targetLong);
+          },
+          done: function () {}
+        });
+      })(f);
+    }
+  }
+  return jobs;
+}
+
+/* ---------- Main run ---------- */
+runBtn.addEventListener("click", async function () {
+  if (busy || files.length === 0) return;
+  busy = true; runBtn.disabled = true; clearBtn.disabled = true;
+  errorBox.style.display = "none";
+  results.style.display = "none";
+  pagesEl.innerHTML = ""; output.value = "";
+  progress.style.display = "block";
+  setBar(0); pLabel.textContent = "Preparing files..."; pSub.textContent = "";
+
+  const targetLong = parseInt($("quality").value, 10);
+  const psm = $("layout").value;          // "1","3","4","6"
+  const useLegacy = psm === "1";          // OSD needs the legacy engine
+
+  const collected = [];   // {label, text, confidence}
+
+  try {
+    const w = await ensureWorker(useLegacy);
+    await w.setParameters({ tessedit_pageseg_mode: psm });
+
+    const jobs = await buildJobs(targetLong);
+    if (jobs.length === 0) throw new Error("No readable pages found.");
+
+    for (let i = 0; i < jobs.length; i++) {
+      const job = jobs[i];
+      const baseFrac = i / jobs.length;
+      const span = 1 / jobs.length;
+      pLabel.textContent = job.label;
+      pSub.textContent = "Reading text...";
+      jobProgress = function (p) {
+        setBar(baseFrac + span * p);
+      };
+
+      let canvas = null;
+      try {
+        canvas = await job.render();
+        const res = await w.recognize(canvas, {}, { text: true });
+        collected.push({
+          label: job.label,
+          text: (res.data.text || "").trim(),
+          confidence: typeof res.data.confidence === "number" ? res.data.confidence : null
+        });
+      } finally {
+        disposeCanvas(canvas);
+        job.done();
+      }
+      setBar((i + 1) / jobs.length);
+    }
+
+    renderResults(collected);
+  } catch (err) {
+    showError((err && err.message) ? err.message : "Something went wrong during extraction.");
+  } finally {
+    progress.style.display = "none";
+    busy = false; clearBtn.disabled = false; runBtn.disabled = files.length === 0;
+    jobProgress = function () {};
+  }
+});
+
+function setBar(frac) {
+  const p = Math.max(0, Math.min(1, frac));
+  pBar.style.width = (p * 100).toFixed(1) + "%";
+  pPct.textContent = Math.round(p * 100) + "%";
+}
+
+/* ---------- Results ---------- */
+function renderResults(items) {
+  const combined = items
+    .map(function (it) { return "===== " + it.label + " =====\n\n" + (it.text || "(no text found)"); })
+    .join("\n\n\n");
+  output.value = combined;
+
+  const words = combined.trim() ? combined.trim().split(/\s+/).length : 0;
+  const confs = items.filter(function (i) { return i.confidence != null; }).map(function (i) { return i.confidence; });
+  const avg = confs.length ? Math.round(confs.reduce(function (a, b) { return a + b; }, 0) / confs.length) : null;
+
+  sPages.innerHTML = "<b>" + items.length + "</b> page" + (items.length === 1 ? "" : "s");
+  sWords.innerHTML = "<b>" + words + "</b> words";
+  sConf.innerHTML = avg != null ? "avg confidence <b>" + avg + "%</b>" : "";
+
+  pagesEl.innerHTML = "";
+  if (items.length > 1) {
+    items.forEach(function (it) {
+      const d = document.createElement("details");
+      const conf = it.confidence != null ? Math.round(it.confidence) + "%" : "";
+      d.innerHTML =
+        '<summary><svg class="chev" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2l4 4-4 4"/></svg>' +
+        '<span class="ttl"></span><span class="conf">' + conf + '</span></summary>' +
+        '<div class="page-text" dir="auto"></div>';
+      d.querySelector(".ttl").textContent = it.label;
+      d.querySelector(".page-text").textContent = it.text || "(no text found)";
+      pagesEl.appendChild(d);
+    });
+  }
+
+  results.style.display = "block";
+  results.scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+/* ---------- Copy / Download ---------- */
+$("copy").addEventListener("click", async function () {
+  try {
+    await navigator.clipboard.writeText(output.value);
+    flash($("copy"), "Copied");
+  } catch (e) {
+    output.select(); document.execCommand("copy");
+    flash($("copy"), "Copied");
+  }
+});
+$("download").addEventListener("click", function () {
+  const blob = new Blob([output.value], { type: "text/plain;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = "ocr-text.txt";
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a);
+  setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+});
+function flash(btn, txt) {
+  const old = btn.innerHTML;
+  btn.textContent = txt;
+  setTimeout(function () { btn.innerHTML = old; }, 1200);
+}
+
+/* ---------- Library load guard ---------- */
+window.addEventListener("load", function () {
+  if (typeof Tesseract === "undefined") {
+    showError("The OCR engine failed to load. If you opened this preview inside the app, deploy the file or open it in a normal browser tab.");
+  }
+});
+</script>
+</body>
+</html>
