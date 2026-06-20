@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>صانع الكتيبات - الذكاء الاصطناعي</title>
+    <title>صانع الكتيبات - النظام الهجين (Llama)</title>
 
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -12,10 +12,11 @@
         tailwind.config = { theme: { extend: { fontFamily: { sans: ['system-ui', '-apple-system', 'sans-serif'] } } } }
     </script>
 
-    <!-- FontAwesome Icons -->
+    <!-- FontAwesome -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-    <!-- Libraries (ZIP & PDF) -->
+    <!-- Libraries -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
@@ -27,7 +28,6 @@
         input[type="number"]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         .ai-pulse { animation: ai-pulse 2s infinite; }
         @keyframes ai-pulse { 0% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0.4); } 70% { box-shadow: 0 0 0 15px rgba(99, 102, 241, 0); } 100% { box-shadow: 0 0 0 0 rgba(99, 102, 241, 0); } }
-        .stars { background-image: radial-gradient(#4f46e5 1px, transparent 1px); background-size: 20px 20px; }
     </style>
 </head>
 <body class="text-gray-800 antialiased">
@@ -36,97 +36,114 @@
     <header class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-40">
         <div class="max-w-5xl mx-auto px-4 h-16 flex items-center justify-between">
             <div class="flex items-center gap-3 text-indigo-800">
-                <i class="fas fa-brain text-2xl"></i>
-                <h1 class="font-bold text-xl">صانع الكتيبات <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full align-middle">AI</span></h1>
+                <i class="fas fa-layer-group text-2xl text-indigo-600"></i>
+                <h1 class="font-bold text-lg md:text-xl">صانع الكتيبات <span class="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full align-middle">النظام الهجين AI</span></h1>
             </div>
-            <button onclick="document.getElementById('api-modal').classList.remove('hidden')" class="text-gray-500 hover:text-indigo-600 transition bg-gray-100 hover:bg-indigo-50 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2">
-                <i class="fas fa-cog"></i> إعدادات الذكاء الاصطناعي
+            <button onclick="document.getElementById('api-modal').classList.remove('hidden')" class="text-gray-600 hover:text-indigo-600 transition bg-gray-100 hover:bg-indigo-50 px-3 py-2 rounded-lg text-sm font-bold flex items-center gap-2 border border-gray-200 shadow-sm">
+                <i class="fas fa-cog"></i> إعدادات Llama
             </button>
         </div>
     </header>
+
+    <!-- API Key Modal -->
+    <div id="api-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-fade-in">
+        <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full relative">
+            <button onclick="document.getElementById('api-modal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700 text-2xl">&times;</button>
+            <div class="text-center mb-6 mt-2">
+                <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
+                    <i class="fas fa-key"></i>
+                </div>
+                <h3 class="text-xl font-bold text-gray-800 mb-2">مفتاح Llama (Groq)</h3>
+                <p class="text-gray-500 text-sm">سيتم استخدام النموذج البصري Llama-4-Scout لقراءة الأرقام من الصور مباشرة.</p>
+            </div>
+            
+            <div class="mb-4">
+                <input type="password" id="api-key-input" placeholder="gsk_..." class="w-full text-left p-3 border border-gray-300 rounded-lg focus:outline-none focus:border-indigo-500 font-mono text-sm" dir="ltr">
+                <p class="text-xs text-gray-500 mt-2">احصل عليه مجاناً من <a href="https://console.groq.com/keys" target="_blank" class="text-indigo-600 underline">Groq Console</a>.</p>
+            </div>
+
+            <button onclick="saveSettings()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition">
+                حفظ وإغلاق
+            </button>
+        </div>
+    </div>
 
     <main class="max-w-5xl mx-auto px-4 py-6">
 
         <!-- Error Alert -->
         <div id="error-box" class="hidden mb-6 bg-red-50 border-r-4 border-red-500 p-4 rounded-lg flex items-center gap-3 text-red-800 shadow-sm transition-all">
             <i class="fas fa-exclamation-triangle text-xl flex-shrink-0"></i>
-            <p id="error-text" class="font-bold text-sm sm:text-base"></p>
-        </div>
-
-        <!-- API Key Modal -->
-        <div id="api-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-            <div class="bg-white rounded-2xl shadow-2xl p-6 max-w-md w-full relative">
-                <button onclick="document.getElementById('api-modal').classList.add('hidden')" class="absolute top-4 right-4 text-gray-400 hover:text-gray-700">
-                    <i class="fas fa-times text-xl"></i>
-                </button>
-                <div class="text-center mb-6">
-                    <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4 text-2xl">
-                        <i class="fas fa-key"></i>
-                    </div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">مفتاح الذكاء الاصطناعي (API Key)</h3>
-                    <p class="text-gray-500 text-sm">التطبيق مرفوع على GitHub، لذلك تحتاج لإدخال مفتاح Gemini الخاص بك ليعمل الذكاء الاصطناعي مجاناً.</p>
-                </div>
-                
-                <div class="mb-4">
-                    <input type="password" id="api-key-input" placeholder="AIzaSy..." class="w-full text-left p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono" dir="ltr">
-                </div>
-                
-                <div class="bg-blue-50 text-blue-800 p-3 rounded-lg text-xs mb-6 flex gap-2">
-                    <i class="fas fa-info-circle mt-0.5"></i>
-                    <p>يمكنك الحصول على مفتاح مجاني من <a href="https://aistudio.google.com/app/apikey" target="_blank" class="font-bold underline">Google AI Studio</a>. يُحفظ المفتاح في متصفحك فقط ولن يُشارك مع أحد.</p>
-                </div>
-
-                <button onclick="saveApiKey()" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl shadow-md transition">
-                    حفظ وإغلاق
-                </button>
+            <div class="flex-1">
+                <p id="error-text" class="font-bold text-sm sm:text-base"></p>
+                <div id="error-action" class="mt-2 hidden"></div>
             </div>
         </div>
 
         <!-- App Container -->
         <div class="bg-white rounded-2xl shadow-xl border border-gray-100 p-5 sm:p-8 min-h-[60vh] relative">
             
-            <!-- STEP 1: UPLOAD -->
+            <!-- STEP 1: UPLOAD & ENGINE SELECT -->
             <div id="step-1" class="flex flex-col items-center justify-center min-h-[50vh] animate-fade-in">
-                <label class="w-full max-w-xl flex flex-col items-center p-10 sm:p-14 border-2 border-dashed border-indigo-300 rounded-3xl bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer text-center relative overflow-hidden stars">
-                    <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-md border border-indigo-100 ai-pulse relative z-10">
-                        <i class="fas fa-sparkles text-4xl text-indigo-600"></i>
+                
+                <!-- Engine Selector -->
+                <div class="mb-8 w-full max-w-xl bg-gray-50 p-2 rounded-xl border border-gray-200 flex gap-2">
+                    <button id="engine-cloud" onclick="setEngine('cloud')" class="flex-1 flex flex-col items-center justify-center p-3 rounded-lg bg-indigo-600 text-white shadow-md transition relative overflow-hidden">
+                        <i class="fas fa-eye text-2xl mb-1 relative z-10"></i>
+                        <span class="font-bold text-sm relative z-10">البصري (Llama 4 Scout)</span>
+                        <span class="text-[10px] opacity-80 relative z-10">يقرأ الصورة مباشرة</span>
+                    </button>
+                    <button id="engine-local" onclick="setEngine('local')" class="flex-1 flex flex-col items-center justify-center p-3 rounded-lg bg-transparent text-gray-500 hover:bg-gray-200 transition relative overflow-hidden">
+                        <i class="fas fa-microchip text-2xl mb-1 relative z-10"></i>
+                        <span class="font-bold text-sm relative z-10">محلي فقط (طوارئ)</span>
+                        <span class="text-[10px] opacity-80 relative z-10">يعمل بدون إنترنت/API</span>
+                    </button>
+                </div>
+
+                <label class="w-full max-w-xl flex flex-col items-center p-10 sm:p-14 border-2 border-dashed border-indigo-300 rounded-3xl bg-indigo-50 hover:bg-indigo-100 transition cursor-pointer text-center relative overflow-hidden">
+                    <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-md border border-indigo-100">
+                        <i class="fas fa-file-import text-4xl text-indigo-600"></i>
                     </div>
                     <h3 class="text-2xl font-bold mb-3 text-gray-800 relative z-10">اختر الصور أو ملف ZIP</h3>
-                    <p class="text-gray-600 mb-8 max-w-sm text-sm sm:text-base leading-relaxed relative z-10">
-                        سيتم تحليل الصور وفهمها بواسطة نموذج <strong>الذكاء الاصطناعي البصري (Gemini)</strong>.
-                    </p>
-                    <div class="px-8 py-3 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 relative z-10">
-                        تصفح الملفات
+                    <div class="px-8 py-3 mt-4 bg-indigo-600 text-white rounded-xl font-bold shadow-lg hover:bg-indigo-700 relative z-10">
+                        <i class="fas fa-upload ml-2"></i> تصفح الملفات
                     </div>
                     <input type="file" id="file-input" multiple accept=".png,.jpg,.jpeg,.zip" class="hidden" />
                 </label>
             </div>
 
-            <!-- STEP 2: AI PROCESSING -->
+            <!-- STEP 2: PROCESSING -->
             <div id="step-2" class="hidden flex flex-col items-center justify-center min-h-[50vh]">
-                <div class="mb-6 ai-pulse rounded-full p-4 bg-indigo-50 text-indigo-600">
-                    <i class="fas fa-robot text-6xl"></i>
+                <div class="mb-6 rounded-full p-5 bg-indigo-50 text-indigo-600 border-2 border-indigo-100" id="processing-icon">
+                    <i class="fas fa-cog fa-spin text-5xl"></i>
                 </div>
                 
-                <h2 class="text-2xl font-bold mb-2 text-indigo-900" id="processing-title">جاري الفهم والتحليل...</h2>
-                <p class="text-gray-500 mb-8 text-center max-w-md text-sm" id="processing-subtitle">
-                    الذكاء الاصطناعي يقرأ الصور كما يقرأها الإنسان.
-                </p>
+                <h2 class="text-2xl font-bold mb-2 text-indigo-900" id="processing-title">جاري الفحص...</h2>
+                <p class="text-gray-500 mb-8 text-center max-w-md text-sm" id="processing-subtitle">الرجاء الانتظار.</p>
                 
                 <div class="w-full max-w-md bg-gray-50 rounded-xl p-6 border border-gray-200 shadow-inner">
                     <div class="flex justify-between items-center mb-2 font-bold text-gray-600 text-sm">
                         <span id="progress-text">صورة 0 من 0</span>
                         <span id="progress-percent" class="text-indigo-600">0%</span>
                     </div>
-                    
-                    <div class="h-3 bg-gray-200 rounded-full overflow-hidden mb-4">
+                    <div class="h-3 bg-gray-200 rounded-full overflow-hidden mb-6">
                         <div id="progress-bar" class="h-full bg-indigo-600 transition-all duration-300" style="width: 0%;"></div>
                     </div>
                     
-                    <div class="flex flex-col items-center mt-6">
-                        <p class="text-[11px] font-bold text-gray-400 mb-2 uppercase tracking-widest">الجزء المرسل لعقل الذكاء الاصطناعي</p>
-                        <div class="bg-white p-2 w-40 h-16 flex items-center justify-center shadow-md border border-indigo-200 rounded-lg">
-                            <img id="ai-live-img" class="max-w-full max-h-full object-contain" src="" alt="AI Crop">
+                    <!-- Viewports -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="flex flex-col items-center">
+                            <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest text-center">عين المتصفح</p>
+                            <div class="bg-white p-2 w-full h-16 flex items-center justify-center shadow-sm border border-gray-200 rounded-lg relative overflow-hidden">
+                                <img id="live-img" class="max-w-full max-h-full object-contain relative z-10" src="">
+                            </div>
+                            <p id="live-ocr-text" class="text-xs mt-2 text-gray-500 font-mono">-</p>
+                        </div>
+                        <div class="flex flex-col items-center">
+                            <p class="text-[10px] font-bold text-gray-400 mb-2 uppercase tracking-widest text-center">عقل Llama 3.1</p>
+                            <div class="bg-indigo-50 p-2 w-full h-16 flex items-center justify-center shadow-sm border border-indigo-200 rounded-lg relative overflow-hidden">
+                                <span id="live-llama-text" class="text-2xl font-bold text-indigo-700">-</span>
+                            </div>
+                            <p class="text-xs mt-2 text-gray-500 font-mono">الناتج المصحح</p>
                         </div>
                     </div>
                 </div>
@@ -136,8 +153,8 @@
             <div id="step-3" class="hidden flex flex-col min-h-[50vh]">
                 <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 gap-4">
                     <div>
-                        <h2 class="text-2xl font-bold mb-2">التحقق من فهم الذكاء الاصطناعي</h2>
-                        <p class="text-gray-500 text-sm">تأكد من الأرقام المستخرجة، وقم بتعديلها يدوياً إذا لزم الأمر.</p>
+                        <h2 class="text-2xl font-bold mb-2">التحقق من الأرقام</h2>
+                        <p class="text-gray-500 text-sm">المربعات الحمراء تعني خطأ أو تكرار. يمكنك تعديلها يدوياً.</p>
                     </div>
                     <div class="flex flex-wrap gap-2 w-full lg:w-auto">
                         <button id="btn-seq" class="flex-1 lg:flex-none px-4 py-3 bg-indigo-50 text-indigo-700 border border-indigo-200 hover:bg-indigo-100 rounded-xl font-bold text-sm transition">
@@ -154,8 +171,8 @@
                 </div>
 
                 <div class="mt-6 flex justify-between items-center border-t border-gray-100 pt-6">
-                    <button id="btn-reset" class="px-4 py-3 text-red-500 hover:text-red-700 font-bold text-sm transition">
-                        <i class="fas fa-trash-alt ml-1"></i> مسح ورفع صور جديدة
+                    <button id="btn-reset" class="px-4 py-3 text-red-500 hover:bg-red-50 hover:text-red-700 font-bold rounded-xl text-sm transition">
+                        <i class="fas fa-trash-alt ml-1"></i> رفع صور جديدة
                     </button>
                     <button id="btn-layout" class="w-full sm:w-auto px-10 py-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-lg flex items-center justify-center gap-3 transition transform active:scale-95 text-lg">
                         اعتماد وتجهيز الكتيب <i class="fas fa-arrow-left"></i>
@@ -172,7 +189,7 @@
                     </div>
                     <div class="flex flex-wrap gap-2 w-full lg:w-auto">
                         <button id="btn-back" class="flex-1 lg:flex-none px-5 py-3 border border-gray-300 hover:bg-gray-50 rounded-xl font-bold text-sm transition">
-                            <i class="fas fa-arrow-right ml-1"></i> رجوع للترتيب
+                            <i class="fas fa-arrow-right ml-1"></i> رجوع
                         </button>
                         <button id="btn-zip" class="flex-1 lg:flex-none px-5 py-3 bg-gray-800 hover:bg-gray-900 text-white rounded-xl font-bold text-sm shadow-md transition">
                             <i class="fas fa-file-archive ml-1"></i> صور ZIP
@@ -192,28 +209,36 @@
     </main>
 
     <script>
-        const state = { images: [], pairs: [], totalExpected: 0 };
+        const state = { images: [], pairs: [], totalExpected: 0, engine: 'cloud' };
         
-        // Initialize API Key from LocalStorage
+        // --- Settings Management ---
         document.addEventListener('DOMContentLoaded', () => {
-            const savedKey = localStorage.getItem('gemini_api_key');
-            if (savedKey) {
-                document.getElementById('api-key-input').value = savedKey;
-            }
+            const savedKey = localStorage.getItem('groq_api_key');
+            if (savedKey) document.getElementById('api-key-input').value = savedKey;
         });
 
-        function saveApiKey() {
+        function saveSettings() {
             const val = document.getElementById('api-key-input').value.trim();
-            if (val) {
-                localStorage.setItem('gemini_api_key', val);
-            } else {
-                localStorage.removeItem('gemini_api_key');
-            }
+            if (val) localStorage.setItem('groq_api_key', val);
+            else localStorage.removeItem('groq_api_key');
             document.getElementById('api-modal').classList.add('hidden');
         }
 
         function getApiKey() {
-            return localStorage.getItem('gemini_api_key') || "";
+            return localStorage.getItem('groq_api_key') || "";
+        }
+
+        function setEngine(type) {
+            state.engine = type;
+            const btnCloud = document.getElementById('engine-cloud');
+            const btnLocal = document.getElementById('engine-local');
+            if (type === 'cloud') {
+                btnCloud.className = "flex-1 flex flex-col items-center justify-center p-3 rounded-lg bg-indigo-600 text-white shadow-md transition relative overflow-hidden";
+                btnLocal.className = "flex-1 flex flex-col items-center justify-center p-3 rounded-lg bg-transparent text-gray-500 hover:bg-gray-200 transition relative overflow-hidden";
+            } else {
+                btnLocal.className = "flex-1 flex flex-col items-center justify-center p-3 rounded-lg bg-gray-800 text-white shadow-md transition relative overflow-hidden";
+                btnCloud.className = "flex-1 flex flex-col items-center justify-center p-3 rounded-lg bg-transparent text-gray-500 hover:bg-gray-200 transition relative overflow-hidden";
+            }
         }
 
         const els = {
@@ -221,16 +246,23 @@
             step3: document.getElementById('step-3'), step4: document.getElementById('step-4'),
             fileInput: document.getElementById('file-input'), verifyGrid: document.getElementById('verify-grid'),
             previewGrid: document.getElementById('preview-grid'), errorBox: document.getElementById('error-box'),
-            errorText: document.getElementById('error-text'), progTitle: document.getElementById('processing-title'),
-            progSub: document.getElementById('processing-subtitle'), progText: document.getElementById('progress-text'),
-            progPct: document.getElementById('progress-percent'), progBar: document.getElementById('progress-bar'),
-            aiLiveImg: document.getElementById('ai-live-img')
+            errorText: document.getElementById('error-text'), errorAction: document.getElementById('error-action'),
+            progTitle: document.getElementById('processing-title'), progSub: document.getElementById('processing-subtitle'),
+            progText: document.getElementById('progress-text'), progPct: document.getElementById('progress-percent'),
+            progBar: document.getElementById('progress-bar'), liveImg: document.getElementById('live-img'),
+            liveOcrText: document.getElementById('live-ocr-text'), liveLlamaText: document.getElementById('live-llama-text'),
+            procIcon: document.getElementById('processing-icon')
         };
 
-        function showError(msg) {
-            els.errorText.innerHTML = msg; // Allows HTML like links
+        function showError(msg, actionHtml = "") {
+            els.errorText.innerHTML = msg; 
+            if(actionHtml) {
+                els.errorAction.innerHTML = actionHtml;
+                els.errorAction.classList.remove('hidden');
+            } else {
+                els.errorAction.classList.add('hidden');
+            }
             els.errorBox.classList.remove('hidden');
-            setTimeout(() => els.errorBox.classList.add('hidden'), 8000);
         }
 
         function switchStep(stepNum) {
@@ -238,7 +270,7 @@
             els[`step${stepNum}`].classList.remove('hidden');
         }
 
-        function updateMainProgress(current, total) {
+        function updateProgress(current, total) {
             const pct = total > 0 ? Math.round((current / total) * 100) : 0;
             els.progText.innerText = `صورة ${current} من ${total}`;
             els.progPct.innerText = `${pct}%`;
@@ -252,17 +284,28 @@
             const files = e.target.files;
             if (!files || files.length === 0) return;
 
-            // CHECK API KEY FIRST
-            if (!getApiKey()) {
+            els.errorBox.classList.add('hidden');
+
+            if (state.engine === 'cloud' && !getApiKey()) {
                 document.getElementById('api-modal').classList.remove('hidden');
-                showError("يرجى إدخال مفتاح الـ API للذكاء الاصطناعي أولاً.");
-                els.fileInput.value = ''; // Reset
+                showError("النظام الهجين يتطلب مفتاح Groq الخاص بك لتشغيل نموذج Llama 3.1.");
+                els.fileInput.value = ''; 
                 return;
             }
 
             switchStep(2);
             state.images = [];
-            updateMainProgress(0, files.length);
+            updateProgress(0, files.length);
+
+            if (state.engine === 'cloud') {
+                els.progTitle.innerText = "المحرك البصري Llama 4 يعمل...";
+                els.progSub.innerText = "يقوم النظام بإرسال الصورة للذكاء الاصطناعي لرؤيتها وقراءة الرقم.";
+                els.procIcon.innerHTML = '<i class="fas fa-eye text-5xl ai-pulse"></i>';
+            } else {
+                els.progTitle.innerText = "المحرك المحلي يقرأ الصور...";
+                els.progSub.innerText = "يتم عزل الألوان آلياً داخل هاتفك لمعرفة الأرقام.";
+                els.procIcon.innerHTML = '<i class="fas fa-microchip text-5xl animate-pulse"></i>';
+            }
 
             try {
                 let count = 0;
@@ -274,19 +317,19 @@
                         for (const zf of zipFiles) {
                             const blob = await zf.async('blob');
                             const imgData = await safeLoadImage(blob);
-                            state.images.push({ ...imgData, originalName: zf.name, detectedPage: "" });
+                            state.images.push({ ...imgData, originalName: zf.name, detectedPage: "", error: "" });
                         }
                     } else if (file.type.startsWith('image/')) {
                         const imgData = await safeLoadImage(file);
-                        state.images.push({ ...imgData, originalName: file.name, detectedPage: "" });
+                        state.images.push({ ...imgData, originalName: file.name, detectedPage: "", error: "" });
                     }
                     count++;
-                    updateMainProgress(count, files.length);
+                    updateProgress(count, files.length);
                 }
 
                 if (state.images.length > 0) {
                     state.totalExpected = state.images.length;
-                    setTimeout(runGeminiAI, 500); 
+                    setTimeout(state.engine === 'cloud' ? runVisionEngine : runLocalEngine, 500); 
                 } else {
                     switchStep(1); showError("لم يتم العثور على صور صالحة.");
                 }
@@ -295,7 +338,7 @@
             }
         });
 
-        // Downscale to save memory and API payload size
+        // Downscale to save memory
         function safeLoadImage(blob) {
             return new Promise((resolve, reject) => {
                 const reader = new FileReader();
@@ -321,110 +364,182 @@
             });
         }
 
-        // --- 2. GOOGLE GEMINI VISION AI ---
-        async function runGeminiAI() {
-            els.progTitle.innerText = "الذكاء الاصطناعي يحلل الصور...";
-            els.progSub.innerText = "يتم إرسال المنطقة السفلية لنموذج الرؤية العميقة لفهم محتواها.";
-            updateMainProgress(0, state.images.length);
+        // ==========================================
+        // ENGINE 1: LOCAL TESSERACT (Fallback)
+        // ==========================================
+        async function runLocalEngine() {
+            updateProgress(0, state.images.length);
+            try {
+                const worker = await window.Tesseract.createWorker('eng', 1);
+                await worker.setParameters({ tessedit_char_whitelist: '0123456789', tessedit_pageseg_mode: 8 });
 
-            let hasApiError = false;
+                for (let i = 0; i < state.images.length; i++) {
+                    const item = state.images[i];
+                    const cropUrl = createWhiteExtractionCrop(item.imgEl);
+                    els.liveImg.src = cropUrl;
+                    await delay(50);
+
+                    const ret = await worker.recognize(cropUrl);
+                    item.detectedPage = extractLogicalNumber(ret.data.text, state.totalExpected) || "";
+                    
+                    els.liveOcrText.innerText = ret.data.text.trim() || "-";
+                    els.liveLlamaText.innerText = item.detectedPage || "-";
+
+                    updateProgress(i + 1, state.images.length);
+                }
+                await worker.terminate();
+            } catch (err) {
+                console.error("Local OCR Error:", err);
+            }
+            finalizeScan();
+        }
+
+        // Creates an isolated black and white crop of the white text
+        function createWhiteExtractionCrop(imgEl) {
+            const canvas = document.createElement('canvas');
+            
+            const cropW = imgEl.width * 0.20; 
+            const cropH = imgEl.height * 0.12; 
+            const cropX = imgEl.width * 0.40; 
+            const cropY = imgEl.height * 0.85; 
+
+            const scale = 5; 
+            canvas.width = cropW * scale;
+            canvas.height = cropH * scale;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.fillStyle = "white"; ctx.fillRect(0,0, canvas.width, canvas.height);
+            ctx.drawImage(imgEl, cropX, cropY, cropW, cropH, 0, 0, canvas.width, canvas.height);
+
+            const imgData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            for (let i = 0; i < imgData.data.length; i += 4) {
+                const r = imgData.data[i], g = imgData.data[i+1], b = imgData.data[i+2];
+                if (r > 190 && g > 190 && b > 190) {
+                    imgData.data[i] = imgData.data[i+1] = imgData.data[i+2] = 0; 
+                } else {
+                    imgData.data[i] = imgData.data[i+1] = imgData.data[i+2] = 255; 
+                }
+            }
+            ctx.putImageData(imgData, 0, 0);
+            return canvas.toDataURL('image/jpeg', 1.0);
+        }
+
+        // ==========================================
+        // ENGINE 2: DIRECT VISION (Llama 4 Scout 17B)
+        // ==========================================
+        async function runVisionEngine() {
+            updateProgress(0, state.images.length);
+            let hasCriticalError = false;
 
             for (let i = 0; i < state.images.length; i++) {
-                if (hasApiError) break; // Stop loop if API key is invalid
+                if (hasCriticalError) break; 
 
                 const item = state.images[i];
-                const cropBase64 = createTargetCropForAI(item.imgEl);
-                els.aiLiveImg.src = `data:image/jpeg;base64,${cropBase64}`;
+                
+                // 1. CLOUD SIGHT: Extract the bottom 25% of the page
+                const cropBase64 = createCloudCrop(item.imgEl);
+                els.liveImg.src = `data:image/jpeg;base64,${cropBase64}`;
+                els.liveOcrText.innerText = "يرى الصورة...";
+                els.liveLlamaText.innerHTML = '<i class="fas fa-spinner fa-spin text-indigo-400"></i>';
 
+                // 2. LLAMA VISION: Send image for extraction
                 try {
-                    const number = await askGeminiWithRetry(cropBase64);
-                    item.detectedPage = extractLogicalNumber(number, state.totalExpected) || "";
+                    const extractedStr = await callLlamaVisionAPI(cropBase64, state.totalExpected);
+                    item.detectedPage = extractLogicalNumber(extractedStr, state.totalExpected) || "";
+                    els.liveLlamaText.innerText = item.detectedPage || "[فارغ]";
+                    els.liveOcrText.innerText = "تمت القراءة";
                 } catch(e) {
-                    console.error("AI Error", e);
-                    item.detectedPage = ""; 
+                    item.detectedPage = ""; item.error = e.message;
+                    els.liveLlamaText.innerText = "خطأ";
                     
-                    if (e.message.includes("400") || e.message.includes("403") || e.message.includes("API_KEY_INVALID")) {
-                        showError("مفتاح الـ API غير صالح أو غير مصرح به. <button onclick=\"document.getElementById('api-modal').classList.remove('hidden')\" class='underline font-bold'>اضغط هنا لتحديثه</button>.");
-                        hasApiError = true;
+                    if (e.message.includes("Failed to fetch") || e.message.includes("CORS")) {
+                         showError("خطأ في الاتصال بسيرفر Groq. تأكد من اتصالك.", 
+                         "<button onclick='forceFallbackToLocal()' class='bg-indigo-600 px-4 py-2 mt-2 rounded text-white font-bold shadow'>استخدام المحرك المحلي بدلاً منه</button>");
+                         hasCriticalError = true;
+                    } else if (e.message.includes("API Key") || e.message.includes("401")) {
+                         showError("مفتاح Groq غير صالح.");
+                         hasCriticalError = true;
+                    } else {
+                         showError("خطأ: " + e.message);
+                         hasCriticalError = true;
                     }
                 }
 
-                updateMainProgress(i + 1, state.images.length);
+                updateProgress(i + 1, state.images.length);
+                
+                // Rate Limiting: llama-4-scout allows 30 Requests Per Minute
+                // 60 seconds / 30 = 2 seconds per request minimum.
+                if (i < state.images.length - 1 && !hasCriticalError) {
+                    await delay(2000); 
+                }
             }
-
-            // Auto sort visually before rendering
-            state.images.sort((a, b) => {
-                const valA = a.detectedPage !== "" ? a.detectedPage : 9999;
-                const valB = b.detectedPage !== "" ? b.detectedPage : 9999;
-                return valA - valB;
-            });
-            
-            renderVerifyGrid();
-            switchStep(3);
+            if(!hasCriticalError) finalizeScan();
         }
 
-        // Crops bottom 25% to give AI context
-        function createTargetCropForAI(imgEl) {
+        function createCloudCrop(imgEl) {
             const canvas = document.createElement('canvas');
-            const cropW = imgEl.width; 
-            const cropH = imgEl.height * 0.25; 
-            const cropY = imgEl.height * 0.75; 
+            const cropW = imgEl.width * 0.6; const cropH = imgEl.height * 0.25; 
+            const cropX = imgEl.width * 0.2; const cropY = imgEl.height * 0.75; 
+            const targetW = 512; const targetH = Math.floor(cropH * (targetW / cropW));
 
-            // Scale down width to 512px to keep payload light
-            const targetW = 512;
-            const targetH = Math.floor(cropH * (targetW / cropW));
-
-            canvas.width = targetW;
-            canvas.height = targetH;
+            canvas.width = targetW; canvas.height = targetH;
             const ctx = canvas.getContext('2d');
-            
-            ctx.fillStyle = "white"; 
-            ctx.fillRect(0,0, canvas.width, canvas.height);
-            ctx.drawImage(imgEl, 0, cropY, cropW, cropH, 0, 0, targetW, targetH);
-
+            ctx.fillStyle = "white"; ctx.fillRect(0,0, canvas.width, canvas.height);
+            ctx.drawImage(imgEl, cropX, cropY, cropW, cropH, 0, 0, targetW, targetH);
             return canvas.toDataURL('image/jpeg', 0.8).split(',')[1]; 
         }
 
-        // Exponential backoff for API calls
-        async function askGeminiWithRetry(base64Image, retries = 3, delayMs = 1000) {
+        window.forceFallbackToLocal = function() {
+            els.errorBox.classList.add('hidden');
+            setEngine('local');
+            runLocalEngine();
+        }
+
+        // Send Image directly to Llama 4 Scout Vision Model
+        async function callLlamaVisionAPI(base64Image, maxPages, retries = 2) {
             const key = getApiKey();
-            // Use gemini-1.5-flash as it is fast and supports vision universally
-            const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`;
+            const url = `https://api.groq.com/openai/v1/chat/completions`;
             
             const payload = {
-                contents: [{
-                    role: "user",
-                    parts: [
-                        { text: "Extract the single page number visible in this image. It is inside a circle or shape. Return ONLY the digits (e.g. 1, 2, 16). Do not include any other text." },
-                        { inlineData: { mimeType: "image/jpeg", data: base64Image } }
-                    ]
-                }],
-                generationConfig: {
-                    temperature: 0.1 
-                }
+                model: "meta-llama/llama-4-scout-17b-16e-instruct",
+                messages: [
+                    { 
+                        role: "user", 
+                        content: [
+                            { type: "text", text: `Look at the bottom shape in this image and extract the single page number visible inside it. Return ONLY the integer digits (e.g. 1, 2, 16). Do not output any other text or characters.` },
+                            { type: "image_url", image_url: { url: `data:image/jpeg;base64,${base64Image}` } }
+                        ]
+                    }
+                ],
+                temperature: 0.0
             };
 
             try {
-                const res = await fetch(url, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(payload)
+                const res = await fetch(url, { 
+                    method: "POST", 
+                    headers: { 
+                        "Content-Type": "application/json",
+                        "Authorization": `Bearer ${key}`
+                    }, 
+                    body: JSON.stringify(payload) 
                 });
-
-                if (!res.ok) {
-                    if (res.status === 429 && retries > 0) { 
-                        await delay(delayMs);
-                        return askGeminiWithRetry(base64Image, retries - 1, delayMs * 2);
-                    }
-                    throw new Error(`HTTP error! status: ${res.status}`);
-                }
                 
                 const data = await res.json();
-                return data.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || "";
+                
+                if (!res.ok) {
+                    if (res.status === 429 && retries > 0) {
+                        await delay(3000); return callLlamaVisionAPI(base64Image, maxPages, retries - 1);
+                    }
+                    throw new Error(data.error?.message || `خطأ سيرفر: ${res.status}`);
+                }
+                return data.choices?.[0]?.message?.content?.trim() || "";
+                
             } catch (e) {
-                if (retries > 0 && !e.message.includes("400") && !e.message.includes("403")) {
-                    await delay(delayMs);
-                    return askGeminiWithRetry(base64Image, retries - 1, delayMs * 2);
+                if (e.name === 'TypeError' || e.message === 'Failed to fetch') {
+                    throw new Error("Failed to fetch (CORS issue)");
+                }
+                if (retries > 0 && !e.message.includes("Invalid API Key")) {
+                    await delay(2000); return callLlamaVisionAPI(base64Image, maxPages, retries - 1);
                 }
                 throw e;
             }
@@ -438,6 +553,16 @@
                 if (nums.length > 0) return Math.max(...nums);
             }
             return null;
+        }
+
+        function finalizeScan() {
+            state.images.sort((a, b) => {
+                const valA = a.detectedPage !== "" ? a.detectedPage : 9999;
+                const valB = b.detectedPage !== "" ? b.detectedPage : 9999;
+                return valA - valB;
+            });
+            renderVerifyGrid();
+            switchStep(3);
         }
 
         // --- 3. VERIFICATION UI ---
@@ -454,17 +579,22 @@
                 const isMissing = img.detectedPage === "";
                 const isError = isDuplicate || isMissing;
                 
-                let borderColor = 'border-gray-200';
-                let bgColor = 'bg-white';
-                
-                if (isError) { borderColor = 'border-red-400'; bgColor = 'bg-red-50/50'; }
+                let borderColor = 'border-gray-200'; let bgColor = 'bg-white';
+                if (isError) { borderColor = 'border-red-400'; bgColor = 'bg-red-50/60'; }
 
                 const card = document.createElement('div');
                 card.className = `${bgColor} border-2 rounded-xl p-2 flex flex-col gap-2 shadow-sm transition-colors ${borderColor}`;
                 
-                let badge = `<span class="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded w-full text-center truncate"><i class="fas fa-brain"></i> قرأه الذكاء</span>`;
-                if (isMissing) badge = `<span class="text-[11px] font-bold text-gray-700 bg-gray-200 px-2 py-1 rounded w-full text-center"><i class="fas fa-search"></i> مفقود</span>`;
-                if (isDuplicate) badge = `<span class="text-[11px] font-bold text-red-700 bg-red-100 px-2 py-1 rounded w-full text-center animate-pulse"><i class="fas fa-exclamation-triangle"></i> مكرر</span>`;
+                let badgeHtml = "";
+                if (img.error) {
+                    badgeHtml = `<span class="text-[10px] font-bold text-red-700 bg-red-100 px-2 py-1 rounded w-full text-center truncate" title="${img.error}"><i class="fas fa-times-circle"></i> خطأ</span>`;
+                } else if (isMissing) {
+                    badgeHtml = `<span class="text-[11px] font-bold text-gray-700 bg-gray-200 px-2 py-1 rounded w-full text-center"><i class="fas fa-search"></i> مفقود</span>`;
+                } else if (isDuplicate) {
+                    badgeHtml = `<span class="text-[11px] font-bold text-red-700 bg-red-100 px-2 py-1 rounded w-full text-center animate-pulse"><i class="fas fa-exclamation-triangle"></i> مكرر</span>`;
+                } else {
+                    badgeHtml = `<span class="text-[11px] font-bold text-indigo-700 bg-indigo-100 px-2 py-1 rounded w-full text-center truncate"><i class="fas fa-check-circle"></i> مقروء</span>`;
+                }
 
                 card.innerHTML = `
                     <div class="w-full h-32 bg-gray-100 rounded-lg overflow-hidden border border-gray-200 relative">
@@ -474,7 +604,7 @@
                         <span class="text-xs font-bold ${isError ? 'text-red-700' : 'text-gray-600'}">الصفحة:</span>
                         <input type="number" data-idx="${index}" value="${img.detectedPage}" placeholder="؟" class="w-12 text-center font-bold text-lg outline-none bg-transparent ${isError ? 'text-red-700 border-b-2 border-red-300' : 'text-indigo-700 border-b-2 border-indigo-200 focus:border-indigo-500'}">
                     </div>
-                    ${badge}
+                    ${badgeHtml}
                 `;
                 
                 const input = card.querySelector('input');
@@ -491,7 +621,7 @@
         document.getElementById('btn-reset').addEventListener('click', () => { state.images = []; switchStep(1); });
 
         document.getElementById('btn-seq').addEventListener('click', () => {
-            state.images.forEach((img, i) => { img.detectedPage = i + 1; });
+            state.images.forEach((img, i) => { img.detectedPage = i + 1; img.error = ""; });
             renderVerifyGrid();
         });
 
@@ -552,8 +682,8 @@
                 const wrapper = document.createElement('div');
                 wrapper.className = "w-full max-w-3xl";
                 
-                const leftImg = pair.left ? `<img src="${pair.left.dataUrl}" class="max-w-full max-h-full object-contain drop-shadow-xl">` : `<span class="text-gray-300 font-bold text-xl text-center px-4">[ صفحة فارغة لضبط الوزن ]</span>`;
-                const rightImg = pair.right ? `<img src="${pair.right.dataUrl}" class="max-w-full max-h-full object-contain drop-shadow-xl">` : `<span class="text-gray-300 font-bold text-xl text-center px-4">[ صفحة فارغة لضبط الوزن ]</span>`;
+                const leftImg = pair.left ? `<img src="${pair.left.dataUrl}" class="max-w-full max-h-full object-contain drop-shadow-xl">` : `<span class="text-gray-300 font-bold text-xl text-center px-4">[ صفحة فارغة ]</span>`;
+                const rightImg = pair.right ? `<img src="${pair.right.dataUrl}" class="max-w-full max-h-full object-contain drop-shadow-xl">` : `<span class="text-gray-300 font-bold text-xl text-center px-4">[ صفحة فارغة ]</span>`;
 
                 wrapper.innerHTML = `
                     <h4 class="text-center font-bold mb-3 text-gray-500 text-sm tracking-wider">--- ورقة ${pair.sheet} (${sideText}) ---</h4>
@@ -596,13 +726,13 @@
                     });
                     pdf.save('Arabic_Booklet_Print.pdf');
                 } catch (err) { showError("حدث خطأ أثناء إنشاء PDF."); }
-                btn.innerHTML = '<i class="fas fa-file-pdf ml-1"></i> تحميل PDF';
+                btn.innerHTML = '<i class="fas fa-file-pdf ml-1"></i> تحميل PDF للطباعة';
             }, 100);
         });
 
         document.getElementById('btn-zip').addEventListener('click', async () => {
             const btn = document.getElementById('btn-zip');
-            btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جاري التصدير...';
+            btn.innerHTML = '<i class="fas fa-spinner fa-spin ml-1"></i> جاري ضغط الصور...';
             try {
                 const zip = new window.JSZip();
                 state.images.forEach((img, idx) => {
@@ -613,10 +743,12 @@
                 const content = await zip.generateAsync({ type: 'blob' });
                 window.saveAs(content, 'Renamed_Pages.zip');
             } catch (err) { showError("حدث خطأ في إنشاء ZIP."); }
-            btn.innerHTML = '<i class="fas fa-file-archive ml-1"></i> تحميل ZIP';
+            btn.innerHTML = '<i class="fas fa-file-archive ml-1"></i> تحميل صور ZIP';
         });
 
     </script>
 </body>
 </html>
+
+
 
