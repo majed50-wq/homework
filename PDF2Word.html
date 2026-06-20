@@ -1,0 +1,388 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PDF to DOCX (Smart OCR)</title>
+    
+    <!-- PDF.js for rendering the PDF pages to images -->
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+    
+    <!-- Tesseract.js for offline Browser-based OCR -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+
+    <!-- docx library for Word document generation -->
+    <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
+
+    <style>
+        :root {
+            --primary: #4F46E5;
+            --primary-hover: #4338CA;
+            --bg-color: #F3F4F6;
+            --surface: #FFFFFF;
+            --text-main: #1F2937;
+            --text-muted: #6B7280;
+            --border: #E5E7EB;
+            --success: #10B981;
+            --error: #EF4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            background-color: var(--surface);
+            max-width: 600px;
+            width: 100%;
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            padding: 40px;
+            text-align: center;
+        }
+
+        h1 {
+            font-size: 1.75rem;
+            margin-bottom: 10px;
+            font-weight: 700;
+        }
+
+        p.subtitle {
+            color: var(--text-muted);
+            margin-bottom: 30px;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .drop-zone {
+            border: 2px dashed var(--border);
+            border-radius: 12px;
+            padding: 50px 20px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background-color: #F9FAFB;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .drop-zone:hover, .drop-zone.dragover {
+            border-color: var(--primary);
+            background-color: #EEF2FF;
+        }
+
+        .drop-zone svg {
+            width: 48px;
+            height: 48px;
+            color: var(--primary);
+            margin-bottom: 15px;
+        }
+
+        .drop-zone p {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: var(--text-main);
+        }
+
+        .drop-zone span {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-top: 5px;
+        }
+
+        #fileInput {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            cursor: pointer;
+        }
+
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            display: none;
+            font-weight: 500;
+            word-wrap: break-word;
+            text-align: left;
+        }
+
+        .status.loading {
+            display: block;
+            background-color: #EFF6FF;
+            color: #1D4ED8;
+            border: 1px solid #BFDBFE;
+        }
+
+        .status.success {
+            display: block;
+            background-color: #ECFDF5;
+            color: #047857;
+            border: 1px solid #A7F3D0;
+        }
+
+        .status.error {
+            display: block;
+            background-color: #FEF2F2;
+            color: #B91C1C;
+            border: 1px solid #FECACA;
+        }
+
+        .progress-bar {
+            width: 100%;
+            background-color: #BFDBFE;
+            height: 6px;
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+            display: none;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background-color: #1D4ED8;
+            width: 0%;
+            transition: width 0.2s ease;
+        }
+
+        .spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(29, 78, 216, 0.3);
+            border-radius: 50%;
+            border-top-color: #1D4ED8;
+            animation: spin 1s ease-in-out infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        @media (max-width: 600px) {
+            .container { padding: 25px; }
+            .drop-zone { padding: 30px 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h1>PDF to DOCX (Smart OCR)</h1>
+        <p class="subtitle">Features dual-language recognition (Arabic/English) and smart paragraph reconstruction.</p>
+
+        <div class="drop-zone" id="dropZone">
+            <input type="file" id="fileInput" accept="application/pdf">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <p>Click or drag your PDF here</p>
+            <span>Runs entirely in your browser</span>
+        </div>
+
+        <div id="statusEl" class="status"></div>
+        <div id="progressBar" class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+    </div>
+
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+        const dropZone = document.getElementById('dropZone');
+        const fileInput = document.getElementById('fileInput');
+        const statusEl = document.getElementById('statusEl');
+        const progressBar = document.getElementById('progressBar');
+        const progressFill = document.getElementById('progressFill');
+
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+        });
+
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+
+        dropZone.addEventListener('dragover', () => dropZone.classList.add('dragover'));
+        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+        dropZone.addEventListener('drop', (e) => {
+            dropZone.classList.remove('dragover');
+            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+        });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length) handleFile(e.target.files[0]);
+        });
+
+        function showStatus(message, type, progress = null) {
+            statusEl.className = `status ${type}`;
+            statusEl.innerHTML = type === 'loading' ? `<span class="spinner"></span> ${message}` : message;
+            
+            if (progress !== null) {
+                progressBar.style.display = 'block';
+                progressFill.style.width = `${progress}%`;
+            } else {
+                progressBar.style.display = 'none';
+            }
+        }
+
+        async function handleFile(file) {
+            if (file.type !== 'application/pdf') {
+                showStatus('Error: Please upload a valid PDF file.', 'error');
+                return;
+            }
+
+            try {
+                // Initialize Offline OCR Worker with BOTH Arabic and English (fixes ESSE -> 2551L error)
+                showStatus('Initializing AI Engine (Arabic + English)...', 'loading', 0);
+                
+                const worker = await Tesseract.createWorker("ara+eng", 1, {
+                    logger: m => {
+                        if (m.status === 'recognizing text') {
+                            showStatus(`Scanning page visually...`, 'loading', Math.round(m.progress * 100));
+                        } else if (m.status === 'loading tesseract core' || m.status === 'loading language traineddata') {
+                            showStatus(`Downloading Dual Language Models...`, 'loading', 50);
+                        }
+                    }
+                });
+
+                showStatus('Reading PDF file...', 'loading', 0);
+                const arrayBuffer = await file.arrayBuffer();
+                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+                
+                let finalParagraphs = [];
+
+                // Loop through pages
+                for (let i = 1; i <= pdf.numPages; i++) {
+                    showStatus(`Rendering page ${i} of ${pdf.numPages}...`, 'loading', 0);
+                    const page = await pdf.getPage(i);
+                    
+                    // Render PDF to Canvas
+                    const viewport = page.getViewport({ scale: 2.0 });
+                    const canvas = document.createElement('canvas');
+                    canvas.width = viewport.width;
+                    canvas.height = viewport.height;
+                    const ctx = canvas.getContext('2d');
+                    
+                    await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+                    // Run OCR
+                    showStatus(`Running Smart OCR on page ${i}...`, 'loading', 0);
+                    const { data: { text } } = await worker.recognize(canvas);
+
+                    // 1. Remove explicit watermarks
+                    let cleanText = text.replace(/Twitter.*ketab_n/gi, '').trim();
+
+                    // 2. Split by line and filter empty
+                    const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l.length > 2);
+                    
+                    // 3. Smart Paragraph Reconstruction
+                    let currentPara = [];
+                    for (let j = 0; j < lines.length; j++) {
+                        let line = lines[j];
+                        
+                        // Clean edge artifacts: removes isolated stray letters/numbers at the end of justified text lines
+                        line = line.replace(/\s+([a-zA-Z0-9\u0621-\u064A])\.?$/, ''); 
+                        
+                        currentPara.push(line);
+                        
+                        // Heuristic: Does this line end a paragraph?
+                        // If it ends with punctuation, OR is significantly short (like a heading), break the paragraph.
+                        const endsWithPunctuation = /[.!?؟:]$/.test(line);
+                        const isShortLine = line.length < 50; 
+                        
+                        if (endsWithPunctuation || isShortLine || j === lines.length - 1) {
+                            finalParagraphs.push(currentPara.join(' ')); // Join the lines with a space
+                            currentPara = [];
+                        }
+                    }
+                }
+
+                await worker.terminate();
+
+                if (finalParagraphs.length === 0) {
+                    throw new Error("OCR finished, but no readable text was found.");
+                }
+
+                showStatus('Structuring DOCX Output...', 'loading', 100);
+                const docxBlob = await generateDocx(finalParagraphs);
+
+                // Trigger Download
+                const url = URL.createObjectURL(docxBlob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = file.name.replace('.pdf', '_SmartOCR.docx');
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+
+                showStatus('Conversion flawless! Your optimized Word file is ready.', 'success');
+                fileInput.value = '';
+            } catch (error) {
+                console.error(error);
+                showStatus(`Error: ${error.message}`, 'error');
+            }
+        }
+
+        function isArabicText(text) {
+            const arabicRegex = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
+            return arabicRegex.test(text);
+        }
+
+        async function generateDocx(paragraphsTextList) {
+            const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
+
+            const docParagraphs = paragraphsTextList.map(text => {
+                const isRTL = isArabicText(text);
+
+                return new Paragraph({
+                    children: [
+                        new TextRun({
+                            text: text,
+                            size: 28, // 14pt
+                            rightToLeft: isRTL 
+                        })
+                    ],
+                    // Changed Alignment to Justified. Arabic text looks dramatically better fully justified.
+                    alignment: isRTL ? AlignmentType.JUSTIFIED : AlignmentType.LEFT,
+                    bidirectional: isRTL, 
+                    spacing: {
+                        after: 240, // Because paragraphs are properly merged now, this spacing will only appear between blocks, not lines!
+                    }
+                });
+            });
+
+            const doc = new Document({
+                sections: [{
+                    properties: {},
+                    children: docParagraphs,
+                }],
+            });
+
+            return await Packer.toBlob(doc);
+        }
+    </script>
+</body>
+</html>
+
+
