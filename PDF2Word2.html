@@ -1,407 +1,504 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PDF to DOCX (Smart OCR)</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF to Word &middot; Smart OCR</title>
 
-    <!-- PDF.js for rendering the PDF pages to images -->
-    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<!-- PDF rendering -->
+<script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
+<!-- On-device OCR -->
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<!-- Word generation -->
+<script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
 
-    <!-- Tesseract.js for offline Browser-based OCR -->
-    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-    <!-- docx library for Word document generation -->
-    <script src="https://cdn.jsdelivr.net/npm/docx@7.8.2/build/index.js"></script>
+<style>
+:root{
+    --bg:#0c0e16;
+    --panel:#141826;
+    --panel-2:#1b2030;
+    --inset:#0f1320;
+    --line:#2a3142;
+    --line-soft:#222838;
+    --ink:#eef0f7;
+    --muted:#98a0b6;
+    --faint:#6b7280;
+    --accent:#7c6cff;
+    --accent-2:#b06bff;
+    --accent-soft:rgba(124,108,255,0.14);
+    --accent-line:rgba(124,108,255,0.55);
+    --ok:#34d399;
+    --bad:#fb7185;
+    --radius:20px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+    font-family:"Quicksand",-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    display:flex;flex-direction:column;align-items:center;
+    padding:22px 16px 60px;
+    /* one quiet signature: a soft violet glow up top */
+    background-image:radial-gradient(120% 60% at 50% -10%, rgba(124,108,255,0.16), transparent 60%);
+    background-repeat:no-repeat;
+}
+.wrap{width:100%;max-width:560px;display:flex;flex-direction:column;gap:18px}
 
-    <style>
-        :root {
-            --primary: #4F46E5;
-            --primary-hover: #4338CA;
-            --bg-color: #F3F4F6;
-            --surface: #FFFFFF;
-            --text-main: #1F2937;
-            --text-muted: #6B7280;
-            --border: #E5E7EB;
-            --success: #10B981;
-            --error: #EF4444;
-        }
+.masthead{display:flex;flex-direction:column;gap:4px;padding:4px 2px 2px}
+.masthead h1{font-size:1.45rem;font-weight:700;letter-spacing:.2px}
+.masthead p{color:var(--muted);font-size:.92rem;font-weight:500}
 
-        * { box-sizing: border-box; margin: 0; padding: 0; }
+.panel{
+    background:linear-gradient(180deg,var(--panel),#11151f);
+    border:1px solid var(--line-soft);
+    border-radius:var(--radius);
+    padding:18px;
+}
 
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-main);
-            display: flex; flex-direction: column;
-            align-items: center; justify-content: center;
-            min-height: 100vh; padding: 20px;
-        }
+/* ---- drop zone ---- */
+.drop{
+    position:relative;
+    border:2px dashed var(--line);
+    border-radius:18px;
+    padding:34px 20px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .18s ease, background .18s ease, transform .18s ease;
+    background:rgba(255,255,255,0.012);
+}
+.drop:hover,.drop.drag{border-color:var(--accent-line);background:var(--accent-soft)}
+.drop .plus{width:30px;height:30px;margin:0 auto 12px;color:var(--accent);opacity:.9}
+.drop h2{font-size:1.12rem;font-weight:600;line-height:1.3;margin-bottom:6px}
+.drop p{color:var(--muted);font-size:.86rem;font-weight:500;line-height:1.45;max-width:38ch;margin:0 auto}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop.has-file{border-style:solid;border-color:var(--accent-line);background:var(--accent-soft)}
+.file-chip{display:none;align-items:center;justify-content:center;gap:10px;font-weight:600}
+.drop.has-file .file-chip{display:flex}
+.drop.has-file .empty{display:none}
+.file-chip svg{width:22px;height:22px;color:var(--accent);flex:0 0 auto}
+.file-chip .nm{max-width:32ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.file-chip .sub{display:block;color:var(--muted);font-size:.78rem;font-weight:500;margin-top:2px}
 
-        .container {
-            background-color: var(--surface);
-            max-width: 600px; width: 100%;
-            border-radius: 16px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
-            padding: 40px; text-align: center;
-        }
+/* ---- mode selector ---- */
+.label{font-size:.82rem;font-weight:600;color:var(--muted);margin:2px 2px 10px;letter-spacing:.3px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mode{
+    background:var(--panel-2);
+    border:1.5px solid var(--line-soft);
+    border-radius:16px;
+    padding:16px 14px;
+    text-align:center;
+    cursor:pointer;
+    transition:border-color .16s ease, background .16s ease, box-shadow .16s ease;
+    display:flex;flex-direction:column;align-items:center;gap:7px;
+    color:var(--ink);font-family:inherit;
+}
+.mode:hover{border-color:var(--line)}
+.mode .ico{width:26px;height:26px;color:var(--muted);transition:color .16s ease}
+.mode .nm{font-weight:700;font-size:1rem}
+.mode .ds{font-size:.78rem;color:var(--muted);font-weight:500;line-height:1.35}
+.mode[aria-pressed="true"]{
+    border-color:var(--accent-line);
+    background:linear-gradient(180deg,var(--accent-soft),rgba(124,108,255,0.05));
+    box-shadow:0 0 0 1px var(--accent-line), 0 8px 24px -14px var(--accent);
+}
+.mode[aria-pressed="true"] .ico{color:var(--accent)}
 
-        h1 { font-size: 1.75rem; margin-bottom: 10px; font-weight: 700; }
+/* ---- key + options ---- */
+.ai-only{margin-top:16px;display:none}
+.ai-only.show{display:block}
+.keyrow{display:flex;gap:10px;margin-top:8px}
+.field{
+    flex:1;background:var(--inset);border:1px solid var(--line-soft);border-radius:12px;
+    color:var(--ink);font-family:inherit;font-size:.95rem;font-weight:600;
+    padding:13px 14px;outline:none;transition:border-color .15s ease;min-width:0;
+}
+.field:focus{border-color:var(--accent-line)}
+.field::placeholder{color:var(--faint);font-weight:500}
+.btn-ghost{
+    background:var(--panel-2);border:1px solid var(--line);color:var(--ink);
+    font-family:inherit;font-weight:700;font-size:.9rem;border-radius:12px;
+    padding:0 16px;cursor:pointer;transition:border-color .15s ease, background .15s ease;white-space:nowrap;
+}
+.btn-ghost:hover{border-color:var(--accent-line);background:var(--accent-soft)}
+.hint{font-size:.8rem;color:var(--muted);font-weight:500;line-height:1.45;margin-top:9px}
+.hint a{color:var(--accent-2);text-decoration:none;font-weight:600}
+.hint a:hover{text-decoration:underline}
 
-        p.subtitle {
-            color: var(--text-muted); margin-bottom: 24px;
-            font-size: 0.95rem; line-height: 1.5;
-        }
+.toggle{display:flex;align-items:center;gap:11px;margin-top:16px;cursor:pointer;user-select:none}
+.toggle input{position:absolute;opacity:0;pointer-events:none}
+.sw{width:42px;height:24px;border-radius:999px;background:var(--panel-2);border:1px solid var(--line);position:relative;flex:0 0 auto;transition:background .16s ease, border-color .16s ease}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:var(--muted);transition:transform .16s ease, background .16s ease}
+.toggle input:checked + .sw{background:var(--accent-soft);border-color:var(--accent-line)}
+.toggle input:checked + .sw::after{transform:translateX(18px);background:var(--accent)}
+.toggle .tx{font-size:.88rem;font-weight:600}
+.toggle .tx small{display:block;color:var(--muted);font-weight:500;font-size:.76rem;margin-top:1px}
+.toggle input:focus-visible + .sw{outline:2px solid var(--accent);outline-offset:2px}
 
-        .options {
-            display: flex; flex-direction: column; gap: 10px;
-            text-align: left; margin-bottom: 22px;
-            background: #F9FAFB; border: 1px solid var(--border);
-            border-radius: 12px; padding: 14px 16px;
-        }
-        .opt-row { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
-        .opt-row input[type="checkbox"] { width: 18px; height: 18px; accent-color: var(--primary); cursor: pointer; }
-        .opt-row label { cursor: pointer; user-select: none; }
-        .opt-hint { display: block; font-size: 0.78rem; color: var(--text-muted); margin-top: 2px; }
+/* ---- action + status ---- */
+.cta{
+    width:100%;border:none;border-radius:14px;cursor:pointer;
+    font-family:inherit;font-weight:700;font-size:1.02rem;color:#fff;
+    padding:16px;margin-top:4px;
+    background:linear-gradient(120deg,var(--accent),var(--accent-2));
+    box-shadow:0 10px 30px -12px var(--accent);
+    transition:filter .15s ease, transform .05s ease, opacity .15s ease;
+}
+.cta:hover{filter:brightness(1.06)}
+.cta:active{transform:translateY(1px)}
+.cta:disabled{opacity:.45;cursor:not-allowed;box-shadow:none;filter:none}
 
-        .drop-zone {
-            border: 2px dashed var(--border); border-radius: 12px;
-            padding: 50px 20px; cursor: pointer;
-            transition: all 0.2s ease; background-color: #F9FAFB;
-            margin-bottom: 20px; position: relative; overflow: hidden;
-        }
-        .drop-zone:hover, .drop-zone.dragover { border-color: var(--primary); background-color: #EEF2FF; }
-        .drop-zone svg { width: 48px; height: 48px; color: var(--primary); margin-bottom: 15px; }
-        .drop-zone p { font-size: 1.1rem; font-weight: 500; color: var(--text-main); }
-        .drop-zone span { display: block; font-size: 0.85rem; color: var(--text-muted); margin-top: 5px; }
+.status{display:none;border-radius:12px;padding:13px 14px;font-size:.9rem;font-weight:600;line-height:1.45;word-wrap:break-word}
+.status.show{display:block}
+.status.loading{background:var(--accent-soft);color:#cdc6ff;border:1px solid var(--accent-line)}
+.status.success{background:rgba(52,211,153,0.12);color:#86efc8;border:1px solid rgba(52,211,153,0.4)}
+.status.error{background:rgba(251,113,133,0.12);color:#fda4b3;border:1px solid rgba(251,113,133,0.4)}
+.progress{height:6px;border-radius:99px;background:var(--line-soft);overflow:hidden;display:none;margin-top:4px}
+.progress.show{display:block}
+.fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--accent-2));transition:width .2s ease}
+.spin{display:inline-block;width:14px;height:14px;border:2px solid rgba(205,198,255,.35);border-top-color:#cdc6ff;border-radius:50%;animation:sp 1s linear infinite;vertical-align:-2px;margin-right:8px}
+@keyframes sp{to{transform:rotate(360deg)}}
 
-        #fileInput {
-            position: absolute; top: 0; left: 0;
-            width: 100%; height: 100%; opacity: 0; cursor: pointer;
-        }
+.foot{text-align:center;color:var(--faint);font-size:.78rem;font-weight:500;margin-top:2px}
 
-        .status {
-            margin-top: 20px; padding: 15px; border-radius: 8px;
-            font-size: 0.95rem; display: none; font-weight: 500;
-            word-wrap: break-word; text-align: left;
-        }
-        .status.loading { display: block; background-color: #EFF6FF; color: #1D4ED8; border: 1px solid #BFDBFE; }
-        .status.success { display: block; background-color: #ECFDF5; color: #047857; border: 1px solid #A7F3D0; }
-        .status.error   { display: block; background-color: #FEF2F2; color: #B91C1C; border: 1px solid #FECACA; }
-
-        .progress-bar {
-            width: 100%; background-color: #BFDBFE; height: 6px;
-            border-radius: 3px; margin-top: 10px; overflow: hidden; display: none;
-        }
-        .progress-fill { height: 100%; background-color: #1D4ED8; width: 0%; transition: width 0.2s ease; }
-
-        .spinner {
-            display: inline-block; width: 16px; height: 16px;
-            border: 2px solid rgba(29, 78, 216, 0.3); border-radius: 50%;
-            border-top-color: #1D4ED8; animation: spin 1s ease-in-out infinite;
-            vertical-align: middle; margin-right: 8px;
-        }
-        @keyframes spin { to { transform: rotate(360deg); } }
-
-        @media (max-width: 600px) {
-            .container { padding: 25px; }
-            .drop-zone { padding: 30px 15px; }
-        }
-    </style>
+@media (max-width:430px){
+    .modes{grid-template-columns:1fr}
+    .keyrow{flex-direction:column}
+    .btn-ghost{padding:13px}
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
 </head>
 <body>
+<div class="wrap">
 
-    <div class="container">
-        <h1>PDF to DOCX (Smart OCR)</h1>
-        <p class="subtitle">Arabic-first recognition tuned for scanned pages. Renders at 300&nbsp;DPI and rebuilds paragraphs automatically. Runs entirely in your browser.</p>
-
-        <div class="options">
-            <div>
-                <div class="opt-row">
-                    <input type="checkbox" id="optEnglish">
-                    <label for="optEnglish">Document also contains English text</label>
-                </div>
-                <span class="opt-hint">Leave OFF for Arabic-only pages (cleaner, more accurate). Turn ON only when real English words appear &mdash; it is slower and can add noise to pure-Arabic text.</span>
-            </div>
-        </div>
-
-        <div class="drop-zone" id="dropZone">
-            <input type="file" id="fileInput" accept="application/pdf">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            <p>Click or drag your PDF here</p>
-            <span>Runs entirely in your browser</span>
-        </div>
-
-        <div id="statusEl" class="status"></div>
-        <div id="progressBar" class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+    <div class="masthead">
+        <h1>PDF to Word</h1>
+        <p>Arabic-first OCR that rebuilds paragraphs into an editable Word file.</p>
     </div>
 
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    <!-- DROP ZONE -->
+    <div class="panel" style="padding:14px">
+        <div class="drop" id="drop">
+            <input type="file" id="fileInput" accept="application/pdf">
+            <div class="empty">
+                <svg class="plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                <h2>Drop your PDF here, or tap to choose</h2>
+                <p>Scanned Arabic booklets work best. Everything runs on your device unless you turn on AI Vision.</p>
+            </div>
+            <div class="file-chip">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3v5h5"/><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/></svg>
+                <span><span class="nm" id="fileName">file.pdf</span><small class="sub">Tap to choose a different file</small></span>
+            </div>
+        </div>
+    </div>
 
-        // ---- Tunables -------------------------------------------------------
-        const TARGET_DPI = 300;   // OCR sweet spot. PDF.js scale 1 == 72 DPI.
-        const MAX_DIM    = 3500;  // px cap on the long edge to protect memory.
-        // --------------------------------------------------------------------
+    <!-- SETTINGS -->
+    <div class="panel">
+        <div class="label">READING METHOD</div>
+        <div class="modes">
+            <button class="mode" id="modeDevice" type="button" aria-pressed="true">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="5" y="5" width="14" height="14" rx="2"/><path d="M9 9h6v6H9z"/><path d="M9 2v3M15 2v3M9 19v3M15 19v3M2 9h3M2 15h3M19 9h3M19 15h3"/></svg>
+                <span class="nm">On-device</span>
+                <span class="ds">Works offline &middot; no key needed</span>
+            </button>
+            <button class="mode" id="modeAI" type="button" aria-pressed="false">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M12 3l1.6 4.4L18 9l-4.4 1.6L12 15l-1.6-4.4L6 9l4.4-1.6z"/><path d="M18 14l.8 2.2L21 17l-2.2.8L18 20l-.8-2.2L15 17l2.2-.8z"/></svg>
+                <span class="nm">AI Vision</span>
+                <span class="ds">Reads the page directly &middot; most accurate</span>
+            </button>
+        </div>
 
-        const dropZone    = document.getElementById('dropZone');
-        const fileInput   = document.getElementById('fileInput');
-        const statusEl    = document.getElementById('statusEl');
-        const progressBar = document.getElementById('progressBar');
-        const progressFill= document.getElementById('progressFill');
-        const optEnglish  = document.getElementById('optEnglish');
+        <div class="ai-only" id="aiBox">
+            <div class="label" style="margin-bottom:0">GROQ API KEY <span style="font-weight:500;text-transform:none">&middot; stored on this device only</span></div>
+            <div class="keyrow">
+                <input class="field" id="keyInput" type="password" placeholder="gsk_..." autocomplete="off" spellcheck="false">
+                <button class="btn-ghost" id="saveKey" type="button">Save key</button>
+            </div>
+            <p class="hint">Free key from <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>. Each page is read with Llama&nbsp;4 Scout vision &mdash; needs internet, and a few fractions of a cent per page.</p>
+        </div>
 
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(ev =>
-            dropZone.addEventListener(ev, preventDefaults, false));
-        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+        <label class="toggle" for="optEnglish">
+            <input type="checkbox" id="optEnglish">
+            <span class="sw"></span>
+            <span class="tx">Document also contains English<small>On-device only. Leave off for Arabic-only pages.</small></span>
+        </label>
+    </div>
 
-        dropZone.addEventListener('dragover',  () => dropZone.classList.add('dragover'));
-        dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-        dropZone.addEventListener('drop', (e) => {
-            dropZone.classList.remove('dragover');
-            if (e.dataTransfer.files.length) handleFile(e.dataTransfer.files[0]);
+    <!-- ACTION -->
+    <button class="cta" id="convert" disabled>Convert to Word</button>
+    <div class="status" id="status"></div>
+    <div class="progress" id="progress"><div class="fill" id="fill"></div></div>
+
+    <div class="foot">Single file &middot; nothing is uploaded in On-device mode</div>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+
+// ---- config -----------------------------------------------------------
+const TARGET_DPI = 300;   // on-device OCR sweet spot (PDF.js scale 1 = 72 DPI)
+const MAX_DIM    = 3500;  // px cap, on-device
+const AI_MAX_DIM = 2000;  // px cap for the image sent to AI Vision (smaller = faster/cheaper)
+const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
+const GROQ_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+const VISION_PROMPT =
+    'You are an OCR engine. Transcribe ALL text from this scanned page exactly as written. ' +
+    'The text is mostly Arabic and may contain some English. Keep the original wording, punctuation and diacritics. ' +
+    'Separate paragraphs with a blank line. Ignore page numbers, running headers/footers and watermarks. ' +
+    'Do not translate, summarise, explain or add anything. Output only the transcribed text.';
+const LS = { mode:'p2w_mode', key:'p2w_groqkey', eng:'p2w_eng' };
+
+// ---- elements ---------------------------------------------------------
+const drop=document.getElementById('drop'), fileInput=document.getElementById('fileInput');
+const fileName=document.getElementById('fileName');
+const modeDevice=document.getElementById('modeDevice'), modeAI=document.getElementById('modeAI');
+const aiBox=document.getElementById('aiBox'), keyInput=document.getElementById('keyInput'), saveKey=document.getElementById('saveKey');
+const optEnglish=document.getElementById('optEnglish');
+const convertBtn=document.getElementById('convert');
+const statusEl=document.getElementById('status'), progress=document.getElementById('progress'), fill=document.getElementById('fill');
+
+let selectedFile=null;
+let mode = localStorage.getItem(LS.mode)==='ai' ? 'ai' : 'device';
+
+// ---- restore saved state ---------------------------------------------
+(function init(){
+    keyInput.value = localStorage.getItem(LS.key) || '';
+    optEnglish.checked = localStorage.getItem(LS.eng)==='1';
+    setMode(mode);
+})();
+
+// ---- mode handling ----------------------------------------------------
+function setMode(m){
+    mode=m;
+    const ai = m==='ai';
+    modeAI.setAttribute('aria-pressed', ai);
+    modeDevice.setAttribute('aria-pressed', !ai);
+    aiBox.classList.toggle('show', ai);
+    optEnglish.closest('.toggle').style.opacity = ai ? '.5' : '1';
+    localStorage.setItem(LS.mode, m);
+}
+modeDevice.addEventListener('click', ()=>setMode('device'));
+modeAI.addEventListener('click', ()=>setMode('ai'));
+optEnglish.addEventListener('change', ()=>localStorage.setItem(LS.eng, optEnglish.checked?'1':'0'));
+saveKey.addEventListener('click', ()=>{
+    localStorage.setItem(LS.key, keyInput.value.trim());
+    saveKey.textContent='Saved';
+    setTimeout(()=>saveKey.textContent='Save key',1400);
+});
+
+// ---- file selection ---------------------------------------------------
+['dragenter','dragover','dragleave','drop'].forEach(ev=>drop.addEventListener(ev,e=>{e.preventDefault();e.stopPropagation();}));
+drop.addEventListener('dragover',()=>drop.classList.add('drag'));
+drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+drop.addEventListener('drop',e=>{drop.classList.remove('drag'); if(e.dataTransfer.files.length) pickFile(e.dataTransfer.files[0]);});
+fileInput.addEventListener('change',e=>{ if(e.target.files.length) pickFile(e.target.files[0]); });
+
+function pickFile(f){
+    if(f.type!=='application/pdf'){ status('That is not a PDF. Choose a .pdf file.','error'); return; }
+    selectedFile=f;
+    fileName.textContent=f.name;
+    drop.classList.add('has-file');
+    convertBtn.disabled=false;
+    hideStatus();
+}
+
+// ---- status helpers ---------------------------------------------------
+function status(msg,type,prog){
+    statusEl.className='status show '+type;
+    statusEl.innerHTML = type==='loading' ? '<span class="spin"></span>'+msg : msg;
+    if(prog!=null){ progress.classList.add('show'); fill.style.width=prog+'%'; }
+    else progress.classList.remove('show');
+}
+function hideStatus(){ statusEl.className='status'; progress.classList.remove('show'); }
+
+// ---- shared rendering -------------------------------------------------
+function renderToCanvas(page, longCap){
+    let scale = TARGET_DPI/72;
+    const base = page.getViewport({scale:1});
+    const longEdge = Math.max(base.width, base.height)*scale;
+    if(longEdge>longCap) scale *= longCap/longEdge;
+    const vp = page.getViewport({scale});
+    const c = document.createElement('canvas');
+    c.width=Math.round(vp.width); c.height=Math.round(vp.height);
+    const ctx=c.getContext('2d',{willReadFrequently:true});
+    return page.render({canvasContext:ctx, viewport:vp}).promise.then(()=>c);
+}
+
+// Gentle grayscale + contrast stretch (on-device only). Harmless on clean
+// scans, helps faded ones. Not hard binarization (would break thin strokes).
+function preprocess(canvas){
+    const ctx=canvas.getContext('2d',{willReadFrequently:true});
+    const img=ctx.getImageData(0,0,canvas.width,canvas.height), d=img.data;
+    const hist=new Uint32Array(256);
+    for(let i=0;i<d.length;i+=4){const g=(d[i]*0.299+d[i+1]*0.587+d[i+2]*0.114)|0;d[i]=d[i+1]=d[i+2]=g;hist[g]++;}
+    const total=canvas.width*canvas.height, lowCut=total*0.005, highCut=total*0.995;
+    let acc=0,lo=0,hi=255;
+    for(let v=0;v<256;v++){acc+=hist[v];if(acc>=lowCut){lo=v;break;}}
+    acc=0;for(let v=0;v<256;v++){acc+=hist[v];if(acc>=highCut){hi=v;break;}}
+    if(hi<=lo){lo=0;hi=255;}
+    const k=255/(hi-lo);
+    for(let i=0;i<d.length;i+=4){let v=(d[i]-lo)*k;v=v<0?0:v>255?255:v;d[i]=d[i+1]=d[i+2]=v;}
+    ctx.putImageData(img,0,0);
+}
+
+// ---- text cleanup + paragraph reconstruction (on-device) -------------
+const ARABIC='\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF';
+function cleanLine(line){
+    line=line.replace(/Twitter\s*:?\s*@?\s*ketab[_ ]?n/gi,' ');
+    if(new RegExp('['+ARABIC+']').test(line)){
+        const strayArabic=new RegExp('\\s+\\.\\s*[\u0621-\u064A]\\s*$');
+        const strayLatin=/\s+[A-Za-z0-9]{1,3}$/;
+        const orphanPunct=/\s+[.\u060C\u061B]\s*$/;
+        let prev;
+        do{ prev=line;
+            line=line.replace(strayLatin,'').replace(strayArabic,'').replace(orphanPunct,'').trim();
+        }while(line!==prev);
+    }
+    line=line.replace(/\s+/g,' ').trim();
+    const letters=(line.match(new RegExp('['+ARABIC+'A-Za-z]','g'))||[]).length;
+    return letters<2?'':line;
+}
+function reconstructParagraphs(rawText){
+    const SENT_END=new RegExp('[.!?\u061F\u00BB:]\\s*$');
+    const paras=[]; let cur=[];
+    const flush=()=>{ if(cur.length){ const p=cur.join(' ').replace(/\s+/g,' ').trim(); if(p.length>1)paras.push(p); cur=[]; } };
+    for(const raw of rawText.split('\n')){
+        const t=raw.trim();
+        if(t===''){flush();continue;}
+        const line=cleanLine(t);
+        if(!line)continue;
+        cur.push(line);
+        if(SENT_END.test(line))flush();
+    }
+    flush();
+    return paras;
+}
+// AI Vision output is already clean -> just split on blank lines.
+function simpleParagraphs(text){
+    return text.replace(/```[a-z]*\n?/gi,'').split(/\n\s*\n/).map(p=>p.replace(/\s*\n\s*/g,' ').trim()).filter(p=>p.length>1);
+}
+
+// ---- engines ----------------------------------------------------------
+async function runDevice(pdf){
+    const lang = optEnglish.checked ? 'ara+eng' : 'ara';
+    let worker=null, parts=[];
+    try{
+        status('Starting on-device engine ('+(optEnglish.checked?'Arabic + English':'Arabic')+')...','loading',0);
+        worker=await Tesseract.createWorker(lang,1,{ logger:m=>{
+            if(m.status==='recognizing text') status('Reading text...','loading',Math.round(m.progress*100));
+            else if(m.status&&m.status.indexOf('loading')===0) status('Downloading language model (first run only)...','loading',30);
+        }});
+        // PSM 6 only. Do NOT set preserve_interword_spaces -> in tesseract.js it
+        // merges words at line ends. Verified against tesseract.js v5.
+        await worker.setParameters({ tessedit_pageseg_mode:'6' });
+
+        for(let i=1;i<=pdf.numPages;i++){
+            status('Rendering page '+i+' of '+pdf.numPages+' at '+TARGET_DPI+' DPI...','loading',0);
+            const page=await pdf.getPage(i);
+            const canvas=await renderToCanvas(page, MAX_DIM);
+            preprocess(canvas);
+            status('Reading page '+i+' of '+pdf.numPages+'...','loading',0);
+            const {data:{text}}=await worker.recognize(canvas);
+            parts.push(text);
+            canvas.width=canvas.height=0;
+        }
+    } finally { if(worker){ try{await worker.terminate();}catch(e){} } }
+    return reconstructParagraphs(parts.join('\n\n'));
+}
+
+async function groqRead(dataUrl, key){
+    const res=await fetch(GROQ_URL,{
+        method:'POST',
+        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+        body:JSON.stringify({
+            model:GROQ_MODEL, temperature:0, max_tokens:4096,
+            messages:[{role:'user',content:[
+                {type:'text',text:VISION_PROMPT},
+                {type:'image_url',image_url:{url:dataUrl}}
+            ]}]
+        })
+    });
+    if(!res.ok){
+        let detail=''; try{ const e=await res.json(); detail=e.error&&e.error.message?e.error.message:''; }catch(_){}
+        if(res.status===401) throw new Error('Groq rejected the API key. Check it and Save again.');
+        throw new Error('Groq error '+res.status+(detail?': '+detail:''));
+    }
+    const j=await res.json();
+    return (j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : '').trim();
+}
+
+async function runAI(pdf, key){
+    let texts=[];
+    for(let i=1;i<=pdf.numPages;i++){
+        status('Rendering page '+i+' of '+pdf.numPages+'...','loading', Math.round(((i-1)/pdf.numPages)*100));
+        const page=await pdf.getPage(i);
+        const canvas=await renderToCanvas(page, AI_MAX_DIM);
+        const dataUrl=canvas.toDataURL('image/jpeg',0.85);
+        canvas.width=canvas.height=0;
+        status('AI Vision reading page '+i+' of '+pdf.numPages+'...','loading', Math.round(((i-0.5)/pdf.numPages)*100));
+        texts.push(await groqRead(dataUrl, key));
+    }
+    return simpleParagraphs(texts.join('\n\n'));
+}
+
+// ---- Word output ------------------------------------------------------
+function isArabicText(t){ return new RegExp('['+ARABIC+']').test(t); }
+function looksLikeHeading(t){ t=t.trim(); return t.length>0 && t.length<45 && !/[.!?\u061F:]$/.test(t); }
+
+async function generateDocx(paras){
+    const {Document,Packer,Paragraph,TextRun,AlignmentType}=docx;
+    const children=paras.map(text=>{
+        const rtl=isArabicText(text), h=looksLikeHeading(text);
+        return new Paragraph({
+            children:[new TextRun({ text, size:h?30:28, bold:h, rightToLeft:rtl, font:'Arial' })],
+            alignment: rtl?AlignmentType.JUSTIFIED:AlignmentType.LEFT,
+            bidirectional: rtl,
+            spacing:{ after:h?120:220, line:360, lineRule:'auto' }
         });
-        fileInput.addEventListener('change', (e) => {
-            if (e.target.files.length) handleFile(e.target.files[0]);
-        });
+    });
+    return Packer.toBlob(new Document({sections:[{properties:{},children}]}));
+}
 
-        function showStatus(message, type, progress = null) {
-            statusEl.className = `status ${type}`;
-            statusEl.innerHTML = type === 'loading' ? `<span class="spinner"></span> ${message}` : message;
-            if (progress !== null) {
-                progressBar.style.display = 'block';
-                progressFill.style.width = `${progress}%`;
-            } else {
-                progressBar.style.display = 'none';
-            }
-        }
+// ---- orchestration ----------------------------------------------------
+convertBtn.addEventListener('click', handleConvert);
+async function handleConvert(){
+    if(!selectedFile){ status('Choose a PDF first.','error'); return; }
+    const key=keyInput.value.trim();
+    if(mode==='ai' && !key){ status('Add your Groq API key to use AI Vision, or switch to On-device.','error'); return; }
 
-        // ---- Image preprocessing (gentle) -----------------------------------
-        // Grayscale + percentile contrast stretch. Proven harmless on clean
-        // scans (identical OCR output) and helpful on faded / photographed pages.
-        // Deliberately NOT hard binarization, which can break thin Arabic strokes.
-        function preprocess(canvas) {
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            const img = ctx.getImageData(0, 0, canvas.width, canvas.height);
-            const d = img.data;
-            const hist = new Uint32Array(256);
-            for (let i = 0; i < d.length; i += 4) {
-                const g = (d[i] * 0.299 + d[i + 1] * 0.587 + d[i + 2] * 0.114) | 0;
-                d[i] = d[i + 1] = d[i + 2] = g;
-                hist[g]++;
-            }
-            const total = canvas.width * canvas.height;
-            const lowCut = total * 0.005, highCut = total * 0.995;
-            let acc = 0, lo = 0, hi = 255;
-            for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= lowCut) { lo = v; break; } }
-            acc = 0;
-            for (let v = 0; v < 256; v++) { acc += hist[v]; if (acc >= highCut) { hi = v; break; } }
-            if (hi <= lo) { lo = 0; hi = 255; }
-            const k = 255 / (hi - lo);
-            for (let i = 0; i < d.length; i += 4) {
-                let v = (d[i] - lo) * k;
-                v = v < 0 ? 0 : v > 255 ? 255 : v;
-                d[i] = d[i + 1] = d[i + 2] = v;
-            }
-            ctx.putImageData(img, 0, 0);
-        }
+    convertBtn.disabled=true;
+    try{
+        status('Reading PDF file...','loading',0);
+        const buf=await selectedFile.arrayBuffer();
+        const pdf=await pdfjsLib.getDocument({data:buf}).promise;
 
-        // ---- Per-line cleanup ----------------------------------------------
-        // Targets the *measured* noise: horizontal + vertical side-margin
-        // watermark bleed (short Latin/digit fragments at line ends) and
-        // standalone page numbers. Safe: never strips trailing Arabic letters.
-        const ARABIC = '\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF';
-        function cleanLine(line) {
-            // Known horizontal watermark
-            line = line.replace(/Twitter\s*:?\s*@?\s*ketab[_ ]?n/gi, ' ');
+        const paras = mode==='ai' ? await runAI(pdf,key) : await runDevice(pdf);
+        if(!paras.length) throw new Error('No readable text was found. Try the other reading method or a clearer scan.');
 
-            // Trailing junk removal is gated to Arabic-containing lines so that
-            // genuine English lines (English mode) are never mangled.
-            if (new RegExp('[' + ARABIC + ']').test(line)) {
-                const strayArabic = new RegExp('\\s+\\.\\s*[\u0621-\u064A]\\s*$');  // " .ا" watermark glyph (dot required = safe)
-                const strayLatin  = /\s+[A-Za-z0-9]{1,3}$/;                          // " 8", " 5", "il"
-                const orphanPunct = /\s+[.\u060C\u061B]\s*$/;                        // " ." left behind
-                let prev;
-                do {
-                    prev = line;
-                    line = line.replace(strayLatin, '');
-                    line = line.replace(strayArabic, '');
-                    line = line.replace(orphanPunct, '');
-                    line = line.trim();
-                } while (line !== prev);
-            }
+        status('Building your Word document...','loading',100);
+        const blob=await generateDocx(paras);
 
-            line = line.replace(/\s+/g, ' ').trim();
-            // Drop lines that carry almost no real text (stray dots, page numbers)
-            const letters = (line.match(new RegExp('[' + ARABIC + 'A-Za-z]', 'g')) || []).length;
-            return letters < 2 ? '' : line;
-        }
+        const url=URL.createObjectURL(blob);
+        const a=document.createElement('a');
+        a.href=url; a.download=selectedFile.name.replace(/\.pdf$/i,'')+'_SmartOCR.docx';
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        URL.revokeObjectURL(url);
 
-        // ---- Paragraph reconstruction --------------------------------------
-        // Replaces the old "break on any short line" heuristic. Two robust rules:
-        //  (1) a blank line from Tesseract = hard paragraph break;
-        //  (2) a line whose END is sentence-final punctuation = paragraph break.
-        // In justified Arabic, sentence ends almost never coincide with line
-        // wraps EXCEPT at true paragraph ends, so rule (2) is accurate.
-        function reconstructParagraphs(rawText) {
-            const SENT_END = new RegExp('[.!?\u061F\u00BB:]\\s*$'); // . ! ? \u061F(?) \u00BB(\u00BB) :
-            const paras = [];
-            let cur = [];
-            const flush = () => {
-                if (cur.length) {
-                    const p = cur.join(' ').replace(/\s+/g, ' ').trim();
-                    if (p.length > 1) paras.push(p);
-                    cur = [];
-                }
-            };
-            for (const raw of rawText.split('\n')) {
-                const t = raw.trim();
-                if (t === '') { flush(); continue; }   // blank line -> break
-                const line = cleanLine(t);
-                if (!line) continue;                   // junk line -> skip, don't break
-                cur.push(line);
-                if (SENT_END.test(line)) flush();      // sentence end at line end -> break
-            }
-            flush();
-            return paras;
-        }
-
-        async function handleFile(file) {
-            if (file.type !== 'application/pdf') {
-                showStatus('Error: Please upload a valid PDF file.', 'error');
-                return;
-            }
-
-            const lang = optEnglish.checked ? 'ara+eng' : 'ara';
-            let worker = null;
-
-            try {
-                showStatus(`Initializing AI engine (${optEnglish.checked ? 'Arabic + English' : 'Arabic'})...`, 'loading', 0);
-
-                worker = await Tesseract.createWorker(lang, 1, {
-                    logger: m => {
-                        if (m.status === 'recognizing text') {
-                            showStatus('Reading text...', 'loading', Math.round(m.progress * 100));
-                        } else if (m.status && m.status.indexOf('loading') === 0) {
-                            showStatus('Downloading language model (first run only)...', 'loading', 30);
-                        }
-                    }
-                });
-
-                // PSM 6 = single uniform block. Note: preserve_interword_spaces
-                // is deliberately OFF — with the Arabic LSTM it MERGES adjacent
-                // words (بطريقة صحيحة -> بطريقةصحيحة). Letting the model insert
-                // spaces gives correct word separation.
-                await worker.setParameters({
-                    tessedit_pageseg_mode: '6'
-                });
-
-                showStatus('Reading PDF file...', 'loading', 0);
-                const arrayBuffer = await file.arrayBuffer();
-                const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
-
-                let fullText = [];
-
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    showStatus(`Rendering page ${i} of ${pdf.numPages} at ${TARGET_DPI} DPI...`, 'loading', 0);
-                    const page = await pdf.getPage(i);
-
-                    // Render to ~TARGET_DPI, capped so large pages can't blow memory.
-                    let scale = TARGET_DPI / 72;
-                    const base = page.getViewport({ scale: 1 });
-                    const longEdge = Math.max(base.width, base.height) * scale;
-                    if (longEdge > MAX_DIM) scale *= MAX_DIM / longEdge;
-
-                    const viewport = page.getViewport({ scale });
-                    const canvas = document.createElement('canvas');
-                    canvas.width = Math.round(viewport.width);
-                    canvas.height = Math.round(viewport.height);
-                    const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                    await page.render({ canvasContext: ctx, viewport }).promise;
-
-                    preprocess(canvas);
-
-                    showStatus(`Running OCR on page ${i} of ${pdf.numPages}...`, 'loading', 0);
-                    const { data: { text } } = await worker.recognize(canvas);
-                    fullText.push(text);
-
-                    // Free the canvas before the next page.
-                    canvas.width = canvas.height = 0;
-                }
-
-                const paragraphs = reconstructParagraphs(fullText.join('\n\n'));
-
-                if (paragraphs.length === 0) {
-                    throw new Error('OCR finished, but no readable text was found. The scan may be too faint or rotated.');
-                }
-
-                showStatus('Building your Word document...', 'loading', 100);
-                const docxBlob = await generateDocx(paragraphs);
-
-                const url = URL.createObjectURL(docxBlob);
-                const a = document.createElement('a');
-                a.href = url;
-                a.download = file.name.replace(/\.pdf$/i, '') + '_SmartOCR.docx';
-                document.body.appendChild(a);
-                a.click();
-                document.body.removeChild(a);
-                URL.revokeObjectURL(url);
-
-                showStatus(`Done. Recovered ${paragraphs.length} paragraph${paragraphs.length === 1 ? '' : 's'} into your Word file.`, 'success');
-                fileInput.value = '';
-            } catch (error) {
-                console.error(error);
-                showStatus(`Error: ${error.message}`, 'error');
-            } finally {
-                if (worker) { try { await worker.terminate(); } catch (e) {} }
-            }
-        }
-
-        function isArabicText(text) {
-            return new RegExp('[' + ARABIC + ']').test(text);
-        }
-
-        // Light heading detection: short line, no sentence-ending punctuation.
-        function looksLikeHeading(text) {
-            const t = text.trim();
-            return t.length > 0 && t.length < 45 && !/[.!?\u061F:]$/.test(t);
-        }
-
-        async function generateDocx(paragraphsTextList) {
-            const { Document, Packer, Paragraph, TextRun, AlignmentType } = docx;
-
-            const docParagraphs = paragraphsTextList.map(text => {
-                const isRTL = isArabicText(text);
-                const heading = looksLikeHeading(text);
-
-                return new Paragraph({
-                    children: [
-                        new TextRun({
-                            text: text,
-                            size: heading ? 30 : 28,        // 15pt heading / 14pt body
-                            bold: heading,
-                            rightToLeft: isRTL,
-                            font: 'Arial'                   // renders Arabic reliably in Word
-                        })
-                    ],
-                    alignment: isRTL ? AlignmentType.JUSTIFIED : AlignmentType.LEFT,
-                    bidirectional: isRTL,
-                    spacing: {
-                        after: heading ? 120 : 220,
-                        line: 360, lineRule: 'auto'         // ~1.5 line spacing for readability
-                    }
-                });
-            });
-
-            const doc = new Document({
-                sections: [{ properties: {}, children: docParagraphs }]
-            });
-
-            return await Packer.toBlob(doc);
-        }
-    </script>
+        status('Done. Recovered '+paras.length+' paragraph'+(paras.length===1?'':'s')+' into your Word file.','success');
+    }catch(err){
+        console.error(err);
+        status('Error: '+err.message,'error');
+    }finally{
+        convertBtn.disabled=false;
+    }
+}
+</script>
 </body>
 </html>
