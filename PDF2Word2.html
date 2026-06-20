@@ -291,11 +291,12 @@
                     }
                 });
 
-                // PSM 6 = single uniform block: gives the cleanest word spacing.
-                // preserve_interword_spaces keeps Arabic words from merging.
+                // PSM 6 = single uniform block. Note: preserve_interword_spaces
+                // is deliberately OFF — with the Arabic LSTM it MERGES adjacent
+                // words (بطريقة صحيحة -> بطريقةصحيحة). Letting the model insert
+                // spaces gives correct word separation.
                 await worker.setParameters({
-                    tessedit_pageseg_mode: '6',
-                    preserve_interword_spaces: '1'
+                    tessedit_pageseg_mode: '6'
                 });
 
                 showStatus('Reading PDF file...', 'loading', 0);
