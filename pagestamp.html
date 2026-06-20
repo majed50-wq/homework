@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>PageStamp - Badge OCR Renamer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js"></script>
+<style>
+  :root{
+    --bg0:#08201f; --bg1:#0e2e2c; --panel:rgba(255,255,255,.04); --panel2:rgba(255,255,255,.06);
+    --line:#1f4a47; --line2:#2a5d59;
+    --teal:#16b3a4; --teal-d:#0e7d72;
+    --gold:#e7c873; --gold-d:#c9a64a;
+    --ink:#eef6f4; --mut:#9cb7b3;
+    --navy:#173362; --navy2:#0f2547;
+    --warn:#e8b04b; --bad:#e0775f; --good:#52c08a;
+    --r:16px; --r-s:10px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    font-family:'Sora',system-ui,sans-serif;
+    color:var(--ink);
+    background:
+      radial-gradient(1100px 700px at 80% -10%, rgba(231,200,115,.10), transparent 60%),
+      radial-gradient(900px 600px at -10% 10%, rgba(22,179,164,.14), transparent 55%),
+      linear-gradient(160deg, var(--bg0), var(--bg1));
+    background-attachment:fixed;
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+    padding:max(18px,env(safe-area-inset-top)) 18px calc(120px + env(safe-area-inset-bottom));
+  }
+  .wrap{max-width:980px;margin:0 auto}
+
+  /* Header */
+  header{padding:26px 4px 14px;text-align:center}
+  .badge-logo{
+    width:64px;height:64px;border-radius:50%;margin:0 auto 14px;
+    background:radial-gradient(circle at 38% 30%, #25467d, var(--navy));
+    border:4px solid var(--gold);
+    box-shadow:0 8px 24px rgba(0,0,0,.4), inset 0 2px 6px rgba(255,255,255,.18);
+    display:flex;align-items:center;justify-content:center;
+    font-family:'DM Serif Display',serif;font-size:30px;color:#fff;
+  }
+  h1{font-family:'DM Serif Display',serif;font-weight:400;font-size:clamp(30px,6vw,46px);margin:0;letter-spacing:.5px}
+  h1 .g{color:var(--gold)}
+  .tag{color:var(--mut);font-size:15px;margin:8px 0 0;font-weight:300}
+  .engine-note{font-size:12.5px;color:var(--mut);margin-top:12px;display:inline-flex;gap:8px;align-items:center;
+    background:var(--panel);border:1px solid var(--line);padding:6px 12px;border-radius:999px}
+  .dot{width:8px;height:8px;border-radius:50%;background:var(--mut);flex:none}
+  .dot.on{background:var(--good);box-shadow:0 0 8px var(--good)}
+  .dot.busy{background:var(--gold);box-shadow:0 0 8px var(--gold)}
+  .dot.err{background:var(--bad)}
+
+  /* Cards / panels */
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+  .card + .card{margin-top:16px}
+
+  /* Drop zone */
+  .drop{
+    border:2px dashed var(--gold-d);border-radius:var(--r);
+    background:linear-gradient(180deg, rgba(231,200,115,.05), rgba(231,200,115,.01));
+    padding:34px 20px;text-align:center;cursor:pointer;transition:.15s;
+  }
+  .drop:hover,.drop.hot{border-color:var(--gold);background:rgba(231,200,115,.10);transform:translateY(-1px)}
+  .drop .ic{font-family:'DM Serif Display',serif;font-size:34px;color:var(--gold)}
+  .drop p{margin:8px 0 2px;font-size:16px}
+  .drop small{color:var(--mut)}
+  input[type=file]{display:none}
+
+  /* Controls */
+  .controls{display:grid;grid-template-columns:1fr 1fr;gap:14px 18px;margin-top:4px}
+  @media(max-width:560px){.controls{grid-template-columns:1fr}}
+  label.fld{display:block;font-size:13px;color:var(--mut);margin-bottom:6px;font-weight:500}
+  .ti{
+    width:100%;padding:11px 13px;border-radius:var(--r-s);border:1px solid var(--line2);
+    background:rgba(0,0,0,.22);color:var(--ink);font-family:'Sora',sans-serif;font-size:15px;outline:none;
+  }
+  .ti:focus{border-color:var(--teal)}
+  select.ti{appearance:none;-webkit-appearance:none;background-image:linear-gradient(45deg,transparent 50%,var(--mut) 50%),linear-gradient(135deg,var(--mut) 50%,transparent 50%);background-position:calc(100% - 18px) 18px,calc(100% - 13px) 18px;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+  .hint{font-size:12px;color:var(--mut);margin-top:6px}
+  code.tok{background:rgba(22,179,164,.16);color:var(--teal);padding:1px 6px;border-radius:6px;font-family:ui-monospace,monospace}
+
+  /* Advanced detection */
+  details.adv{margin-top:16px;border-top:1px solid var(--line);padding-top:14px}
+  details.adv summary{cursor:pointer;color:var(--gold);font-size:14px;font-weight:600;list-style:none;display:flex;align-items:center;gap:8px}
+  details.adv summary::-webkit-details-marker{display:none}
+  details.adv summary .chev{transition:.2s;font-family:'DM Serif Display',serif}
+  details.adv[open] summary .chev{transform:rotate(90deg)}
+  .adv-grid{display:grid;grid-template-columns:1fr 220px;gap:18px;margin-top:16px}
+  @media(max-width:620px){.adv-grid{grid-template-columns:1fr}}
+  .sliders{display:grid;gap:14px}
+  .srow{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px}
+  .srow label{font-size:13px;color:var(--mut)}
+  .srow .val{font-size:13px;color:var(--gold);font-variant-numeric:tabular-nums;min-width:48px;text-align:right}
+  input[type=range]{-webkit-appearance:none;appearance:none;width:100%;height:4px;border-radius:99px;background:var(--line2);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--teal);border:3px solid #0a2a28;cursor:pointer}
+  input[type=range]::-moz-range-thumb{width:18px;height:18px;border-radius:50%;background:var(--teal);border:3px solid #0a2a28;cursor:pointer}
+  .scan-preview{text-align:center}
+  .scan-preview .lbl{font-size:12px;color:var(--mut);margin-bottom:8px}
+  .scan-preview canvas{max-width:100%;border-radius:var(--r-s);border:1px solid var(--line2);background:#000;image-rendering:crisp-edges}
+  .scan-preview .empty{color:var(--mut);font-size:12px;padding:30px 8px;border:1px dashed var(--line2);border-radius:var(--r-s)}
+
+  /* Buttons */
+  .btn{
+    font-family:'Sora',sans-serif;font-weight:600;font-size:15px;border:none;border-radius:var(--r-s);
+    padding:13px 20px;cursor:pointer;transition:.15s;display:inline-flex;align-items:center;justify-content:center;gap:8px;
+  }
+  .btn:disabled{opacity:.45;cursor:not-allowed}
+  .btn.primary{background:linear-gradient(180deg,var(--teal),var(--teal-d));color:#022;box-shadow:0 6px 16px rgba(22,179,164,.28)}
+  .btn.primary:not(:disabled):hover{transform:translateY(-1px);box-shadow:0 9px 22px rgba(22,179,164,.36)}
+  .btn.gold{background:linear-gradient(180deg,var(--gold),var(--gold-d));color:#2a2200;box-shadow:0 6px 16px rgba(231,200,115,.26)}
+  .btn.gold:not(:disabled):hover{transform:translateY(-1px)}
+  .btn.ghost{background:transparent;color:var(--ink);border:1px solid var(--line2)}
+  .btn.ghost:hover{border-color:var(--teal);color:var(--teal)}
+
+  /* Results */
+  .results-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:24px 4px 12px;flex-wrap:wrap}
+  .results-head h2{font-family:'DM Serif Display',serif;font-weight:400;font-size:22px;margin:0}
+  .count{color:var(--mut);font-size:14px}
+  .rh-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .chip{font-size:12px;padding:5px 11px;border-radius:999px;border:1px solid var(--line2);background:var(--panel);color:var(--mut);cursor:pointer}
+  .chip:hover{border-color:var(--teal);color:var(--teal)}
+
+  .rows{display:grid;gap:10px}
+  .row{
+    display:grid;grid-template-columns:64px 1fr 92px;gap:14px;align-items:center;
+    background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px;transition:.15s;
+  }
+  .row.bad{border-color:var(--bad);background:rgba(224,119,95,.07)}
+  .row.warn{border-color:var(--warn)}
+  .thumb{width:64px;height:64px;border-radius:var(--r-s);object-fit:cover;background:#000;border:1px solid var(--line2)}
+  .meta{min-width:0}
+  .meta .orig{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta .newname{font-size:15px;font-weight:600;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .meta .newname .ext{color:var(--mut);font-weight:400}
+  .meta .status{font-size:11.5px;margin-top:4px;display:inline-flex;align-items:center;gap:6px}
+  .st-ok{color:var(--good)} .st-warn{color:var(--warn)} .st-bad{color:var(--bad)} .st-wait{color:var(--mut)}
+  .numwrap{display:flex;flex-direction:column;align-items:center;gap:6px}
+  .mini-badge{
+    width:46px;height:46px;border-radius:50%;flex:none;position:relative;
+    background:radial-gradient(circle at 38% 30%, #25467d, var(--navy));
+    border:3px solid var(--gold);box-shadow:inset 0 1px 3px rgba(255,255,255,.2);
+  }
+  .mini-badge input{
+    position:absolute;inset:0;width:100%;height:100%;background:transparent;border:none;outline:none;
+    text-align:center;font-family:'DM Serif Display',serif;font-size:20px;color:#fff;padding:0;
+  }
+  .mini-badge input::-webkit-outer-spin-button,.mini-badge input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .row.bad .mini-badge{border-color:var(--bad)}
+  .del{background:none;border:none;color:var(--mut);font-size:12px;cursor:pointer;padding:2px}
+  .del:hover{color:var(--bad)}
+
+  .empty-state{text-align:center;color:var(--mut);padding:30px 10px;font-size:14px}
+
+  /* Action bar */
+  .bar{
+    position:fixed;left:0;right:0;bottom:0;z-index:40;
+    background:linear-gradient(180deg, rgba(8,32,31,.4), rgba(8,32,31,.96));
+    backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+    border-top:1px solid var(--line);
+    padding:14px 18px calc(14px + env(safe-area-inset-bottom));
+  }
+  .bar-in{max-width:980px;margin:0 auto;display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  .bar .summary{font-size:13px;color:var(--mut);margin-right:auto}
+  .bar .summary b{color:var(--ink)}
+
+  /* Progress */
+  .prog{height:4px;border-radius:99px;background:var(--line2);overflow:hidden;margin-top:12px;display:none}
+  .prog.show{display:block}
+  .prog i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--teal),var(--gold));transition:width .2s}
+  .prog-lbl{font-size:12px;color:var(--mut);margin-top:6px;text-align:center;display:none}
+  .prog-lbl.show{display:block}
+
+  .toast{position:fixed;left:50%;top:18px;transform:translateX(-50%) translateY(-80px);z-index:60;
+    background:var(--panel2);border:1px solid var(--line2);color:var(--ink);padding:11px 18px;border-radius:999px;
+    font-size:14px;transition:.25s;opacity:0;box-shadow:0 8px 24px rgba(0,0,0,.4)}
+  .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
+  a.hidden-dl{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="badge-logo">N</div>
+    <h1>Page<span class="g">Stamp</span></h1>
+    <p class="tag">Read the page-number badge, rename every image in order.</p>
+    <div class="engine-note"><span class="dot" id="engDot"></span><span id="engTxt">Finds the badge automatically - engine loads on first scan</span></div>
+  </header>
+
+  <!-- Intake -->
+  <div class="card">
+    <div class="drop" id="drop">
+      <div class="ic">+</div>
+      <p>Drop your page images here, or tap to choose</p>
+      <small>PNG, JPG or WEBP. The number in the bottom badge is detected automatically.</small>
+    </div>
+    <input type="file" id="file" accept="image/*" multiple>
+
+    <div class="prog" id="prog"><i id="progBar"></i></div>
+    <div class="prog-lbl" id="progLbl"></div>
+  </div>
+
+  <!-- Settings -->
+  <div class="card">
+    <div class="controls">
+      <div>
+        <label class="fld" for="pattern">Filename pattern</label>
+        <input class="ti" id="pattern" type="text" value="page-{n}" spellcheck="false">
+        <div class="hint">Use <code class="tok">{n}</code> for the detected number. Example: <code class="tok">omar-{n}</code></div>
+      </div>
+      <div>
+        <label class="fld" for="pad">Number padding</label>
+        <select class="ti" id="pad">
+          <option value="0">None (1, 2, 10)</option>
+          <option value="2" selected>2 digits (01, 02, 10)</option>
+          <option value="3">3 digits (001, 002)</option>
+        </select>
+        <div class="hint">Padding keeps pages sorted correctly in any file browser.</div>
+      </div>
+    </div>
+
+    <details class="adv">
+      <summary><span class="chev">&gt;</span> Manual detection zone (only needed if auto-detect misses)</summary>
+      <div class="adv-grid">
+        <div class="sliders">
+          <div class="srow"><label>Vertical position</label><input type="range" id="zTop" min="50" max="95" value="89"><span class="val" id="zTopV">89%</span></div>
+          <div class="srow"><label>Zone height</label><input type="range" id="zH" min="4" max="30" value="10"><span class="val" id="zHV">10%</span></div>
+          <div class="srow"><label>Zone width</label><input type="range" id="zW" min="10" max="80" value="28"><span class="val" id="zWV">28%</span></div>
+          <div class="srow"><label>Brightness cutoff</label><input type="range" id="zThr" min="90" max="240" value="165"><span class="val" id="zThrV">165</span></div>
+          <button class="btn ghost" id="rescan" style="margin-top:4px">Re-scan with these settings</button>
+        </div>
+        <div class="scan-preview">
+          <div class="lbl">Cleaned badge (what the reader sees)</div>
+          <canvas id="prevCanvas" width="180" height="80"></canvas>
+          <div class="empty" id="prevEmpty">Add an image to preview</div>
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <!-- Results -->
+  <div class="results-head">
+    <div><h2>Pages</h2><span class="count" id="count">No images yet</span></div>
+    <div class="rh-actions">
+      <span class="chip" id="sortBtn">Sort by number</span>
+      <span class="chip" id="clearBtn">Clear all</span>
+    </div>
+  </div>
+  <div class="rows" id="rows">
+    <div class="empty-state">Your pages will appear here. Each detected number sits in a badge you can edit.</div>
+  </div>
+
+</div>
+
+<!-- Sticky action bar -->
+<div class="bar">
+  <div class="bar-in">
+    <div class="summary" id="barSummary">Add images to begin</div>
+    <button class="btn ghost" id="folderBtn" style="display:none">Save to folder</button>
+    <button class="btn gold" id="scanBtn" disabled>Scan numbers</button>
+    <button class="btn primary" id="zipBtn" disabled>Download renamed ZIP</button>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+<a class="hidden-dl" id="dl"></a>
+
+<script>
+"use strict";
+(function(){
+  // ---------- State ----------
+  var items = [];        // {id,file,origName,ext,base,thumb,num,conf,status}
+  var worker = null;
+  var workerReady = false;
+  var uid = 0;
+
+  var $ = function(id){ return document.getElementById(id); };
+
+  // ---------- Toast ----------
+  var toastT;
+  function toast(msg){
+    var t=$('toast'); t.textContent=msg; t.classList.add('show');
+    clearTimeout(toastT); toastT=setTimeout(function(){ t.classList.remove('show'); }, 2200);
+  }
+
+  // ---------- Settings reads ----------
+  function zone(){
+    return {
+      top: +$('zTop').value/100,
+      h:   +$('zH').value/100,
+      w:   +$('zW').value/100,
+      thr: +$('zThr').value
+    };
+  }
+  function syncSliderLabels(){
+    $('zTopV').textContent=$('zTop').value+'%';
+    $('zHV').textContent=$('zH').value+'%';
+    $('zWV').textContent=$('zW').value+'%';
+    $('zThrV').textContent=$('zThr').value;
+  }
+  ['zTop','zH','zW','zThr'].forEach(function(id){
+    $(id).addEventListener('input', function(){ syncSliderLabels(); drawPreview(); });
+  });
+  syncSliderLabels();
+
+  // ---------- File extension helpers ----------
+  function splitName(name){
+    var i=name.lastIndexOf('.');
+    if(i<=0) return {base:name, ext:''};
+    return {base:name.slice(0,i), ext:name.slice(i)};
+  }
+
+  // ---------- Engine status ----------
+  function setEngine(state, txt){
+    var d=$('engDot'); d.className='dot';
+    if(state==='on') d.classList.add('on');
+    else if(state==='busy') d.classList.add('busy');
+    else if(state==='err') d.classList.add('err');
+    if(txt) $('engTxt').textContent=txt;
+  }
+
+  // ---------- Progress ----------
+  function progress(p, label){
+    var pr=$('prog'), bar=$('progBar'), lbl=$('progLbl');
+    if(p===null){ pr.classList.remove('show'); lbl.classList.remove('show'); return; }
+    pr.classList.add('show'); lbl.classList.add('show');
+    bar.style.width=Math.round(p*100)+'%';
+    lbl.textContent=label||'';
+  }
+
+  // ---------- Tesseract worker ----------
+  function ensureWorker(){
+    if(workerReady) return Promise.resolve();
+    if(typeof Tesseract==='undefined'){
+      setEngine('err','OCR engine unavailable - type numbers manually, renaming still works');
+      return Promise.reject(new Error('no-tesseract'));
+    }
+    setEngine('busy','Loading OCR engine (one time)...');
+    progress(0.05,'Loading OCR engine...');
+    return Tesseract.createWorker('eng', 1, {
+      logger: function(m){
+        if(m && m.status && typeof m.progress==='number'){
+          var label = m.status.replace(/_/g,' ');
+          progress(0.05 + m.progress*0.4, label.charAt(0).toUpperCase()+label.slice(1));
+        }
+      }
+    }).then(function(w){
+      worker=w; workerReady=true;
+      setEngine('on','OCR engine ready');
+      return w.setParameters({ tessedit_char_whitelist:'0123456789' });
+    });
+  }
+
+  // ---------- Image load to an off-DOM Image ----------
+  function loadImage(file){
+    return new Promise(function(res,rej){
+      var url=URL.createObjectURL(file);
+      var img=new Image();
+      img.onload=function(){ res({img:img,url:url}); };
+      img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error('img-load')); };
+      img.src=url;
+    });
+  }
+
+  // ---------- Connected-component labeling (4-connectivity, BFS) ----------
+  function labelComponents(mask, w, h){
+    var labels=new Int32Array(w*h);
+    var stack=new Int32Array(w*h);
+    var comps=[], cur=0, i;
+    for(i=0;i<w*h;i++){
+      if(mask[i]!==1 || labels[i]!==0) continue;
+      cur++; var sp=0; stack[sp++]=i; labels[i]=cur;
+      var cnt=0,minx=w,maxx=0,miny=h,maxy=0;
+      while(sp>0){
+        var p=stack[--sp], x=p%w, y=(p/w)|0, q;
+        cnt++;
+        if(x<minx)minx=x; if(x>maxx)maxx=x; if(y<miny)miny=y; if(y>maxy)maxy=y;
+        if(x>0){ q=p-1; if(mask[q]===1&&labels[q]===0){labels[q]=cur;stack[sp++]=q;} }
+        if(x<w-1){ q=p+1; if(mask[q]===1&&labels[q]===0){labels[q]=cur;stack[sp++]=q;} }
+        if(y>0){ q=p-w; if(mask[q]===1&&labels[q]===0){labels[q]=cur;stack[sp++]=q;} }
+        if(y<h-1){ q=p+w; if(mask[q]===1&&labels[q]===0){labels[q]=cur;stack[sp++]=q;} }
+      }
+      comps.push({label:cur,count:cnt,minx:minx,maxx:maxx,miny:miny,maxy:maxy});
+    }
+    return {labels:labels, comps:comps};
+  }
+
+  // ---------- Sobel edge map (threshold = mean + 1 std over interior) ----------
+  function sobelEdges(gray, w, h){
+    var mag=new Float32Array(w*h), i, sum=0, cnt=0;
+    for(var y=1;y<h-1;y++){
+      for(var x=1;x<w-1;x++){
+        var idx=y*w+x;
+        var a=gray[idx-w-1],b=gray[idx-w],c=gray[idx-w+1];
+        var dd=gray[idx-1],f=gray[idx+1];
+        var g=gray[idx+w-1],hh=gray[idx+w],ii=gray[idx+w+1];
+        var gx=(c+2*f+ii)-(a+2*dd+g);
+        var gy=(g+2*hh+ii)-(a+2*b+c);
+        var mg=Math.sqrt(gx*gx+gy*gy);
+        mag[idx]=mg; sum+=mg; cnt++;
+      }
+    }
+    var mean=sum/Math.max(1,cnt), v=0;
+    for(y=1;y<h-1;y++) for(x=1;x<w-1;x++){ var e=mag[y*w+x]-mean; v+=e*e; }
+    var std=Math.sqrt(v/Math.max(1,cnt)), thr=mean+1.0*std;
+    var edge=new Uint8Array(w*h);
+    for(i=0;i<w*h;i++) edge[i]= mag[i]>thr ?1:0;
+    return edge;
+  }
+
+  // ---------- Auto-locate the badge by its circular edge ----------
+  // Every badge in the series - navy disk or cream disk, on rug, floor, or
+  // ornamental panel - is a circle at the bottom centre. Finding that circle
+  // by its edge is colour-agnostic, so it survives every badge style.
+  function locateBadge(img){
+    var W=img.naturalWidth, H=img.naturalHeight;
+    var ry0=Math.floor(H*0.86), rx0=Math.floor(W*0.28), rx1=Math.ceil(W*0.72);
+    var rw=rx1-rx0, rh=H-ry0;
+    if(rw<24||rh<24) return null;
+    var cv=document.createElement('canvas'); cv.width=rw; cv.height=rh;
+    var ctx=cv.getContext('2d'); ctx.drawImage(img, rx0,ry0,rw,rh, 0,0,rw,rh);
+    var d=ctx.getImageData(0,0,rw,rh).data;
+    var gray=new Float32Array(rw*rh);
+    for(var i=0,j=0;i<gray.length;i++,j+=4) gray[i]=d[j]*0.299+d[j+1]*0.587+d[j+2]*0.114;
+    var edge=sobelEdges(gray,rw,rh);
+    var ANG=72, ca=new Float32Array(ANG), sa=new Float32Array(ANG), a;
+    for(a=0;a<ANG;a++){ var t=a*2*Math.PI/ANG; ca[a]=Math.cos(t); sa[a]=Math.sin(t); }
+    var cx0=Math.floor(W*0.44)-rx0, cx1=Math.floor(W*0.56)-rx0;
+    var cy0=Math.floor(H*0.90)-ry0, cy1=Math.floor(H*0.99)-ry0;
+    var best=-1, bcx=0,bcy=0,br=0;
+    for(var r=38;r<=60;r+=2){
+      var ox=new Int32Array(ANG), oy=new Int32Array(ANG);
+      for(a=0;a<ANG;a++){ ox[a]=Math.round(r*ca[a]); oy[a]=Math.round(r*sa[a]); }
+      for(var cx=cx0;cx<cx1;cx+=2){
+        for(var cy=cy0;cy<cy1;cy+=2){
+          var hit=0, valid=0;
+          for(a=0;a<ANG;a++){
+            var xx=cx+ox[a], yy=cy+oy[a];
+            if(xx<0||xx>=rw||yy<0||yy>=rh) continue;
+            valid++; if(edge[yy*rw+xx]) hit++;
+          }
+          if(valid<ANG*0.6) continue;
+          var sc=hit/valid;
+          if(sc>best){ best=sc; bcx=cx+rx0; bcy=cy+ry0; br=r; }
+        }
+      }
+    }
+    return best<0 ? null : { cx:bcx, cy:bcy, r:br, score:best };
+  }
+
+  // ---------- Otsu auto threshold ----------
+  function otsu(gray){
+    var hist=new Array(256), i; for(i=0;i<256;i++) hist[i]=0;
+    for(i=0;i<gray.length;i++) hist[gray[i]]++;
+    var tot=gray.length, sum=0; for(i=0;i<256;i++) sum+=i*hist[i];
+    var wB=0,sumB=0,mx=0,thr=127;
+    for(i=0;i<256;i++){
+      wB+=hist[i]; if(wB===0) continue;
+      var wF=tot-wB; if(wF===0) break;
+      sumB+=i*hist[i];
+      var mB=sumB/wB, mF=(sum-sumB)/wF, v=wB*wF*(mB-mF)*(mB-mF);
+      if(v>mx){ mx=v; thr=i; }
+    }
+    return thr;
+  }
+
+  // ---------- Upscaled colour crop of a region (fallback zone) ----------
+  function regionCanvas(img, x0,y0,x1,y1){
+    var w=Math.max(2,x1-x0+1), h=Math.max(2,y1-y0+1);
+    var scale=Math.max(1, Math.round(160/h))+1;
+    var cv=document.createElement('canvas'); cv.width=w*scale; cv.height=h*scale;
+    var ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(img, x0,y0,w,h, 0,0, cv.width, cv.height);
+    return cv;
+  }
+
+  // ---------- Upscaled crop of the disk interior ----------
+  function diskCrop(img, cx, cy, r){
+    var rr=Math.round(r*0.82), diam=2*rr;
+    var scale=Math.max(2, Math.round(160/diam))+2;
+    var cv=document.createElement('canvas'); cv.width=diam*scale; cv.height=diam*scale;
+    var ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=true;
+    ctx.drawImage(img, cx-rr, cy-rr, diam, diam, 0,0, cv.width, cv.height);
+    return cv;
+  }
+
+  // ---------- Clean a badge crop into black-digit-on-white, normalized whitespace ----------
+  // Auto-detects polarity (white digit on dark disk, or dark digit on light disk),
+  // drops the ring/surround, keeps every digit, and centres them with generous
+  // margin - the margin matters: this bold rounded font needs whitespace to read.
+  function cleanBadge(srcCanvas){
+    var w=srcCanvas.width, h=srcCanvas.height;
+    var dd=srcCanvas.getContext('2d').getImageData(0,0,w,h).data;
+    var gray=new Uint8Array(w*h), i, j, sum=0;
+    for(i=0,j=0;i<gray.length;i++,j+=4){ var g=(dd[j]*0.299+dd[j+1]*0.587+dd[j+2]*0.114)|0; gray[i]=g; sum+=g; }
+    var bright=(sum/gray.length)<128;       // dark disk -> bright digit
+    var thr=otsu(gray);
+    var ink=new Uint8Array(w*h);
+    for(i=0;i<gray.length;i++){ ink[i]=(bright ? gray[i]>thr : gray[i]<thr) ?1:0; }
+    var L=labelComponents(ink,w,h);
+    var kept={}, any=false, kx0=w,kx1=0,ky0=h,ky1=0;
+    for(var k=0;k<L.comps.length;k++){
+      var c=L.comps[k];
+      if(c.count<30) continue;
+      if(c.minx<=1||c.miny<=1||c.maxx>=w-2||c.maxy>=h-2) continue;   // touches border = ring/surround
+      var cw=c.maxx-c.minx+1, ch=c.maxy-c.miny+1;
+      if(Math.max(cw,ch)/Math.max(1,Math.min(cw,ch))>6) continue;    // thin strip
+      kept[c.label]=1; any=true;
+      if(c.minx<kx0)kx0=c.minx; if(c.maxx>kx1)kx1=c.maxx;
+      if(c.miny<ky0)ky0=c.miny; if(c.maxy>ky1)ky1=c.maxy;
+    }
+    if(!any) return null;
+    var gw=kx1-kx0+1, gh=ky1-ky0+1, mgn=Math.round(gh*0.5);
+    var ow=gw+2*mgn, oh=gh+2*mgn;
+    var out=document.createElement('canvas'); out.width=ow; out.height=oh;
+    var octx=out.getContext('2d'); octx.fillStyle='#fff'; octx.fillRect(0,0,ow,oh);
+    var od=octx.getImageData(0,0,ow,oh), o=od.data, lab=L.labels;
+    for(var y=ky0;y<=ky1;y++) for(var x=kx0;x<=kx1;x++){
+      if(kept[lab[y*w+x]]){
+        var p=((mgn+y-ky0)*ow+(mgn+x-kx0))*4; o[p]=o[p+1]=o[p+2]=0; o[p+3]=255;
+      }
+    }
+    octx.putImageData(od,0,0);
+    return out;
+  }
+
+  // ---------- Build the OCR-ready canvas for an item ----------
+  function makeOcrCanvas(img, z){
+    var c=locateBadge(img);
+    if(c){
+      var clean=cleanBadge(diskCrop(img, c.cx, c.cy, c.r));
+      if(clean) return { clean:clean, located:true };
+    }
+    // fallback: fixed bottom-centre zone (manual sliders)
+    var W=img.naturalWidth, H=img.naturalHeight;
+    var x0=Math.round(W*(0.5-z.w/2)), x1=Math.round(W*(0.5+z.w/2))-1;
+    var y0=Math.round(H*z.top), y1=Math.min(H-1, Math.round(H*(z.top+z.h))-1);
+    var fb=regionCanvas(img, x0,y0,x1,y1);
+    return { clean: cleanBadge(fb) || fb, located:false };
+  }
+
+  // ---------- Recognize digits from a clean crop ----------
+  function recognize(cv){
+    var P = (window.Tesseract && Tesseract.PSM) ? Tesseract.PSM : {};
+    var order = [ P.SINGLE_BLOCK||'6', P.SINGLE_WORD||'8', P.SINGLE_LINE||'7', P.RAW_LINE||'13', P.SINGLE_CHAR||'10' ];
+    function confOf(data){
+      if(!data) return 0;
+      if(typeof data.confidence==='number' && data.confidence>0) return data.confidence;
+      var sum=0,c=0;
+      try{
+        (data.blocks||[]).forEach(function(b){
+          (b.paragraphs||[]).forEach(function(p){
+            (p.lines||[]).forEach(function(ln){
+              (ln.words||[]).forEach(function(wd){
+                if(typeof wd.confidence==='number'){ sum+=wd.confidence; c++; }
+              });
+            });
+          });
+        });
+      }catch(e){}
+      return c?sum/c:0;
+    }
+    function run(psm){
+      return worker.setParameters({ tessedit_pageseg_mode:psm }).then(function(){
+        return worker.recognize(cv, {}, { text:true, blocks:true });
+      }).then(function(r){
+        var txt=((r.data&&r.data.text)||'').replace(/[^0-9]/g,'');
+        return { txt:txt, conf:Math.round(confOf(r.data)) };
+      });
+    }
+    function step(i){
+      if(i>=order.length) return Promise.resolve({ txt:'', conf:0 });
+      return run(order[i]).then(function(a){ return a.txt ? a : step(i+1); });
+    }
+    return step(0);
+  }
+
+  // ---------- Add files ----------
+  function addFiles(fileList){
+    var arr=[].slice.call(fileList).filter(function(f){ return /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name); });
+    if(!arr.length){ toast('No image files found'); return; }
+    var loads=arr.map(function(f){
+      var sp=splitName(f.name);
+      var it={ id:++uid, file:f, origName:f.name, ext:sp.ext||'.png', base:sp.base, thumb:'', num:'', conf:0, status:'wait' };
+      items.push(it);
+      return loadImage(f).then(function(o){
+        // thumbnail
+        var tc=document.createElement('canvas'); tc.width=tc.height=128;
+        var tctx=tc.getContext('2d');
+        var s=Math.min(o.img.naturalWidth, o.img.naturalHeight);
+        var ox=(o.img.naturalWidth-s)/2, oy=(o.img.naturalHeight-s)/2;
+        tctx.drawImage(o.img, ox,oy,s,s, 0,0,128,128);
+        it.thumb=tc.toDataURL('image/jpeg',0.8);
+        it._img=o.img; it._url=o.url;
+      }).catch(function(){ it.status='bad'; });
+    });
+    Promise.all(loads).then(function(){ render(); drawPreview(); updateBar(); });
+  }
+
+  // ---------- Scan all ----------
+  function scanAll(){
+    var pend=items.filter(function(it){ return it._img; });
+    if(!pend.length){ toast('Add some images first'); return; }
+    $('scanBtn').disabled=true;
+    ensureWorker().then(function(){
+      var z=zone(), i=0;
+      function next(){
+        if(i>=pend.length){
+          progress(null); setEngine('on','OCR engine ready');
+          render(); updateBar(); $('scanBtn').disabled=false;
+          toast('Scan complete');
+          return;
+        }
+        var it=pend[i];
+        progress(0.45 + 0.55*(i/pend.length), 'Reading page '+(i+1)+' of '+pend.length);
+        var oc=makeOcrCanvas(it._img, z);
+        it.located=oc.located;
+        recognize(oc.clean).then(function(r){
+          it.num=r.txt; it.conf=r.conf;
+          // a successful read is OK; only flag when nothing was found.
+          // confidence is shown for information but never demotes a real read.
+          it.status = !r.txt ? 'bad' : ((r.conf>0 && r.conf<40) ? 'warn' : 'ok');
+          i++; render(); setTimeout(next, 0);
+        }).catch(function(){
+          it.status='bad'; i++; render(); setTimeout(next,0);
+        });
+      }
+      next();
+    }).catch(function(){
+      // engine failed: leave for manual entry
+      $('scanBtn').disabled=false; progress(null);
+      render(); updateBar();
+      toast('Engine unavailable - enter numbers by hand');
+    });
+  }
+
+  // ---------- Naming ----------
+  function padNum(n, pad){
+    if(!pad) return n;
+    n=String(n);
+    while(n.length<pad) n='0'+n;
+    return n;
+  }
+  function newName(it){
+    var pat=$('pattern').value || '{n}';
+    var pad=+$('pad').value;
+    var n = it.num ? padNum(it.num, pad) : '';
+    var base = pat.indexOf('{n}')>=0 ? pat.replace(/\{n\}/g, n||'__') : (pat + (n||'__'));
+    return base + it.ext;
+  }
+
+  // ---------- Conflict detection ----------
+  function markConflicts(){
+    var seen={};
+    items.forEach(function(it){ it._dup=false; });
+    items.forEach(function(it){
+      if(!it.num) return;
+      var key=it.num;
+      if(seen[key]!==undefined){ it._dup=true; items[seen[key]]._dup=true; }
+      else seen[key]=items.indexOf(it);
+    });
+  }
+
+  // ---------- Render ----------
+  function render(){
+    markConflicts();
+    var box=$('rows');
+    if(!items.length){
+      box.innerHTML='<div class="empty-state">Your pages will appear here. Each detected number sits in a badge you can edit.</div>';
+      $('count').textContent='No images yet';
+      return;
+    }
+    box.innerHTML='';
+    items.forEach(function(it){
+      var row=document.createElement('div');
+      var cls='row';
+      if(it._dup || (!it.num && it.status!=='wait')) cls+=' bad';
+      else if(it.status==='warn') cls+=' warn';
+      row.className=cls;
+
+      var statusHtml;
+      if(it.status==='wait') statusHtml='<span class="status st-wait">Not scanned yet</span>';
+      else if(it._dup) statusHtml='<span class="status st-bad">Duplicate number - fix one</span>';
+      else if(!it.num) statusHtml='<span class="status st-bad">No badge read - type the number</span>';
+      else if(it.status==='warn') statusHtml='<span class="status st-warn">Read '+escapeHtml(it.num)+' - low confidence, please check</span>';
+      else {
+        var how = it.located ? 'badge found' : 'manual zone';
+        var pct = it.conf>0 ? ' ('+it.conf+'%)' : '';
+        statusHtml='<span class="status st-ok">Read '+escapeHtml(it.num)+' - '+how+pct+'</span>';
+      }
+
+      var nm=newName(it);
+      var sp=splitName(nm);
+
+      row.innerHTML=
+        '<img class="thumb" src="'+(it.thumb||'')+'" alt="">'+
+        '<div class="meta">'+
+          '<div class="orig">'+escapeHtml(it.origName)+'</div>'+
+          '<div class="newname">'+escapeHtml(sp.base)+'<span class="ext">'+escapeHtml(sp.ext)+'</span></div>'+
+          statusHtml+
+        '</div>'+
+        '<div class="numwrap">'+
+          '<div class="mini-badge"><input type="text" inputmode="numeric" pattern="[0-9]*" maxlength="3" value="'+escapeAttr(it.num)+'" data-id="'+it.id+'"></div>'+
+          '<button class="del" data-del="'+it.id+'">remove</button>'+
+        '</div>';
+      box.appendChild(row);
+    });
+
+    // wire inputs
+    [].forEach.call(box.querySelectorAll('.mini-badge input'), function(inp){
+      inp.addEventListener('input', function(){
+        var id=+inp.getAttribute('data-id');
+        var it=items.filter(function(x){return x.id===id;})[0];
+        if(!it) return;
+        it.num=inp.value.replace(/[^0-9]/g,'');
+        it.status = it.num ? 'ok' : 'bad';
+        it.conf = it.conf || 100;
+        // light re-render of names/conflicts without losing focus
+        updateNamesOnly();
+        updateBar();
+      });
+    });
+    [].forEach.call(box.querySelectorAll('[data-del]'), function(b){
+      b.addEventListener('click', function(){
+        var id=+b.getAttribute('data-del');
+        items=items.filter(function(x){ if(x.id===id && x._url){ URL.revokeObjectURL(x._url);} return x.id!==id; });
+        render(); drawPreview(); updateBar();
+      });
+    });
+
+    var done=items.filter(function(it){return it.num;}).length;
+    $('count').textContent=items.length+' image'+(items.length>1?'s':'')+' - '+done+' numbered';
+  }
+
+  // update names + conflict styling without rebuilding inputs (keeps focus)
+  function updateNamesOnly(){
+    markConflicts();
+    var rows=$('rows').children;
+    for(var i=0;i<items.length;i++){
+      var it=items[i], row=rows[i]; if(!row) continue;
+      var nm=newName(it), sp=splitName(nm);
+      var nn=row.querySelector('.newname');
+      if(nn) nn.innerHTML=escapeHtml(sp.base)+'<span class="ext">'+escapeHtml(sp.ext)+'</span>';
+      row.className='row'+((it._dup||(!it.num&&it.status!=='wait'))?' bad':(it.status==='warn'?' warn':''));
+      var st=row.querySelector('.status');
+      if(st){
+        if(it._dup){ st.className='status st-bad'; st.textContent='Duplicate number - fix one'; }
+        else if(!it.num){ st.className='status st-bad'; st.textContent='No badge read - type the number'; }
+        else if(it.status==='warn'){ st.className='status st-warn'; st.textContent='Read '+it.num+' - low confidence, please check'; }
+        else { st.className='status st-ok'; st.textContent='Ready'; }
+      }
+    }
+    var done=items.filter(function(it){return it.num;}).length;
+    $('count').textContent=items.length+' image'+(items.length>1?'s':'')+' - '+done+' numbered';
+  }
+
+  function escapeHtml(s){ return String(s).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+  function escapeAttr(s){ return String(s).replace(/"/g,'&quot;'); }
+
+  // ---------- Preview crop ----------
+  function drawPreview(){
+    var first=items.filter(function(it){return it._img;})[0];
+    var cv=$('prevCanvas'), empty=$('prevEmpty');
+    if(!first){ cv.style.display='none'; empty.style.display='block'; return; }
+    cv.style.display='block'; empty.style.display='none';
+    var oc=makeOcrCanvas(first._img, zone());
+    var crop=oc.clean;
+    var ctx=cv.getContext('2d');
+    var w=180, h=Math.max(40, Math.round(180 * crop.height/crop.width));
+    cv.width=w; cv.height=h;
+    ctx.imageSmoothingEnabled=true;
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,w,h);
+    ctx.drawImage(crop, 0,0, w, h);
+  }
+
+  // ---------- Bar / counts ----------
+  function updateBar(){
+    var n=items.length;
+    var ready=items.filter(function(it){return it.num;}).length;
+    var dups=items.filter(function(it){return it._dup;}).length;
+    $('scanBtn').disabled = n===0;
+    $('zipBtn').disabled = ready===0;
+    $('folderBtn').disabled = ready===0;
+    if(n===0){ $('barSummary').innerHTML='Add images to begin'; return; }
+    var msg='<b>'+ready+'</b> of <b>'+n+'</b> ready to rename';
+    if(dups) msg+=' &middot; <span style="color:var(--bad)">'+dups+' duplicate</span>';
+    $('barSummary').innerHTML=msg;
+  }
+
+  // ---------- CRC32 + ZIP (store only, validated) ----------
+  function crc32(bytes){
+    var t=crc32.t;
+    if(!t){ t=[]; for(var n=0;n<256;n++){ var c=n; for(var k=0;k<8;k++) c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1); t[n]=c>>>0; } crc32.t=t; }
+    var crc=0xFFFFFFFF;
+    for(var i=0;i<bytes.length;i++) crc=(crc>>>8)^t[(crc^bytes[i])&0xFF];
+    return (crc^0xFFFFFFFF)>>>0;
+  }
+  function strBytes(s){ var a=new Uint8Array(s.length); for(var i=0;i<s.length;i++) a[i]=s.charCodeAt(i)&0xFF; return a; }
+  function u16(v){ return [v&0xFF,(v>>8)&0xFF]; }
+  function u32(v){ return [v&0xFF,(v>>8)&0xFF,(v>>16)&0xFF,(v>>24)&0xFF]; }
+  function makeZip(files){
+    var chunks=[], central=[], offset=0, i;
+    for(i=0;i<files.length;i++){
+      var name=strBytes(files[i].name), data=files[i].data, crc=crc32(data);
+      var lh=[].concat(u32(0x04034b50),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0));
+      chunks.push(new Uint8Array(lh)); chunks.push(name); chunks.push(data);
+      var ch=[].concat(u32(0x02014b50),u16(20),u16(20),u16(0),u16(0),u16(0),u16(0),u32(crc),u32(data.length),u32(data.length),u16(name.length),u16(0),u16(0),u16(0),u16(0),u32(0),u32(offset));
+      central.push(new Uint8Array(ch)); central.push(name);
+      offset += lh.length + name.length + data.length;
+    }
+    var cdSize=0; for(i=0;i<central.length;i++) cdSize+=central[i].length;
+    var eocd=new Uint8Array([].concat(u32(0x06054b50),u16(0),u16(0),u16(files.length),u16(files.length),u32(cdSize),u32(offset),u16(0)));
+    var all=chunks.concat(central,[eocd]);
+    var total=0; for(i=0;i<all.length;i++) total+=all[i].length;
+    var out=new Uint8Array(total), p=0;
+    for(i=0;i<all.length;i++){ out.set(all[i],p); p+=all[i].length; }
+    return out;
+  }
+
+  // ---------- Resolve final filenames (handle collisions safely) ----------
+  function finalFiles(){
+    var used={}, out=[];
+    var ready=items.filter(function(it){return it.num;});
+    ready.forEach(function(it){
+      var nm=newName(it);
+      if(used[nm]!==undefined){
+        var sp=splitName(nm), k=2;
+        while(used[sp.base+'-'+k+sp.ext]!==undefined) k++;
+        nm=sp.base+'-'+k+sp.ext;
+      }
+      used[nm]=true;
+      out.push({it:it, name:nm});
+    });
+    return out;
+  }
+
+  // ---------- Download ZIP ----------
+  function downloadZip(){
+    var list=finalFiles();
+    if(!list.length){ toast('Nothing to rename yet'); return; }
+    $('zipBtn').disabled=true; progress(0.02,'Packing files...');
+    var packed=[], i=0;
+    function step(){
+      if(i>=list.length){
+        var zip=makeZip(packed);
+        var blob=new Blob([zip], {type:'application/zip'});
+        var url=URL.createObjectURL(blob);
+        var a=$('dl'); a.href=url; a.download='renamed-pages.zip'; a.click();
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+        progress(null); $('zipBtn').disabled=false;
+        toast('ZIP ready - '+list.length+' files');
+        return;
+      }
+      progress(0.02 + 0.96*(i/list.length), 'Packing '+(i+1)+' of '+list.length);
+      list[i].it.file.arrayBuffer().then(function(buf){
+        packed.push({name:list[i].name, data:new Uint8Array(buf)});
+        i++; setTimeout(step,0);
+      }).catch(function(){ i++; setTimeout(step,0); });
+    }
+    step();
+  }
+
+  // ---------- Save to folder (File System Access API) ----------
+  function saveToFolder(){
+    var list=finalFiles();
+    if(!list.length){ toast('Nothing to rename yet'); return; }
+    if(!window.showDirectoryPicker){ toast('Folder save not supported here - use ZIP'); return; }
+    $('folderBtn').disabled=true; progress(0.02,'Choosing folder...');
+    window.showDirectoryPicker({mode:'readwrite'}).then(function(dir){
+      var i=0;
+      function step(){
+        if(i>=list.length){ progress(null); $('folderBtn').disabled=false; toast('Saved '+list.length+' files to folder'); return; }
+        progress(0.02 + 0.96*(i/list.length), 'Writing '+(i+1)+' of '+list.length);
+        list[i].it.file.arrayBuffer().then(function(buf){
+          return dir.getFileHandle(list[i].name, {create:true}).then(function(fh){
+            return fh.createWritable().then(function(w){
+              return w.write(new Uint8Array(buf)).then(function(){ return w.close(); });
+            });
+          });
+        }).then(function(){ i++; step(); }).catch(function(e){
+          progress(null); $('folderBtn').disabled=false; toast('Folder write failed - use ZIP'); 
+        });
+      }
+      step();
+    }).catch(function(){ progress(null); $('folderBtn').disabled=false; });
+  }
+
+  // ---------- Sort ----------
+  function sortByNumber(){
+    items.sort(function(a,b){
+      var na=a.num?parseInt(a.num,10):1e9, nb=b.num?parseInt(b.num,10):1e9;
+      if(na!==nb) return na-nb;
+      return a.origName.localeCompare(b.origName);
+    });
+    render(); updateBar(); toast('Sorted by number');
+  }
+
+  // ---------- Wire UI ----------
+  var drop=$('drop'), fileInp=$('file');
+  drop.addEventListener('click', function(){ fileInp.click(); });
+  fileInp.addEventListener('change', function(){ addFiles(fileInp.files); fileInp.value=''; });
+  ['dragenter','dragover'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.add('hot'); }); });
+  ['dragleave','drop'].forEach(function(ev){ drop.addEventListener(ev, function(e){ e.preventDefault(); drop.classList.remove('hot'); }); });
+  drop.addEventListener('drop', function(e){ if(e.dataTransfer&&e.dataTransfer.files) addFiles(e.dataTransfer.files); });
+  // accept drops anywhere on the page
+  ['dragover','drop'].forEach(function(ev){ window.addEventListener(ev, function(e){ e.preventDefault(); }); });
+
+  $('scanBtn').addEventListener('click', scanAll);
+  $('rescan').addEventListener('click', scanAll);
+  $('zipBtn').addEventListener('click', downloadZip);
+  $('folderBtn').addEventListener('click', saveToFolder);
+  $('sortBtn').addEventListener('click', sortByNumber);
+  $('clearBtn').addEventListener('click', function(){
+    items.forEach(function(it){ if(it._url) URL.revokeObjectURL(it._url); });
+    items=[]; render(); drawPreview(); updateBar(); toast('Cleared');
+  });
+  $('pattern').addEventListener('input', function(){ updateNamesOnly(); });
+  $('pad').addEventListener('change', function(){ updateNamesOnly(); });
+
+  if(window.showDirectoryPicker) $('folderBtn').style.display='inline-flex';
+
+  // initial
+  updateBar();
+})();
+</script>
+</body>
+</html>
