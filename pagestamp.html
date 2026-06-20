@@ -8,6 +8,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@6.0.1/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{
     --bg0:#08201f; --bg1:#0e2e2c; --panel:rgba(255,255,255,.04); --panel2:rgba(255,255,255,.06);
@@ -180,6 +181,72 @@
     font-size:14px;transition:.25s;opacity:0;box-shadow:0 8px 24px rgba(0,0,0,.4)}
   .toast.show{transform:translateX(-50%) translateY(0);opacity:1}
   a.hidden-dl{display:none}
+
+  /* Engine selector */
+  .engine-pick{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .eng-opt{
+    border:1px solid var(--line2);border-radius:var(--r-s);background:rgba(0,0,0,.18);
+    padding:12px 12px;cursor:pointer;text-align:center;transition:.15s;display:flex;flex-direction:column;gap:3px;align-items:center;
+  }
+  .eng-opt .et{font-weight:600;font-size:14px;color:var(--ink)}
+  .eng-opt .es{font-size:11.5px;color:var(--mut)}
+  .eng-opt .ei{font-family:'DM Serif Display',serif;font-size:22px;line-height:1}
+  .eng-opt.on{border-color:var(--gold);background:linear-gradient(180deg,rgba(231,200,115,.14),rgba(231,200,115,.04));box-shadow:0 6px 16px rgba(231,200,115,.14)}
+  .eng-opt.on .ei{color:var(--gold)}
+  .eng-opt.on.local{border-color:var(--teal);background:linear-gradient(180deg,rgba(22,179,164,.14),rgba(22,179,164,.04));box-shadow:0 6px 16px rgba(22,179,164,.14)}
+  .eng-opt.on.local .ei{color:var(--teal)}
+
+  /* AI key row */
+  .keyrow{display:none;margin-bottom:16px}
+  .keyrow.show{display:block}
+  .keyrow .kr-in{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  .keyrow .ti{flex:1;min-width:160px;direction:ltr;font-family:ui-monospace,monospace;font-size:13px}
+  .keyrow .saved{font-size:12px;color:var(--good);display:none;align-items:center;gap:5px}
+  .keyrow .saved.show{display:inline-flex}
+
+  /* Live scan panel */
+  .live{display:none;margin-top:14px;grid-template-columns:1fr 1fr;gap:14px;align-items:center}
+  .live.show{display:grid}
+  .live .pane{background:rgba(0,0,0,.22);border:1px solid var(--line2);border-radius:var(--r-s);padding:10px;text-align:center}
+  .live .pl{font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin-bottom:8px}
+  .live img{max-width:100%;max-height:64px;border-radius:6px;background:#fff;display:block;margin:0 auto;object-fit:contain}
+  .live .ans{font-family:'DM Serif Display',serif;font-size:34px;color:var(--gold);line-height:64px;height:64px}
+  .live .ans.dim{color:var(--mut);font-size:18px}
+
+  /* Booklet */
+  #bookletCard{display:none}
+  #bookletCard.show{display:block}
+  .bk-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:6px}
+  .bk-head h2{font-family:'DM Serif Display',serif;font-weight:400;font-size:22px;margin:0}
+  .bk-sub{color:var(--mut);font-size:13px}
+  .bk-note{font-size:12.5px;color:var(--mut);margin:10px 0 16px;line-height:1.5}
+  .bk-note b{color:var(--gold)}
+  .sheets{display:grid;gap:22px;margin-top:6px}
+  .sheet-wrap{}
+  .sheet-cap{text-align:center;font-size:12px;letter-spacing:.06em;color:var(--mut);margin-bottom:8px}
+  .sheet{
+    position:relative;display:flex;aspect-ratio:1.414/1;width:100%;max-width:520px;margin:0 auto;
+    background:#0b1f1e;border:1px solid var(--line2);border-radius:8px;overflow:hidden;
+  }
+  .sheet .fold{position:absolute;top:0;bottom:0;left:50%;width:0;border-left:2px dashed var(--line2);z-index:3}
+  .sheet .half{flex:1;position:relative;display:flex;align-items:center;justify-content:center;padding:14px;background:#fff}
+  .sheet .half.l{border-right:1px solid #e7e7e7}
+  .sheet .half img{max-width:100%;max-height:100%;object-fit:contain;box-shadow:0 2px 8px rgba(0,0,0,.18)}
+  .sheet .half .blank{color:#bbb;font-size:13px}
+  .sheet .pnum{position:absolute;top:8px;font-size:10.5px;font-weight:600;color:#fff;background:rgba(8,32,31,.82);padding:3px 9px;border-radius:999px;z-index:2}
+  .sheet .half.l .pnum{left:8px}
+  .sheet .half.r .pnum{right:8px}
+
+  /* Settings modal */
+  .modal{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;padding:18px;
+    background:rgba(4,16,15,.62);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+  .modal.show{display:flex}
+  .modal .box{background:linear-gradient(160deg,var(--bg1),var(--bg0));border:1px solid var(--line2);border-radius:var(--r);
+    padding:22px;max-width:420px;width:100%;box-shadow:0 24px 60px rgba(0,0,0,.5)}
+  .modal h3{font-family:'DM Serif Display',serif;font-weight:400;font-size:22px;margin:0 0 6px}
+  .modal p{color:var(--mut);font-size:13.5px;margin:0 0 16px;line-height:1.5}
+  .modal a{color:var(--teal)}
+  .modal .mrow{display:flex;gap:8px;margin-top:16px;justify-content:flex-end}
 </style>
 </head>
 <body>
@@ -203,10 +270,44 @@
 
     <div class="prog" id="prog"><i id="progBar"></i></div>
     <div class="prog-lbl" id="progLbl"></div>
+
+    <div class="live" id="live">
+      <div class="pane">
+        <div class="pl">What the reader sees</div>
+        <img id="liveCrop" alt="">
+      </div>
+      <div class="pane">
+        <div class="pl">Detected number</div>
+        <div class="ans dim" id="liveAns">-</div>
+      </div>
+    </div>
   </div>
 
   <!-- Settings -->
   <div class="card">
+    <div class="engine-pick">
+      <div class="eng-opt on" id="engVision" data-eng="vision">
+        <div class="ei">&#9673;</div>
+        <div class="et">AI Vision</div>
+        <div class="es">Reads the photo directly &middot; most accurate</div>
+      </div>
+      <div class="eng-opt local" id="engLocal" data-eng="local">
+        <div class="ei">&#9881;</div>
+        <div class="et">On-device</div>
+        <div class="es">Works offline &middot; no key needed</div>
+      </div>
+    </div>
+
+    <div class="keyrow" id="keyRow">
+      <label class="fld" for="apiKey">Groq API key (kept on this device only)</label>
+      <div class="kr-in">
+        <input class="ti" id="apiKey" type="password" placeholder="gsk_..." autocomplete="off" spellcheck="false">
+        <button class="btn ghost" id="saveKey" type="button">Save key</button>
+        <span class="saved" id="keySaved">&#10003; saved</span>
+      </div>
+      <div class="hint">Free key from <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>. Used to read each badge with Llama&nbsp;4 Scout vision.</div>
+    </div>
+
     <div class="controls">
       <div>
         <label class="fld" for="pattern">Filename pattern</label>
@@ -255,6 +356,16 @@
     <div class="empty-state">Your pages will appear here. Each detected number sits in a badge you can edit.</div>
   </div>
 
+  <!-- Booklet -->
+  <div class="card" id="bookletCard">
+    <div class="bk-head">
+      <h2>Print booklet</h2>
+      <span class="bk-sub" id="bkSub"></span>
+    </div>
+    <p class="bk-note">Pages are imposed for an <b>Arabic right-to-left</b> saddle-stitch booklet: print on A4 <b>landscape</b>, double-sided (flip on short edge), then fold the stack in half and staple the spine. Page&nbsp;1 lands on the right when the book is opened.</p>
+    <div class="sheets" id="sheets"></div>
+  </div>
+
 </div>
 
 <!-- Sticky action bar -->
@@ -264,11 +375,24 @@
     <button class="btn ghost" id="folderBtn" style="display:none">Save to folder</button>
     <button class="btn gold" id="scanBtn" disabled>Scan numbers</button>
     <button class="btn primary" id="zipBtn" disabled>Download renamed ZIP</button>
+    <button class="btn primary" id="bookBtn" disabled>Print booklet PDF</button>
   </div>
 </div>
 
 <div class="toast" id="toast"></div>
 <a class="hidden-dl" id="dl"></a>
+
+<div class="modal" id="keyModal">
+  <div class="box">
+    <h3>Add your AI key</h3>
+    <p>AI Vision reads each badge with Llama&nbsp;4 Scout. Paste a free Groq key from <a href="https://console.groq.com/keys" target="_blank" rel="noopener">console.groq.com/keys</a>. It stays on this device.</p>
+    <input class="ti" id="modalKey" type="password" placeholder="gsk_..." autocomplete="off" spellcheck="false" style="direction:ltr;font-family:ui-monospace,monospace">
+    <div class="mrow">
+      <button class="btn ghost" id="modalLocal" type="button">Use on-device instead</button>
+      <button class="btn gold" id="modalSave" type="button">Save &amp; scan</button>
+    </div>
+  </div>
+</div>
 
 <script>
 "use strict";
@@ -278,8 +402,14 @@
   var worker = null;
   var workerReady = false;
   var uid = 0;
+  var engine = 'vision'; // 'vision' (Llama 4 Scout) or 'local' (on-device)
+  var pairs = [];        // booklet imposition sheets
 
   var $ = function(id){ return document.getElementById(id); };
+
+  // ---------- AI key (Groq) ----------
+  function getKey(){ try{ return localStorage.getItem('groq_api_key')||''; }catch(e){ return ''; } }
+  function setKey(v){ try{ if(v) localStorage.setItem('groq_api_key',v); else localStorage.removeItem('groq_api_key'); }catch(e){} }
 
   // ---------- Toast ----------
   var toastT;
@@ -580,6 +710,67 @@
     return step(0);
   }
 
+  // ---------- AI VISION ENGINE (Llama 4 Scout via Groq) ----------
+  // Mirrors the validated approach: cut a bottom-centre band out of the page
+  // first, downscale it, then let the vision model read the digits. Cropping
+  // before sending focuses the model on the badge and keeps requests light.
+  function cloudCrop(img){
+    var W=img.naturalWidth, H=img.naturalHeight;
+    var cropW=W*0.60, cropH=H*0.25, cropX=W*0.20, cropY=H*0.75;
+    var targetW=512, targetH=Math.max(1, Math.floor(cropH*(targetW/cropW)));
+    var cv=document.createElement('canvas'); cv.width=targetW; cv.height=targetH;
+    var ctx=cv.getContext('2d');
+    ctx.fillStyle='#fff'; ctx.fillRect(0,0,targetW,targetH);
+    ctx.drawImage(img, cropX,cropY,cropW,cropH, 0,0,targetW,targetH);
+    return cv.toDataURL('image/jpeg',0.8);   // full data URL (incl. prefix)
+  }
+
+  function extractNumber(text, maxAllowed){
+    if(!text) return '';
+    var m=String(text).match(/\d+/g);
+    if(!m) return '';
+    var cap=(maxAllowed||0)+5;
+    var nums=m.map(function(n){return parseInt(n,10);}).filter(function(n){return n>0 && n<=cap;});
+    if(!nums.length) return '';
+    return String(Math.max.apply(null, nums));
+  }
+
+  function delay(ms){ return new Promise(function(r){ setTimeout(r,ms); }); }
+
+  // Returns the model's raw reply (digits). Retries on rate-limit / transient errors.
+  function llamaVision(dataUrl, retries){
+    if(retries===undefined) retries=2;
+    var key=getKey();
+    if(!key) return Promise.reject(new Error('no-key'));
+    var payload={
+      model:'meta-llama/llama-4-scout-17b-16e-instruct',
+      temperature:0.0,
+      messages:[{ role:'user', content:[
+        { type:'text', text:'Look at the badge shape at the bottom of this image and read the single page number inside it. Reply with ONLY the integer digits (for example 1, 2, 16). No words, no punctuation.' },
+        { type:'image_url', image_url:{ url:dataUrl } }
+      ]}]
+    };
+    return fetch('https://api.groq.com/openai/v1/chat/completions',{
+      method:'POST',
+      headers:{ 'Content-Type':'application/json', 'Authorization':'Bearer '+key },
+      body:JSON.stringify(payload)
+    }).then(function(res){
+      return res.json().then(function(data){
+        if(!res.ok){
+          if(res.status===429 && retries>0) return delay(3000).then(function(){ return llamaVision(dataUrl, retries-1); });
+          if(res.status===401) throw new Error('bad-key');
+          throw new Error((data.error&&data.error.message)||('server-'+res.status));
+        }
+        return (data.choices&&data.choices[0]&&data.choices[0].message&&data.choices[0].message.content||'').trim();
+      });
+    }).catch(function(e){
+      if(e.message==='bad-key') throw e;
+      if(e.name==='TypeError' || /Failed to fetch/i.test(e.message)) throw new Error('network');
+      if(retries>0) return delay(2000).then(function(){ return llamaVision(dataUrl, retries-1); });
+      throw e;
+    });
+  }
+
   // ---------- Add files ----------
   function addFiles(fileList){
     var arr=[].slice.call(fileList).filter(function(f){ return /^image\//.test(f.type) || /\.(png|jpe?g|webp|gif|bmp)$/i.test(f.name); });
@@ -603,17 +794,36 @@
   }
 
   // ---------- Scan all ----------
+  // ---------- Live scan panel ----------
+  function liveShow(on){ $('live').classList[on?'add':'remove']('show'); }
+  function liveUpdate(cropDataUrl, ans, busy){
+    if(cropDataUrl) $('liveCrop').src=cropDataUrl;
+    var a=$('liveAns');
+    a.textContent = ans;
+    a.className = 'ans' + (busy||ans==='-'||ans==='...' ? ' dim' : '');
+  }
+
   function scanAll(){
     var pend=items.filter(function(it){ return it._img; });
     if(!pend.length){ toast('Add some images first'); return; }
+    if(engine==='vision'){
+      if(!getKey()){ openKeyModal(); return; }
+      scanVision(pend);
+    } else {
+      scanLocal(pend);
+    }
+  }
+
+  // ---- On-device (Tesseract) ----
+  function scanLocal(pend){
     $('scanBtn').disabled=true;
     ensureWorker().then(function(){
       var z=zone(), i=0;
       function next(){
         if(i>=pend.length){
-          progress(null); setEngine('on','OCR engine ready');
+          progress(null); liveShow(false); setEngine('on','On-device reader ready');
           render(); updateBar(); $('scanBtn').disabled=false;
-          toast('Scan complete');
+          toast('Scan complete'); maybeBuildBooklet();
           return;
         }
         var it=pend[i];
@@ -622,8 +832,6 @@
         it.located=oc.located;
         recognize(oc.clean).then(function(r){
           it.num=r.txt; it.conf=r.conf;
-          // a successful read is OK; only flag when nothing was found.
-          // confidence is shown for information but never demotes a real read.
           it.status = !r.txt ? 'bad' : ((r.conf>0 && r.conf<40) ? 'warn' : 'ok');
           i++; render(); setTimeout(next, 0);
         }).catch(function(){
@@ -632,11 +840,50 @@
       }
       next();
     }).catch(function(){
-      // engine failed: leave for manual entry
-      $('scanBtn').disabled=false; progress(null);
+      $('scanBtn').disabled=false; progress(null); liveShow(false);
       render(); updateBar();
-      toast('Engine unavailable - enter numbers by hand');
+      toast('On-device reader unavailable - enter numbers by hand');
     });
+  }
+
+  // ---- AI Vision (Llama 4 Scout) ----
+  function scanVision(pend){
+    $('scanBtn').disabled=true;
+    setEngine('busy','AI Vision reading pages...');
+    liveShow(true); liveUpdate('', '-', true);
+    var maxExpect=pend.length;
+    var i=0, stop=false;
+    function finish(msg){
+      progress(null); liveShow(false);
+      setEngine('on', stop?'AI Vision paused':'AI Vision ready');
+      render(); updateBar(); $('scanBtn').disabled=false;
+      if(msg) toast(msg);
+      if(!stop) maybeBuildBooklet();
+    }
+    function next(){
+      if(stop) { finish(); return; }
+      if(i>=pend.length){ finish('Scan complete'); return; }
+      var it=pend[i];
+      progress(0.05 + 0.95*(i/pend.length), 'AI reading page '+(i+1)+' of '+pend.length);
+      var crop=cloudCrop(it._img);
+      liveUpdate(crop, '...', true);
+      it.located=true;
+      llamaVision(crop).then(function(reply){
+        var num=extractNumber(reply, maxExpect);
+        it.num=num; it.conf=num?100:0;
+        it.status = num ? 'ok' : 'bad';
+        liveUpdate(crop, num||'?', !num);
+        i++; render();
+        // Groq llama-4-scout free tier ~30 req/min -> ~2s spacing
+        if(i<pend.length) setTimeout(next, 2000); else next();
+      }).catch(function(e){
+        stop=true; liveUpdate(crop, '!', true);
+        if(e.message==='bad-key'){ render(); finish(); openKeyModal('That key was rejected. Paste a valid Groq key.'); return; }
+        if(e.message==='network'){ render(); finish('Could not reach Groq - check connection or switch to On-device'); return; }
+        render(); finish('AI error: '+e.message);
+      });
+    }
+    next();
   }
 
   // ---------- Naming ----------
@@ -786,10 +1033,13 @@
     $('scanBtn').disabled = n===0;
     $('zipBtn').disabled = ready===0;
     $('folderBtn').disabled = ready===0;
-    if(n===0){ $('barSummary').innerHTML='Add images to begin'; return; }
+    var bookable = ready>0 && ready===n && dups===0;
+    $('bookBtn').disabled = !bookable;
+    if(n===0){ $('barSummary').innerHTML='Add images to begin'; refreshBooklet(); return; }
     var msg='<b>'+ready+'</b> of <b>'+n+'</b> ready to rename';
     if(dups) msg+=' &middot; <span style="color:var(--bad)">'+dups+' duplicate</span>';
     $('barSummary').innerHTML=msg;
+    refreshBooklet();
   }
 
   // ---------- CRC32 + ZIP (store only, validated) ----------
@@ -890,6 +1140,144 @@
     }).catch(function(){ progress(null); $('folderBtn').disabled=false; });
   }
 
+  // ---------- RTL saddle-stitch booklet ----------
+  // Imposition mirrors the validated layout: pad to a multiple of 4, then pair
+  // outer pages with inner ones, alternating left/right per sheet face so the
+  // folded stack reads right-to-left (Arabic), page 1 on the right.
+  function computePairs(){
+    var ready=items.filter(function(it){return it.num;});
+    if(!ready.length) return [];
+    var byNum={};
+    ready.forEach(function(it){
+      var n=parseInt(it.num,10);
+      if(n>0) byNum[n]=it;
+    });
+    var paddedTotal=Math.ceil(ready.length/4)*4;
+    if(paddedTotal<4) paddedTotal=4;
+    var pagesArr=new Array(paddedTotal).fill(null);
+    for(var n=1;n<=paddedTotal;n++) pagesArr[n-1]=byNum[n]||null;
+
+    var out=[];
+    for(var i=0;i<paddedTotal/2;i++){
+      if(i%2===0){
+        out.push({ left:pagesArr[i], right:pagesArr[paddedTotal-i-1], leftNum:i+1, rightNum:paddedTotal-i, sheet:Math.floor(i/2)+1 });
+      } else {
+        out.push({ left:pagesArr[paddedTotal-i-1], right:pagesArr[i], leftNum:paddedTotal-i, rightNum:i+1, sheet:Math.floor(i/2)+1 });
+      }
+    }
+    return out;
+  }
+
+  function maybeBuildBooklet(){ refreshBooklet(); }
+
+  function refreshBooklet(){
+    var n=items.length, ready=items.filter(function(it){return it.num;}).length;
+    var dups=items.filter(function(it){return it._dup;}).length;
+    var bookable = ready>0 && ready===n && dups===0;
+    var card=$('bookletCard');
+    if(!bookable){ card.classList.remove('show'); return; }
+    card.classList.add('show');
+    pairs=computePairs();
+    var total=pairs.length*2;
+    var sheets=total/2;
+    $('bkSub').textContent = total+' pages \u00b7 '+sheets+' A4 sheet'+(sheets>1?'s':'')+' (double-sided)';
+    renderSheets();
+  }
+
+  function renderSheets(){
+    var box=$('sheets'); box.innerHTML='';
+    pairs.forEach(function(p, idx){
+      var face = idx%2===0 ? 'front' : 'back';
+      var w=document.createElement('div'); w.className='sheet-wrap';
+      function cell(side, pg, it){
+        var inner = it ? '<img src="'+(it._url||it.thumb||'')+'" alt="">' : '<span class="blank">blank</span>';
+        return '<div class="half '+side+'"><span class="pnum">p'+pg+'</span>'+inner+'</div>';
+      }
+      w.innerHTML =
+        '<div class="sheet-cap">Sheet '+p.sheet+' \u00b7 '+face+'</div>'+
+        '<div class="sheet">'+
+          cell('l', p.leftNum, p.left)+
+          '<div class="fold"></div>'+
+          cell('r', p.rightNum, p.right)+
+        '</div>';
+      box.appendChild(w);
+    });
+  }
+
+  // Render one page image to a print-sized JPEG data URL
+  function pageDataUrl(it){
+    return new Promise(function(res){
+      var img=it._img;
+      if(!img){ res(null); return; }
+      var maxEdge=1800;
+      var w=img.naturalWidth, h=img.naturalHeight;
+      var s=Math.min(1, maxEdge/Math.max(w,h));
+      var cw=Math.max(1,Math.round(w*s)), ch=Math.max(1,Math.round(h*s));
+      var cv=document.createElement('canvas'); cv.width=cw; cv.height=ch;
+      var ctx=cv.getContext('2d'); ctx.imageSmoothingEnabled=true;
+      ctx.fillStyle='#fff'; ctx.fillRect(0,0,cw,ch);
+      ctx.drawImage(img,0,0,cw,ch);
+      res({ url:cv.toDataURL('image/jpeg',0.92), w:cw, h:ch });
+    });
+  }
+
+  function buildBookletPDF(){
+    if(!(window.jspdf && window.jspdf.jsPDF)){ toast('PDF library not loaded - check connection'); return; }
+    pairs=computePairs();
+    if(!pairs.length){ toast('Number the pages first'); return; }
+    $('bookBtn').disabled=true; progress(0.02,'Building print booklet...');
+    var flat=[];
+    pairs.forEach(function(p){ flat.push(p.left, p.right); });
+    var cache={};
+    function getUrl(it){
+      if(!it) return Promise.resolve(null);
+      if(cache[it.id]) return Promise.resolve(cache[it.id]);
+      return pageDataUrl(it).then(function(d){ cache[it.id]=d; return d; });
+    }
+    var uniq=[]; var seen={};
+    flat.forEach(function(it){ if(it && !seen[it.id]){ seen[it.id]=1; uniq.push(it); } });
+    var done=0;
+    function loadNext(i){
+      if(i>=uniq.length) return Promise.resolve();
+      progress(0.02 + 0.7*(i/uniq.length), 'Preparing page '+(i+1)+' of '+uniq.length);
+      return getUrl(uniq[i]).then(function(){ done++; return loadNext(i+1); });
+    }
+    loadNext(0).then(function(){
+      progress(0.78,'Composing PDF...');
+      var jsPDF=window.jspdf.jsPDF;
+      var pdf=new jsPDF({ orientation:'l', unit:'mm', format:'a4' });
+      var halfW=148.5, fullH=210;
+      function place(d, xOff){
+        if(!d) return;
+        var ratio=Math.min(halfW/d.w, fullH/d.h);
+        var w=d.w*ratio, h=d.h*ratio;
+        var x=xOff+(halfW-w)/2, y=(fullH-h)/2;
+        pdf.addImage(d.url,'JPEG', x,y,w,h);
+      }
+      pairs.forEach(function(p, idx){
+        if(idx>0) pdf.addPage();
+        place(cache[p.left&&p.left.id], 0);
+        place(cache[p.right&&p.right.id], halfW);
+      });
+      progress(0.96,'Saving...');
+      try{
+        var fname=($('pattern').value||'booklet').replace(/\{n\}/g,'').replace(/[^a-z0-9_-]+/gi,'').replace(/^[-_]+|[-_]+$/g,'')||'booklet';
+        pdf.save(fname+'-RTL-print.pdf');
+        toast('Booklet PDF ready - '+pairs.length+' sheets');
+      }catch(e){ toast('Could not save PDF'); }
+      progress(null); $('bookBtn').disabled=false;
+    }).catch(function(){ progress(null); $('bookBtn').disabled=false; toast('Booklet build failed'); });
+  }
+
+  // ---------- Settings modal ----------
+  function openKeyModal(msg){
+    $('modalKey').value=getKey();
+    $('keyModal').classList.add('show');
+    setTimeout(function(){ $('modalKey').focus(); }, 50);
+    if(msg) toast(msg);
+  }
+  function closeKeyModal(){ $('keyModal').classList.remove('show'); }
+
   // ---------- Sort ----------
   function sortByNumber(){
     items.sort(function(a,b){
@@ -911,20 +1299,63 @@
   ['dragover','drop'].forEach(function(ev){ window.addEventListener(ev, function(e){ e.preventDefault(); }); });
 
   $('scanBtn').addEventListener('click', scanAll);
-  $('rescan').addEventListener('click', scanAll);
+  $('rescan').addEventListener('click', function(){
+    var pend=items.filter(function(it){ return it._img; });
+    if(!pend.length){ toast('Add some images first'); return; }
+    scanLocal(pend);
+  });
   $('zipBtn').addEventListener('click', downloadZip);
   $('folderBtn').addEventListener('click', saveToFolder);
+  $('bookBtn').addEventListener('click', buildBookletPDF);
   $('sortBtn').addEventListener('click', sortByNumber);
   $('clearBtn').addEventListener('click', function(){
     items.forEach(function(it){ if(it._url) URL.revokeObjectURL(it._url); });
-    items=[]; render(); drawPreview(); updateBar(); toast('Cleared');
+    items=[]; pairs=[]; render(); drawPreview(); updateBar(); toast('Cleared');
   });
   $('pattern').addEventListener('input', function(){ updateNamesOnly(); });
   $('pad').addEventListener('change', function(){ updateNamesOnly(); });
 
+  // ---- Engine selector ----
+  function selectEngine(type){
+    engine = (type==='local') ? 'local' : 'vision';
+    $('engVision').classList.toggle('on', engine==='vision');
+    $('engLocal').classList.toggle('on', engine==='local');
+    $('keyRow').classList.toggle('show', engine==='vision');
+    $('scanBtn').textContent = engine==='vision' ? 'Scan with AI Vision' : 'Scan numbers';
+    setEngine(engine==='vision'?'':'', engine==='vision'
+      ? 'AI Vision reads each badge directly - highest accuracy'
+      : 'Finds the badge on-device - works offline');
+  }
+  $('engVision').addEventListener('click', function(){ selectEngine('vision'); });
+  $('engLocal').addEventListener('click', function(){ selectEngine('local'); });
+
+  // ---- AI key (inline) ----
+  function showSaved(){ var s=$('keySaved'); s.classList.add('show'); setTimeout(function(){ s.classList.remove('show'); }, 1800); }
+  if(getKey()) $('apiKey').value=getKey();
+  $('saveKey').addEventListener('click', function(){
+    setKey($('apiKey').value.trim()); showSaved(); toast(getKey()?'Key saved on this device':'Key cleared');
+  });
+  $('apiKey').addEventListener('keydown', function(e){ if(e.key==='Enter'){ $('saveKey').click(); } });
+
+  // ---- Key modal ----
+  $('modalSave').addEventListener('click', function(){
+    var v=$('modalKey').value.trim();
+    if(!v){ toast('Paste a key, or pick on-device'); return; }
+    setKey(v); $('apiKey').value=v; closeKeyModal();
+    var pend=items.filter(function(it){ return it._img; });
+    if(pend.length) scanVision(pend);
+  });
+  $('modalLocal').addEventListener('click', function(){
+    closeKeyModal(); selectEngine('local');
+    var pend=items.filter(function(it){ return it._img; });
+    if(pend.length) scanLocal(pend);
+  });
+  $('keyModal').addEventListener('click', function(e){ if(e.target===$('keyModal')) closeKeyModal(); });
+
   if(window.showDirectoryPicker) $('folderBtn').style.display='inline-flex';
 
   // initial
+  selectEngine('vision');
   updateBar();
 })();
 </script>
