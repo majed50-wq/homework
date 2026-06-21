@@ -754,7 +754,14 @@ class TesseractAdapter extends OcrAdapter {
    - models fetched + cached by the browser/paddle-js on first use
    - returns line-level boxes (from detection polygons) so geometry survives
    Model source is configurable so PP-OCRv5 / Arabic weights can be supplied. */
-const PADDLE_ESM = "https://esm.sh/@paddle-js-models/ocr@4.0.0";
+/* Self-contained bundles tried in order. "?bundle"/"+esm" inline all dependencies
+   into ONE module, which avoids iOS Safari's "Importing a module script failed"
+   when transitive paddle-js sub-imports fail to resolve. */
+const PADDLE_SOURCES = [
+  "https://esm.sh/@paddle-js-models/ocr@4.0.0?bundle&target=es2020",
+  "https://cdn.jsdelivr.net/npm/@paddle-js-models/ocr@4.0.0/+esm",
+  "https://esm.sh/@paddle-js-models/ocr@4.0.0"
+];
 const PADDLE_MODELS = { det:null, rec:null };   /* null = package defaults; set URLs for PP-OCRv5 / Arabic */
 class PaddleOcrAdapter extends OcrAdapter {
   constructor(){ super(); this._mod=null; this._ready=false; }
@@ -762,10 +769,13 @@ class PaddleOcrAdapter extends OcrAdapter {
   get label(){ return "PaddleOCR Mobile"; }
   async init(progress){
     if(this._ready) return;
-    if(progress) progress("Loading PaddleOCR models (first run only)...");
-    let mod;
-    try { mod = await import(/* @vite-ignore */ PADDLE_ESM); }
-    catch(e){ const err=new Error("PaddleOCR runtime import failed: "+((e&&e.message)||e)); err.cause=e; err.stage="import"; throw err; }
+    if(progress) progress("Loading PaddleOCR runtime (first run only)...");
+    let mod=null,lastErr=null;
+    for(let i=0;i<PADDLE_SOURCES.length;i++){
+      try { mod = await import(/* @vite-ignore */ PADDLE_SOURCES[i]); this._sourceUsed=PADDLE_SOURCES[i]; break; }
+      catch(e){ lastErr=e; }
+    }
+    if(!mod){ const err=new Error("PaddleOCR runtime import failed on all sources: "+((lastErr&&lastErr.message)||lastErr)); err.cause=lastErr; err.stage="import"; throw err; }
     const api = mod.default || mod;
     try {
       if(PADDLE_MODELS.det || PADDLE_MODELS.rec) await api.init(PADDLE_MODELS.det, PADDLE_MODELS.rec);
@@ -820,21 +830,29 @@ async function diagProbeUrl(url, timeoutMs){
   }
 }
 async function runPaddleDiagnostics(){
-  const d={ runtimeUrl:PADDLE_ESM, detUrl:PADDLE_MODELS.det, recUrl:PADDLE_MODELS.rec,
+  const d={ sources:[], detUrl:PADDLE_MODELS.det, recUrl:PADDLE_MODELS.rec,
             ua:navigator.userAgent||"", browser:diagBrowser(), wasm:diagHasWasm(), webgl:diagWebGL(),
-            runtimeFetch:null, importOk:false, importErr:null, importStack:null,
+            importOk:false, importErr:null, importStack:null, usedUrl:null,
             initOk:false, initErr:null, initStack:null, det:null, rec:null, finalError:null };
-  d.runtimeFetch=await diagProbeUrl(PADDLE_ESM, 15000);
   let mod=null;
-  try{ mod=await import(/* @vite-ignore */ PADDLE_ESM); d.importOk=true; }
-  catch(e){ d.importErr=(e&&e.message)||String(e); d.importStack=(e&&e.stack)||null; d.finalError=d.finalError||d.importErr; }
+  for(let i=0;i<PADDLE_SOURCES.length;i++){
+    const url=PADDLE_SOURCES[i];
+    const entry={ url:url, fetch:await diagProbeUrl(url,15000), importOk:false, importErr:null, skipped:false };
+    if(!mod){
+      try{ const m=await import(/* @vite-ignore */ url); entry.importOk=true; mod=m; d.usedUrl=url; }
+      catch(e){ entry.importErr=(e&&e.message)||String(e); if(!d.importStack) d.importStack=(e&&e.stack)||null; }
+    } else { entry.skipped=true; }
+    d.sources.push(entry);
+  }
+  d.importOk=!!mod;
+  if(!mod){ d.importErr=d.sources.map(function(s){return s.importErr;}).filter(Boolean).join("  |  "); d.finalError=d.importErr; }
   d.det = d.detUrl ? await diagProbeUrl(d.detUrl, 25000) : { kind:"default" };
   d.rec = d.recUrl ? await diagProbeUrl(d.recUrl, 25000) : { kind:"default" };
   if(mod){
     const api=mod.default||mod;
     try{
       if(d.detUrl||d.recUrl) await api.init(d.detUrl,d.recUrl); else await api.init();
-      d.initOk=true; paddleAdapter._mod=api; paddleAdapter._ready=true;
+      d.initOk=true; paddleAdapter._mod=api; paddleAdapter._ready=true; paddleAdapter._sourceUsed=d.usedUrl;
     }catch(e){ d.initErr=(e&&e.message)||String(e); d.initStack=(e&&e.stack)||null; d.finalError=d.finalError||d.initErr; }
   }
   return d;
@@ -852,34 +870,41 @@ function fmtProbe(p){
   }
 }
 function okBad(b){ return b?'<span class="ok">\u2705</span> ':'<span class="bad">\u274C</span> '; }
+function probeTxt(p){ if(!p)return "n/a"; if(p.kind==="ok")return "OK HTTP "+p.status; if(p.kind==="http-error")return "FAIL HTTP "+p.status+" "+(p.statusText||""); if(p.kind==="timeout")return "TIMEOUT"; if(p.kind==="network-or-cors")return "NETWORK/CORS "+(p.message||""); if(p.kind==="default")return "default (internal)"; if(p.kind==="none")return "not set"; return "?"; }
 function diagToText(d){
-  function probeTxt(p){ if(!p)return "n/a"; if(p.kind==="ok")return "OK HTTP "+p.status; if(p.kind==="http-error")return "FAIL HTTP "+p.status+" "+(p.statusText||""); if(p.kind==="timeout")return "TIMEOUT"; if(p.kind==="network-or-cors")return "NETWORK/CORS "+(p.message||""); if(p.kind==="default")return "default (internal)"; if(p.kind==="none")return "not set"; return "?"; }
-  return [
-    "PaddleOCR diagnostics",
-    "Runtime URL: "+d.runtimeUrl,
-    "Runtime fetch: "+probeTxt(d.runtimeFetch),
-    "Runtime import: "+(d.importOk?"OK":("FAILED - "+(d.importErr||""))),
-    "Browser: "+d.browser,
-    "User agent: "+d.ua,
-    "WebAssembly: "+(d.wasm?"supported":"NOT supported"),
-    "WebGL: "+(d.webgl||"NOT supported"),
-    "Detector model URL: "+(d.detUrl||"(default)"),
-    "Detector download: "+probeTxt(d.det),
-    "Recognizer model URL: "+(d.recUrl||"(default)"),
-    "Recognizer download: "+probeTxt(d.rec),
-    "Init: "+(d.initOk?"OK":(d.importOk?("FAILED - "+(d.initErr||"")):"not attempted (import failed)")),
-    "Import stack: "+(d.importStack||"(none)"),
-    "Init stack: "+(d.initStack||"(none)")
-  ].join("\n");
+  const lines=["PaddleOCR diagnostics",""];
+  d.sources.forEach(function(s,i){
+    lines.push("Source "+(i+1)+": "+s.url);
+    lines.push("  fetch: "+probeTxt(s.fetch));
+    lines.push("  import: "+(s.skipped?"skipped (already loaded)":(s.importOk?"OK":("FAILED - "+(s.importErr||"")))));
+  });
+  lines.push("");
+  lines.push("Runtime import overall: "+(d.importOk?("OK via "+d.usedUrl):"FAILED on all sources"));
+  lines.push("Browser: "+d.browser);
+  lines.push("User agent: "+d.ua);
+  lines.push("WebAssembly: "+(d.wasm?"supported":"NOT supported"));
+  lines.push("WebGL: "+(d.webgl||"NOT supported"));
+  lines.push("Detector model URL: "+(d.detUrl||"(default)"));
+  lines.push("Detector download: "+probeTxt(d.det));
+  lines.push("Recognizer model URL: "+(d.recUrl||"(default)"));
+  lines.push("Recognizer download: "+probeTxt(d.rec));
+  lines.push("Init: "+(d.initOk?"OK":(d.importOk?("FAILED - "+(d.initErr||"")):"not attempted (import failed)")));
+  lines.push("Import stack: "+(d.importStack||"(none)"));
+  lines.push("Init stack: "+(d.initStack||"(none)"));
+  return lines.join("\n");
 }
 let LAST_DIAG=null;
 function renderPaddleDiag(d){
   LAST_DIAG=d;
   const rows=[];
   function row(k,v){ rows.push('<div class="diag-row"><div class="dk">'+k+'</div><div class="dv">'+v+'</div></div>'); }
-  row("Runtime URL", '<code>'+esc(d.runtimeUrl)+'</code>');
-  row("Runtime fetch", fmtProbe(d.runtimeFetch));
-  row("Runtime import", (d.importOk?'<span class="ok">\u2705</span> Loaded':'<span class="bad">\u274C</span> Failed')+(d.importErr?'<pre>'+esc(d.importErr)+(d.importStack?"\n\n"+esc(d.importStack):"")+'</pre>':''));
+  d.sources.forEach(function(s,i){
+    const imp = s.skipped ? 'skipped (runtime already loaded)'
+      : (s.importOk?'<span class="ok">\u2705</span> imported'
+         :'<span class="bad">\u274C</span> '+(s.importErr?esc(s.importErr):'failed'));
+    row("Source "+(i+1), '<code>'+esc(s.url)+'</code><br>fetch: '+fmtProbe(s.fetch)+'<br>import: '+imp);
+  });
+  row("Runtime import", d.importOk?('<span class="ok">\u2705</span> Loaded via <code>'+esc(d.usedUrl)+'</code>'):('<span class="bad">\u274C</span> Failed on all sources'+(d.importStack?'<pre>'+esc(d.importStack)+'</pre>':'')));
   row("Browser", esc(d.browser));
   row("User agent", '<code>'+esc(d.ua)+'</code>');
   row("WebAssembly", okBad(d.wasm)+(d.wasm?"Supported":"Not supported"));
