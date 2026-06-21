@@ -348,7 +348,7 @@
       <div class="cmp-pane" id="paneOrig"><div class="cap">Original scan</div><div class="cmp-frame" id="frameOrig"></div></div>
       <div class="cmp-pane" id="paneGen"><div class="cap">OCR-generated</div><div class="cmp-frame" id="frameGen"></div></div>
     </div>
-    <p class="note" style="margin-top:14px"><b>Reading this view:</b> left is the raw source scan; right is the page rebuilt from the structured model. <b>Match layout</b> redraws each detected line at its original position, size and width, so line count, block placement, margins and density mirror the page. The analyzer only classifies page number, title, body, and marginalia &mdash; it never invents headings or sections; paragraph blocks come straight from geometry. <b>Clean reflow</b> ignores geometry and typesets the text as a plain document. Switch modes with the toggle above the text.</p>
+    <p class="note" style="margin-top:14px"><b>Reading this view:</b> left is the raw source scan; right is the page rebuilt from the structured model. <b>Match layout</b> redraws each detected line at its original position, size and width, so line count, block placement, margins and density mirror the page. The analyzer classifies only three physical roles &mdash; title, body, and decoration (all page furniture: page numbers, running heads/feet, counters, margin notes, side labels). It never invents headings or sections; body blocks come straight from geometry, and decoration is never merged into body. <b>Clean reflow</b> ignores geometry and typesets the body text as a plain document. Switch modes with the toggle above the text.</p>
   </section>
 
   <section class="card" id="debug">
@@ -798,9 +798,13 @@ function setBar(frac){ const p=Math.max(0,Math.min(1,frac)); pBar.style.width=(p
 /* ---- results ---- */
 function countWords(s){ s=(s||"").trim(); return s?s.split(/\s+/).length:0; }
 function fmtTime(ms){ if(ms<1000) return Math.round(ms)+"<small>ms</small>"; if(ms<60000) return (ms/1000).toFixed(1)+"<small>s</small>"; const m=Math.floor(ms/60000),s=Math.round((ms%60000)/1000); return m+"<small>m</small> "+s+"<small>s</small>"; }
+function structWordCount(){
+  let n=0;
+  PAGE_STRUCT.forEach(function(st){ st.elements.forEach(function(el){ if(el.role==="decoration") return; const t=elText(el).trim(); if(t) n+=t.split(/\s+/).length; }); });
+  return n;
+}
 function updateEval(){
-  const combined=output.value;
-  mWords.innerHTML=String(countWords(combined.replace(/=====.+?=====/g,"")));
+  mWords.innerHTML = PAGE_STRUCT.length ? String(structWordCount()) : String(countWords(output.value));
   mConf.innerHTML=(LAST_AVG_CONF!=null)?(LAST_AVG_CONF+"<small>%</small>"):"&mdash;";
   mTime.innerHTML=LAST_PROC_MS?fmtTime(LAST_PROC_MS):"&mdash;";
   mAi.innerHTML=(LAST_AI_CHANGES!=null)?(LAST_AI_CHANGES+"<small> tok</small>"):"&mdash;";
@@ -811,13 +815,13 @@ function elText(el){ return (el.aiText!=null?el.aiText:el.text)||""; }
 function serializeStruct(st){
   const out=[];
   st.elements.forEach(function(el){
+    if(el.role==="decoration") return;            /* page furniture kept out of body text */
     const t=elText(el).trim(); if(!t) return;
-    if(el.role==="pageNumber") return;            /* page number shown separately at end */
-    out.push(t); out.push("");                    /* blocks in geometric order, blank-line separated */
+    out.push(t); out.push("");
   });
   let s=out.join("\n").replace(/\n{3,}/g,"\n\n").trim();
-  const pn=st.pageNumber?elText(st.pageNumber):null;
-  if(pn) s=s+"\n\n["+pn+"]";
+  const deco=st.elements.filter(function(e){return e.role==="decoration";}).map(function(e){return elText(e).trim();}).filter(Boolean);
+  if(deco.length) s=(s?s+"\n\n":"")+"\u2014 decoration (not counted): "+deco.join("  \u00b7  ")+" \u2014";
   return s||"(no text found)";
 }
 function structToTextarea(){
@@ -939,90 +943,104 @@ function mkEl(role,lines){
   const text=lines.map(function(l){return l.text;}).join(" ").replace(/\s{2,}/g," ").trim();
   return { id:"e"+(++__eid), role:role, bbox:bbox, lines:lines.map(function(l){return {bbox:{x0:l.x0,y0:l.y0,x1:l.x1,y1:l.y1},text:l.text};}), text:text, aiText:null, aiChanged:false };
 }
+function isCounterText(t){ const s=(t||"").trim(); return /^[\s().\-\u2013\u2014]*[0-9\u0660-\u0669]{1,4}\s*[\/\-]\s*[0-9\u0660-\u0669]{1,4}[\s().\-\u2013\u2014]*$/.test(s); }
+function hasSideLabel(t){ return /\u0647\u0627\u0645\u0634|\u062D\u0627\u0634\u064A\u0629/.test(t||""); }   /* "hamish"/"hashiya" = margin/footnote */
 function analyzeStructure(norm, aspect, label, pageIndex){
   const rawText=(norm.text||"").trim();
   const boxes=(norm.lineBoxes||[]).filter(function(l){ return l&&(l.text||"").trim(); });
   const base={ label:label, pageIndex:pageIndex, aspect:aspect||1.414, confidence:(norm.confidence!=null?norm.confidence:null),
-               rawText:rawText, pageNumber:null, title:null, marginalia:[], elements:[], paragraphs:[],
-               englishWords:englishTokens(rawText), hasGeometry:false };
+               rawText:rawText, pageNumber:null, title:null, decoration:[], elements:[], paragraphs:[],
+               englishWords:[], hasGeometry:false };
   if(boxes.length){ analyzeGeometry(base, boxes); base.hasGeometry=true; }
   else { analyzeText(base, rawText); }
   base.title=base.elements.filter(function(e){return e.role==="title";})[0]||null;
-  base.pageNumber=base.elements.filter(function(e){return e.role==="pageNumber";})[0]||null;
-  base.marginalia=base.elements.filter(function(e){return e.role==="marginalia";});
+  base.decoration=base.elements.filter(function(e){return e.role==="decoration";});
+  base.pageNumber=base.decoration.filter(function(e){return e.kind==="pageNumber";})[0]||null;
   base.paragraphs=base.elements.filter(function(e){return e.role==="body";}).map(function(e){return {id:e.id,text:elText(e)};});
+  /* metrics use book content only (title + body), never decoration (rule 5) */
+  const content=base.elements.filter(function(e){return e.role!=="decoration";}).map(function(e){return elText(e);}).join(" ");
+  base.englishWords=englishTokens(content);
   return base;
 }
-/* Geometry classification - PHYSICAL roles only: pageNumber, title, marginalia, body.
-   No headings, no sections, no semantic labels are ever created. Paragraph blocks
-   come straight from the line geometry (vertical gap / indent), nothing is invented. */
+/* Geometry classification - PHYSICAL roles only: decoration, title, body.
+   "decoration" = all page furniture (page numbers, running heads/feet, counters,
+   margin notes, side labels, publisher marks, watermarks). It is detected first,
+   never grouped, never merged into title/body, and rendered from geometry only.
+   For small isolated elements near the page edges, ambiguity resolves to decoration. */
 function analyzeGeometry(base, boxes){
   const lines=boxes.map(function(l){ return {x0:l.x0,y0:l.y0,x1:l.x1,y1:l.y1,text:tidy(l.text||"").trim()}; })
                    .filter(function(l){ return l.text; }).sort(function(a,b){ return a.y0-b.y0; });
-  if(!lines.length) return;
+  const n=lines.length; if(!n) return;
   const H=median(lines.map(function(l){return l.y1-l.y0;}))||0.02;
-  const roles=new Array(lines.length).fill("body");
+  const allGaps=[]; for(let i=1;i<n;i++){ const g=lines[i].y0-lines[i-1].y1; if(g>=0) allGaps.push(g); }
+  const Gall=median(allGaps)||0.005;
+  /* main text column from central lines */
+  const central=lines.filter(function(l){ const cy=(l.y0+l.y1)/2; return cy>=0.12&&cy<=0.88; });
+  const colLeft = central.length?median(central.map(function(l){return l.x0;})):0;
+  const colRight= central.length?median(central.map(function(l){return l.x1;})):1;
+  const colW=Math.max(0.05,colRight-colLeft);
 
-  /* 1. page number: short numeric line in the top/bottom margin band */
-  for(let i=0;i<lines.length;i++){ const cy=(lines[i].y0+lines[i].y1)/2,w=lines[i].x1-lines[i].x0;
-    if((cy<0.13||cy>0.87)&&w<0.5&&isPageNumberText(lines[i].text)) roles[i]="pageNumber"; }
-
-  /* 2. marginalia: running heads/feet at the extreme top/bottom edge, and short
-        notes sitting outside the main text column. Conservative on purpose. */
-  const colCand=lines.filter(function(l,i){ const cy=(l.y0+l.y1)/2; return roles[i]==="body"&&cy>=0.10&&cy<=0.90; });
-  const colLeft = colCand.length?median(colCand.map(function(l){return l.x0;})):0;
-  const colRight= colCand.length?median(colCand.map(function(l){return l.x1;})):1;
-  for(let i=0;i<lines.length;i++){ if(roles[i]!=="body") continue;
-    const cy=(lines[i].y0+lines[i].y1)/2,w=lines[i].x1-lines[i].x0;
-    const edge=(cy<0.06||cy>0.94)&&w<0.6;
-    const sideNote=w<0.25&&(lines[i].x1<colLeft-0.05||lines[i].x0>colRight+0.05);
-    if(edge||sideNote) roles[i]="marginalia";
+  const roles=new Array(n).fill("body"), kinds=new Array(n).fill(null);
+  for(let i=0;i<n;i++){
+    const l=lines[i],cy=(l.y0+l.y1)/2,w=l.x1-l.x0;
+    const outside=(l.x1<colLeft-0.04)||(l.x0>colRight+0.04);
+    const gapUp=i>0?(l.y0-lines[i-1].y1):Infinity, gapDown=i<n-1?(lines[i+1].y0-l.y1):Infinity;
+    const isolated=(gapUp>1.6*Gall&&gapDown>1.6*Gall)||gapUp===Infinity||gapDown===Infinity;
+    let role=null,kind=null;
+    if(isPageNumberText(l.text)&&(cy<0.14||cy>0.86)&&w<0.5){ role="decoration"; kind="pageNumber"; }
+    else if(isCounterText(l.text)&&w<0.55&&(cy<0.16||cy>0.84||outside)){ role="decoration"; kind="counter"; }
+    else if(hasSideLabel(l.text)&&w<0.5){ role="decoration"; kind="sideLabel"; }
+    else if((cy<0.11||cy>0.89)&&w<0.6*colW){ role="decoration"; kind=cy<0.5?"runningHead":"runningFoot"; }
+    else if(outside&&w<0.3){ role="decoration"; kind="marginNote"; }
+    else if(w<0.22&&(cy<0.12||cy>0.88||outside)&&isolated){ role="decoration"; kind="edge"; }
+    if(role){ roles[i]=role; kinds[i]=kind; }
   }
-
-  /* 3. title: at most one - the tallest line in the top third, only if it is
-        clearly larger than body. If nothing is clearly a title, none is created. */
+  /* title: at most one - tallest line in top third, only if clearly larger than body */
   let titleIdx=-1,titleH=0;
-  for(let i=0;i<lines.length;i++){ if(roles[i]!=="body") continue; const cy=(lines[i].y0+lines[i].y1)/2,h=lines[i].y1-lines[i].y0;
+  for(let i=0;i<n;i++){ if(roles[i]!=="body") continue; const cy=(lines[i].y0+lines[i].y1)/2,h=lines[i].y1-lines[i].y0;
     if(cy<0.30&&h>=1.5*H&&h>titleH&&(lines[i].x1-lines[i].x0)<0.9){ titleH=h; titleIdx=i; } }
   if(titleIdx>=0) roles[titleIdx]="title";
-
-  /* 4. everything else stays body. Group consecutive body lines into paragraph
-        blocks using geometry only (gap or first-line indent). */
+  /* body paragraph blocks from geometry only; decoration never participates */
   const bodyXs0=[],bodyXs1=[];
-  for(let i=0;i<lines.length;i++){ if(roles[i]==="body"){ bodyXs0.push(lines[i].x0); bodyXs1.push(lines[i].x1); } }
+  for(let i=0;i<n;i++){ if(roles[i]==="body"){ bodyXs0.push(lines[i].x0); bodyXs1.push(lines[i].x1); } }
   const leftMargin=bodyXs0.length?Math.min.apply(null,bodyXs0):0;
   const rightMargin=bodyXs1.length?Math.max.apply(null,bodyXs1):1;
-  const gaps=[]; for(let i=1;i<lines.length;i++){ if(roles[i]==="body"&&roles[i-1]==="body"){ const g=lines[i].y0-lines[i-1].y1; if(g>=0) gaps.push(g); } }
-  const G=median(gaps)||0.005;
+  const bgaps=[]; let prevBody=-1;
+  for(let i=0;i<n;i++){ if(roles[i]!=="body") continue; if(prevBody>=0){ const g=lines[i].y0-lines[prevBody].y1; if(g>=0) bgaps.push(g); } prevBody=i; }
+  const G=median(bgaps)||Gall;
   const els=[]; let para=[];
   function flushPara(){ if(para.length){ els.push(mkEl("body",para)); para=[]; } }
-  for(let i=0;i<lines.length;i++){
+  for(let i=0;i<n;i++){
     if(roles[i]==="body"){
       if(para.length){ const prev=para[para.length-1],gap=lines[i].y0-prev.y1,rtl=isArabicStr(lines[i].text);
         const indent=rtl?(lines[i].x1<rightMargin-0.035):(lines[i].x0>leftMargin+0.035);
         if(gap>1.6*G||indent) flushPara(); }
       para.push(lines[i]);
-    } else { flushPara(); els.push(mkEl(roles[i],[lines[i]])); }
+    } else { flushPara(); const el=mkEl(roles[i],[lines[i]]); if(kinds[i]) el.kind=kinds[i]; els.push(el); }
   }
   flushPara();
   base.elements=els;
 }
-/* Text fallback (no boxes): classify page numbers, everything else is body.
-   No titles, headings, or sections are invented from plain text. */
+/* Text fallback (no boxes): page numbers / counters -> decoration, everything else body. */
 function analyzeText(base, rawText){
   const blocks=parseBlocks(rawText),els=[];
   blocks.forEach(function(b){
     if(b.type==="space") return;
-    const role=isPageNumberText(b.text)?"pageNumber":"body";
-    els.push({ id:"e"+(++__eid), role:role, bbox:null, lines:[{bbox:null,text:b.text}], text:b.text, aiText:null, aiChanged:false });
+    let role="body",kind=null;
+    if(isPageNumberText(b.text)){ role="decoration"; kind="pageNumber"; }
+    else if(isCounterText(b.text)){ role="decoration"; kind="counter"; }
+    else if(hasSideLabel(b.text)){ role="decoration"; kind="sideLabel"; }
+    const el={ id:"e"+(++__eid), role:role, bbox:null, lines:[{bbox:null,text:b.text}], text:b.text, aiText:null, aiChanged:false };
+    if(kind) el.kind=kind;
+    els.push(el);
   });
   base.elements=els;
 }
 
 /* ============================================================
    PAGE REBUILDER  (reads PAGE_STRUCT; never the textarea)
-   - title / heading / pageNumber: geometry-locked (drawn at exact box)
-   - paragraph: original line boxes if untouched; reflow-in-box only if AI changed it
+   - title / decoration: geometry-locked (drawn at original boxes)
+   - body: original line boxes if untouched; reflow-in-box only if AI changed it
    ============================================================ */
 function drawLineAtBox(ctx,W,H,bbox,text){
   const txt=(text||"").trim(); if(!txt||!bbox) return;
@@ -1056,7 +1074,7 @@ function drawElement(ctx,W,H,el){
     if(el.aiChanged) reflowInBox(ctx,W,H,el);
     else el.lines.forEach(function(l){ drawLineAtBox(ctx,W,H,l.bbox,l.text); });
   } else {
-    /* title / pageNumber / marginalia: geometry-locked */
+    /* title / decoration: geometry-locked */
     if(el.lines.length===1) drawLineAtBox(ctx,W,H,el.lines[0].bbox, elText(el));
     else if(el.aiChanged) reflowInBox(ctx,W,H,el);
     else el.lines.forEach(function(l){ drawLineAtBox(ctx,W,H,l.bbox,l.text); });
@@ -1072,7 +1090,7 @@ function layoutFromStructure(st){
 function layoutStructReflow(st){
   const blocks=[];
   st.elements.forEach(function(el){
-    if(el.role==="pageNumber") return; const t=elText(el).trim(); if(!t) return;
+    if(el.role==="decoration") return; const t=elText(el).trim(); if(!t) return;
     blocks.push({type:(el.role==="title")?"h":"p",text:t}); blocks.push({type:"space"});
   });
   while(blocks.length&&blocks[blocks.length-1].type==="space") blocks.pop();
@@ -1159,22 +1177,21 @@ function tokenDiffCount(aStr,bStr){
 
 /* ---- Structure Debug View (requirement C) ---- */
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function decoKindLabel(k){ return ({pageNumber:"PG",counter:"#/#",runningHead:"HEAD",runningFoot:"FOOT",marginNote:"MARGIN",sideLabel:"LABEL",edge:"EDGE"})[k]||"DEC"; }
 function renderDebug(){
   const host=$("debugList"); if(!host) return; host.innerHTML="";
   PAGE_STRUCT.forEach(function(st){
     const paras=st.elements.filter(function(e){return e.role==="body";});
-    const marg=st.elements.filter(function(e){return e.role==="marginalia";});
-    const pn=st.pageNumber?elText(st.pageNumber):null;
+    const deco=st.elements.filter(function(e){return e.role==="decoration";});
     const title=st.title?elText(st.title):null;
     const eng=st.englishWords||[];
     const engShow=eng.slice(0,24).map(esc).join(", ")+(eng.length>24?(" \u2026 (+"+(eng.length-24)+")"):"");
-    const margHtml=marg.length?marg.map(function(e){return '<span class="dbg-chip">'+esc(elText(e))+'</span>';}).join(""):'<span class="vv muted">none detected</span>';
+    const decoHtml=deco.length?deco.map(function(e){return '<span class="dbg-chip"><b>'+decoKindLabel(e.kind)+'</b>'+esc(elText(e))+'</span>';}).join(""):'<span class="vv muted">none detected</span>';
     const d=document.createElement("div"); d.className="dbg-pg";
     d.innerHTML=
       '<div class="hd">'+esc(st.label)+'<small>'+(st.hasGeometry?"geometry":"text-only")+(st.confidence!=null?" \u00b7 "+Math.round(st.confidence)+"%":"")+'</small></div>'+
-      '<div class="dbg-row"><div class="kk">Page number</div><div class="vv'+(pn?'':' muted')+'">'+(pn?esc(pn):"none detected")+'</div></div>'+
+      '<div class="dbg-row"><div class="kk">Decoration ('+deco.length+')</div><div class="vv" dir="auto">'+decoHtml+'</div></div>'+
       '<div class="dbg-row"><div class="kk">Title</div><div class="vv'+(title?'':' muted')+'" dir="auto">'+(title?esc(title):"none detected")+'</div></div>'+
-      '<div class="dbg-row"><div class="kk">Marginalia ('+marg.length+')</div><div class="vv" dir="auto">'+margHtml+'</div></div>'+
       '<div class="dbg-row"><div class="kk">Body blocks</div><div class="vv">'+paras.length+' paragraph block'+(paras.length===1?'':'s')+' (geometry)</div></div>'+
       '<div class="dbg-row"><div class="kk">English tokens</div><div class="vv'+(eng.length?'':' muted')+'">'+(eng.length?(eng.length+" \u2014 "+engShow):"none detected")+'</div></div>';
     host.appendChild(d);
@@ -1204,7 +1221,7 @@ function collectAiElements(){
   const items=[];
   PAGE_STRUCT.forEach(function(st,pi){
     st.elements.forEach(function(el){
-      if(el.role==="pageNumber") return;
+      if(el.role==="decoration") return;
       const t=(el.text||"").trim(); if(!t) return;
       items.push({ref:el, id:"p"+pi+"_"+el.id, role:el.role, text:t});
     });
@@ -1244,7 +1261,7 @@ $("aiFix").addEventListener("click", async function() {
 
         const instructions =
 "You are an OCR correction engine for a page-structure-preserving pipeline. "+
-"You receive a JSON array of page elements, each with an id, a role (title, body, marginalia), and OCR text.\n"+
+"You receive a JSON array of page elements, each with an id, a role (title, body), and OCR text.\n"+
 "Correct ONLY OCR recognition errors in each element's text. Rules:\n"+
 "1. Return a JSON array of objects {\"id\":\"...\",\"text\":\"...\"} using the EXACT same ids. No extra keys, no commentary, no markdown.\n"+
 "2. Keep every element separate. NEVER merge, split, reorder, add, or drop elements.\n"+
@@ -1299,7 +1316,7 @@ $("aiFix").addEventListener("click", async function() {
         // refresh derived views that surface corrected text
         PAGE_STRUCT.forEach(function(st){
             st.paragraphs=st.elements.filter(function(x){return x.role==="body";}).map(function(x){return {id:x.id,text:elText(x)};});
-            st.marginalia=st.elements.filter(function(x){return x.role==="marginalia";});
+            st.decoration=st.elements.filter(function(x){return x.role==="decoration";});
         });
 
         const afterAll = elements.map(function(e){return elText(e.ref);}).join("\n");
