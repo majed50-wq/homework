@@ -136,6 +136,19 @@
   .metric .v{font-size:19px;font-weight:700;color:var(--gold-soft);font-variant-numeric:tabular-nums;line-height:1.1}
   .metric .v small{font-size:11px;font-weight:600;color:var(--muted)}
 
+  /* ---- structure debug ---- */
+  #debug{display:none}
+  .dbg-pg{border:1px solid var(--gold-line);border-radius:12px;background:rgba(0,0,0,.18);padding:13px 15px;margin-bottom:10px}
+  .dbg-pg .hd{font-size:12.5px;font-weight:700;color:var(--gold-soft);margin-bottom:10px}
+  .dbg-pg .hd small{font-weight:600;color:var(--muted-2);font-size:10.5px;margin-left:8px;letter-spacing:.04em;text-transform:uppercase}
+  .dbg-row{display:flex;gap:10px;font-size:12.5px;line-height:1.55;padding:4px 0;border-top:1px dashed var(--gold-line)}
+  .dbg-row:first-of-type{border-top:0}
+  .dbg-row .kk{flex:0 0 116px;color:var(--muted-2);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:.05em;padding-top:1px}
+  .dbg-row .vv{flex:1;min-width:0;color:var(--text);word-break:break-word}
+  .dbg-row .vv.muted{color:var(--muted-2);font-style:italic}
+  .dbg-chip{display:inline-block;background:rgba(21,184,166,.12);border:1px solid var(--gold-line);color:var(--gold-soft);border-radius:7px;padding:2px 8px;margin:2px 4px 2px 0;font-size:11.5px}
+  .dbg-chip b{color:var(--teal);font-weight:700;font-size:10px;margin-right:4px}
+
   /* ---- reconstruction mode row ---- */
   .recon-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
   .recon-lbl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2)}
@@ -308,6 +321,7 @@
       </button>
       <button class="mini" id="genPdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Generate PDF</button>
       <button class="mini" id="compareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg>Compare</button>
+      <button class="mini" id="debugBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/></svg>Structure</button>
       <button class="mini" id="copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>Copy</button>
       <button class="mini" id="download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>.txt</button>
     </div>
@@ -337,6 +351,12 @@
     <p class="note" style="margin-top:14px"><b>Reading this view:</b> left is the raw source scan; right is the page rebuilt from the OCR result. <b>Match layout</b> redraws each detected line at its original position, size and width &mdash; so line count, headings, margins and density mirror the book page (uses the raw OCR line text). <b>Clean reflow</b> ignores geometry and typesets the edited / AI-corrected text as a fresh document. Switch modes with the toggle above the text.</p>
   </section>
 
+  <section class="card" id="debug">
+    <h2>Structure debug</h2>
+    <p class="note" style="margin:-4px 0 14px">What the Structure Analyzer detected per page, before AI cleanup runs. Use this to tell apart OCR errors, structure-detection errors, and AI errors.</p>
+    <div id="debugList"></div>
+  </section>
+
 </div>
 
 <script>
@@ -362,7 +382,9 @@ let DICT=new Set();
 const MAX_AREA=15000000, MAX_SIDE=4000;
 
 /* ---- evaluation + comparison state ---- */
-let LAST_PAGES=[];          /* [{label, original}] captured per source page during a run */
+let LAST_PAGES=[];          /* per-page capture during a run: {label, original, lines, aspect} */
+let PAGE_STRUCT=[];         /* CANONICAL structured page model - single source of truth */
+let STRUCT_VERSION=0;       /* bumped whenever PAGE_STRUCT changes (run / AI cleanup) */
 let LAST_AVG_CONF=null;     /* number | null */
 let LAST_PROC_MS=0;         /* extraction wall-clock */
 let LAST_AI_CHANGES=null;   /* token-diff count after AI fix, or null */
@@ -469,7 +491,7 @@ input.addEventListener("change",function(){ addFiles(input.files); input.value="
 ["dragenter","dragover"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add("over"); }); });
 ["dragleave","drop"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove("over"); }); });
 drop.addEventListener("drop",function(e){ if(e.dataTransfer&&e.dataTransfer.files) addFiles(e.dataTransfer.files); });
-clearBtn.addEventListener("click",function(){ if(busy)return; files=[]; renderFiles(); results.style.display="none"; errorBox.style.display="none"; output.value=""; output.classList.remove("ai-fixed"); pagesEl.innerHTML=""; $("compare").style.display="none"; GEN_CACHE=null; LAST_PAGES=[]; LAST_AVG_CONF=null; LAST_PROC_MS=0; LAST_AI_CHANGES=null; });
+clearBtn.addEventListener("click",function(){ if(busy)return; files=[]; renderFiles(); results.style.display="none"; errorBox.style.display="none"; output.value=""; output.classList.remove("ai-fixed"); pagesEl.innerHTML=""; $("compare").style.display="none"; $("debug").style.display="none"; GEN_CACHE=null; LAST_PAGES=[]; PAGE_STRUCT=[]; STRUCT_VERSION=0; LAST_AVG_CONF=null; LAST_PROC_MS=0; LAST_AI_CHANGES=null; });
 function showError(m){ errorBox.textContent=m; errorBox.style.display="block"; }
 
 /* ============================================================ PREPROCESSING ============================================================ */
@@ -682,7 +704,7 @@ runBtn.addEventListener("click", async function(){
   if(busy||files.length===0) return;
   busy=true; runBtn.disabled=true; clearBtn.disabled=true;
   errorBox.style.display="none"; results.style.display="none"; pagesEl.innerHTML=""; output.value=""; output.classList.remove("ai-fixed");
-  $("compare").style.display="none"; GEN_CACHE=null; LAST_PAGES=[]; LAST_AVG_CONF=null; LAST_AI_CHANGES=null;
+  $("compare").style.display="none"; $("debug").style.display="none"; GEN_CACHE=null; LAST_PAGES=[]; PAGE_STRUCT=[]; LAST_AVG_CONF=null; LAST_AI_CHANGES=null;
   progress.style.display="block"; setBar(0); pLabel.textContent="Preparing files..."; pSub.textContent="";
   const t0=performance.now();
 
@@ -757,7 +779,16 @@ runBtn.addEventListener("click", async function(){
       job.done(); setBar((i+1)/jobs.length);
     }
     LAST_PROC_MS=performance.now()-t0;
-    renderResults(collected);
+    /* ---- Structure Analyzer: build the canonical page model ---- */
+    PAGE_STRUCT=collected.map(function(it,idx){
+      const lp=LAST_PAGES[idx]||{};
+      const norm={ text:it.text, lineBoxes:lp.lines||[], confidence:it.conf };
+      const st=analyzeStructure(norm, lp.aspect||1.414, it.label, idx);
+      st.original=lp.original||null; st.source=it.source; st.thumb=it.thumb||null;
+      return st;
+    });
+    STRUCT_VERSION++; GEN_CACHE=null; LAST_AI_CHANGES=null;
+    renderResults();
   } catch(err){ showError((err&&err.message)?err.message:"Something went wrong during extraction."); }
   finally{ progress.style.display="none"; busy=false; clearBtn.disabled=false; runBtn.disabled=files.length===0; jobProgress=function(){}; }
 });
@@ -774,23 +805,43 @@ function updateEval(){
   mTime.innerHTML=LAST_PROC_MS?fmtTime(LAST_PROC_MS):"&mdash;";
   mAi.innerHTML=(LAST_AI_CHANGES!=null)?(LAST_AI_CHANGES+"<small> tok</small>"):"&mdash;";
 }
-function renderResults(items){
-  const combined=items.map(function(it){ return "===== "+it.label+" =====\n\n"+(it.text||"(no text found)"); }).join("\n\n\n");
-  output.value=combined;
-  const confs=items.filter(function(i){return i.conf!=null&&i.conf>0;}).map(function(i){return i.conf;});
+/* current text of an element (AI-corrected if present) */
+function elText(el){ return (el.aiText!=null?el.aiText:el.text)||""; }
+/* readable serialization of the structured model (textarea is a VIEW only) */
+function serializeStruct(st){
+  const out=[];
+  st.elements.forEach(function(el,i){
+    const t=elText(el).trim(); if(!t) return;
+    if(el.role==="pageNumber") return;            /* page numbers shown separately at end */
+    if(el.role==="title"){ out.push(t); out.push(""); }
+    else if(el.role==="heading"){ out.push(""); out.push(t); out.push(""); }
+    else { out.push(t); out.push(""); }
+  });
+  let s=out.join("\n").replace(/\n{3,}/g,"\n\n").trim();
+  const pn=st.pageNumber?elText(st.pageNumber):null;
+  if(pn) s=s+"\n\n["+pn+"]";
+  return s||"(no text found)";
+}
+function structToTextarea(){
+  output.value=PAGE_STRUCT.map(function(st){ return "===== "+st.label+" =====\n\n"+serializeStruct(st); }).join("\n\n\n");
+}
+function renderResults(){
+  structToTextarea();
+  const confs=PAGE_STRUCT.filter(function(s){return s.confidence!=null&&s.confidence>0;}).map(function(s){return s.confidence;});
   LAST_AVG_CONF=confs.length?Math.round(confs.reduce(function(a,b){return a+b;},0)/confs.length):null;
   updateEval();
   pagesEl.innerHTML="";
-  items.forEach(function(it){
+  PAGE_STRUCT.forEach(function(st){
     const d=document.createElement("details"); d.className="pg";
     d.innerHTML='<summary><svg class="chev" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2l4 4-4 4"/></svg><span class="ttl"></span><span class="tag"></span></summary><div class="page-body"></div>';
-    d.querySelector(".ttl").textContent=it.label;
-    d.querySelector(".tag").textContent=it.source+(it.conf!=null&&it.conf>0?" "+Math.round(it.conf)+"%":"");
+    d.querySelector(".ttl").textContent=st.label;
+    d.querySelector(".tag").textContent=(st.source||"")+(st.confidence!=null&&st.confidence>0?" "+Math.round(st.confidence)+"%":"");
     const body=d.querySelector(".page-body");
-    if(it.thumb){ const th=document.createElement("div"); th.className="thumb"; th.innerHTML='<img alt="page">'+(it.source.indexOf("text layer")>=0?'':'<div class="cap">what the OCR sees</div>'); th.querySelector("img").src=it.thumb; body.appendChild(th); }
-    const tx=document.createElement("div"); tx.className="page-text"; tx.setAttribute("dir","auto"); tx.textContent=it.text||"(no text found)"; body.appendChild(tx);
+    if(st.thumb){ const th=document.createElement("div"); th.className="thumb"; th.innerHTML='<img alt="page">'+((st.source||"").indexOf("text layer")>=0?'':'<div class="cap">what the OCR sees</div>'); th.querySelector("img").src=st.thumb; body.appendChild(th); }
+    const tx=document.createElement("div"); tx.className="page-text"; tx.setAttribute("dir","auto"); tx.textContent=serializeStruct(st); body.appendChild(tx);
     pagesEl.appendChild(d);
   });
+  renderDebug();
   results.style.display="block"; results.scrollIntoView({behavior:"smooth",block:"start"});
 }
 
@@ -864,54 +915,170 @@ function layoutToCanvases(blocks){
   });
   canvases.push(c); return canvases;
 }
-function genSig(){ const v=output.value; return RECON_MODE+"|"+v.length+"|"+v.slice(0,160)+"|"+v.slice(-120); }
-/* LAYOUT mode: redraw each OCR line at its detected position / size / width
-   so the result mirrors the original page geometry (line count, block width,
-   heading placement, margins, density) rather than reflowing for readability. */
-function layoutFromGeometry(lines,aspect){
-  const W=PG_W,H=Math.max(200,Math.round(PG_W*(aspect||1.414)));
+function genSig(){ return RECON_MODE+"|v"+STRUCT_VERSION; }
+
+/* ============================================================
+   STRUCTURE ANALYZER
+   Engine-agnostic: consumes a normalised OCR result {text, lineBoxes, confidence}.
+   Output (PAGE_STRUCT entry) is the single source of truth for rendering,
+   comparison, PDF, and AI cleanup. Adding a new engine = produce that triple.
+   ============================================================ */
+function median(arr){ if(!arr.length) return 0; const a=arr.slice().sort(function(x,y){return x-y;}),m=a.length>>1; return a.length%2?a[m]:(a[m-1]+a[m])/2; }
+function isPageNumberText(t){
+  const s=(t||"").trim(); if(!s) return false;
+  const core=s.replace(/^[\s().\-\u2013\u2014_]+|[\s().\-\u2013\u2014_]+$/g,"").replace(/^(page|pg|p|\u0635\u0641\u062d\u0629|\u0635)\s*[.:]?\s*/i,"");
+  return core.length>0&&core.length<=4&&/^[0-9\u0660-\u0669]+$/.test(core);
+}
+function englishTokens(text){
+  const out=[],seen={};
+  (text.match(/[A-Za-z][A-Za-z'\-]*/g)||[]).forEach(function(w){ if(w.length>=2){ const k=w.toLowerCase(); if(!seen[k]){ seen[k]=1; out.push(w); } } });
+  return out;
+}
+let __eid=0;
+function mkEl(role,lines){
+  const bbox={x0:Math.min.apply(null,lines.map(function(l){return l.x0;})),y0:Math.min.apply(null,lines.map(function(l){return l.y0;})),
+              x1:Math.max.apply(null,lines.map(function(l){return l.x1;})),y1:Math.max.apply(null,lines.map(function(l){return l.y1;}))};
+  const text=lines.map(function(l){return l.text;}).join(" ").replace(/\s{2,}/g," ").trim();
+  return { id:"e"+(++__eid), role:role, bbox:bbox, lines:lines.map(function(l){return {bbox:{x0:l.x0,y0:l.y0,x1:l.x1,y1:l.y1},text:l.text};}), text:text, aiText:null, aiChanged:false };
+}
+function analyzeStructure(norm, aspect, label, pageIndex){
+  const rawText=(norm.text||"").trim();
+  const boxes=(norm.lineBoxes||[]).filter(function(l){ return l&&(l.text||"").trim(); });
+  const base={ label:label, pageIndex:pageIndex, aspect:aspect||1.414, confidence:(norm.confidence!=null?norm.confidence:null),
+               rawText:rawText, pageNumber:null, title:null, elements:[], headings:[], paragraphs:[],
+               englishWords:englishTokens(rawText), detectedSections:[], hasGeometry:false };
+  if(boxes.length){ analyzeGeometry(base, boxes); base.hasGeometry=true; }
+  else { analyzeText(base, rawText); }
+  base.headings=base.elements.filter(function(e){return e.role==="heading";}).map(function(e){return {id:e.id,text:elText(e),level:e.level||1};});
+  base.paragraphs=base.elements.filter(function(e){return e.role==="paragraph";}).map(function(e){return {id:e.id,text:elText(e)};});
+  base.title=base.elements.filter(function(e){return e.role==="title";})[0]||null;
+  base.pageNumber=base.elements.filter(function(e){return e.role==="pageNumber";})[0]||null;
+  base.detectedSections=buildSections(base.elements);
+  return base;
+}
+function buildSections(elements){
+  const secs=[]; let cur=null;
+  elements.forEach(function(e){
+    if(e.role==="title"||e.role==="pageNumber") return;
+    if(e.role==="heading"){ cur={heading:elText(e),paragraphs:[]}; secs.push(cur); }
+    else if(e.role==="paragraph"){ if(!cur){ cur={heading:null,paragraphs:[]}; secs.push(cur); } cur.paragraphs.push(elText(e)); }
+  });
+  return secs;
+}
+function analyzeGeometry(base, boxes){
+  const lines=boxes.map(function(l){ return {x0:l.x0,y0:l.y0,x1:l.x1,y1:l.y1,text:tidy(l.text||"").trim()}; })
+                   .filter(function(l){ return l.text; }).sort(function(a,b){ return a.y0-b.y0; });
+  if(!lines.length) return;
+  const H=median(lines.map(function(l){return l.y1-l.y0;}))||0.02;
+  const leftMargin=Math.min.apply(null,lines.map(function(l){return l.x0;}));
+  const rightMargin=Math.max.apply(null,lines.map(function(l){return l.x1;}));
+  const roles=new Array(lines.length).fill("body");
+  for(let i=0;i<lines.length;i++){ const cy=(lines[i].y0+lines[i].y1)/2,w=lines[i].x1-lines[i].x0;
+    if((cy<0.13||cy>0.87)&&w<0.5&&isPageNumberText(lines[i].text)) roles[i]="pageNumber"; }
+  let titleIdx=-1,titleH=0;
+  for(let i=0;i<lines.length;i++){ if(roles[i]!=="body") continue; const cy=(lines[i].y0+lines[i].y1)/2,h=lines[i].y1-lines[i].y0;
+    if(cy<0.34&&h>=1.45*H&&h>titleH&&(lines[i].x1-lines[i].x0)<0.92){ titleH=h; titleIdx=i; } }
+  if(titleIdx>=0) roles[titleIdx]="title";
+  for(let i=0;i<lines.length;i++){ if(roles[i]!=="body") continue; if((lines[i].y1-lines[i].y0)>=1.18*H) roles[i]="heading"; }
+  const gaps=[]; for(let i=1;i<lines.length;i++){ if(roles[i]==="body"&&roles[i-1]==="body"){ const g=lines[i].y0-lines[i-1].y1; if(g>=0) gaps.push(g); } }
+  const G=median(gaps)||0.005;
+  const els=[]; let para=[];
+  function flushPara(){ if(para.length){ els.push(mkEl("paragraph",para)); para=[]; } }
+  for(let i=0;i<lines.length;i++){
+    if(roles[i]==="body"){
+      if(para.length){ const prev=para[para.length-1],gap=lines[i].y0-prev.y1,rtl=isArabicStr(lines[i].text);
+        const indent=rtl?(lines[i].x1<rightMargin-0.035):(lines[i].x0>leftMargin+0.035);
+        if(gap>1.6*G||indent) flushPara(); }
+      para.push(lines[i]);
+    } else {
+      flushPara(); const el=mkEl(roles[i],[lines[i]]);
+      if(roles[i]==="heading") el.level=(lines[i].y1-lines[i].y0)>=1.4*H?1:2;
+      els.push(el);
+    }
+  }
+  flushPara();
+  base.elements=els;
+}
+function analyzeText(base, rawText){
+  const blocks=parseBlocks(rawText),els=[]; let first=true;
+  blocks.forEach(function(b){
+    if(b.type==="space") return;
+    let role=b.type==="h"?"heading":"paragraph";
+    if(isPageNumberText(b.text)) role="pageNumber";
+    else if(first&&b.type==="h") role="title";
+    const el={ id:"e"+(++__eid), role:role, bbox:null, lines:[{bbox:null,text:b.text}], text:b.text, aiText:null, aiChanged:false };
+    if(role==="heading") el.level=2;
+    els.push(el); first=false;
+  });
+  base.elements=els;
+}
+
+/* ============================================================
+   PAGE REBUILDER  (reads PAGE_STRUCT; never the textarea)
+   - title / heading / pageNumber: geometry-locked (drawn at exact box)
+   - paragraph: original line boxes if untouched; reflow-in-box only if AI changed it
+   ============================================================ */
+function drawLineAtBox(ctx,W,H,bbox,text){
+  const txt=(text||"").trim(); if(!txt||!bbox) return;
+  const x0=bbox.x0*W,y0=bbox.y0*H,x1=bbox.x1*W,y1=bbox.y1*H;
+  const boxW=Math.max(6,x1-x0),boxH=Math.max(8,y1-y0),rtl=isArabicStr(txt);
+  let size=Math.round(boxH*0.80); if(size<11) size=11; if(size>150) size=150;
+  ctx.font="400 "+size+"px "+(rtl?"Amiri":"Georgia,'Amiri',serif");
+  const tw=ctx.measureText(txt).width||1,sx=Math.max(0.35,Math.min(1.12,boxW/tw)),baseline=y1-boxH*0.16;
+  ctx.save(); ctx.fillStyle="#15201f"; ctx.direction=rtl?"rtl":"ltr";
+  if(rtl){ ctx.translate(x1,0); ctx.scale(sx,1); ctx.textAlign="right"; ctx.fillText(txt,0,baseline); }
+  else { ctx.translate(x0,0); ctx.scale(sx,1); ctx.textAlign="left"; ctx.fillText(txt,0,baseline); }
+  ctx.restore();
+}
+function reflowInBox(ctx,W,H,el){
+  const txt=elText(el).trim(); if(!txt||!el.bbox) return;
+  const x0=el.bbox.x0*W,y0=el.bbox.y0*H,x1=el.bbox.x1*W,y1=el.bbox.y1*H,boxW=Math.max(20,x1-x0);
+  const lineHs=el.lines.map(function(l){return l.bbox?(l.bbox.y1-l.bbox.y0)*H:(y1-y0);});
+  let size=Math.round((median(lineHs)||(y1-y0))*0.80); if(size<11) size=11; if(size>150) size=150;
+  const rtl=isArabicStr(txt);
+  ctx.font="400 "+size+"px "+(rtl?"Amiri":"Georgia,'Amiri',serif");
+  const wrapped=wrapLine(ctx,txt,boxW),lh=Math.round(size*1.5);
+  ctx.save(); ctx.fillStyle="#15201f"; ctx.direction=rtl?"rtl":"ltr"; ctx.textAlign=rtl?"right":"left";
+  let yy=y0+size;
+  wrapped.forEach(function(ln){ ctx.fillText(ln, rtl?x1:x0, yy); yy+=lh; });
+  ctx.restore();
+}
+function drawElement(ctx,W,H,el){
+  if(!el.bbox) return;
+  if(el.role==="paragraph"){
+    if(el.aiChanged) reflowInBox(ctx,W,H,el);
+    else el.lines.forEach(function(l){ drawLineAtBox(ctx,W,H,l.bbox,l.text); });
+  } else {
+    if(el.lines.length===1) drawLineAtBox(ctx,W,H,el.lines[0].bbox, elText(el));
+    else if(el.aiChanged) reflowInBox(ctx,W,H,el);
+    else el.lines.forEach(function(l){ drawLineAtBox(ctx,W,H,l.bbox,l.text); });
+  }
+}
+function layoutFromStructure(st){
+  const W=PG_W,H=Math.max(200,Math.round(PG_W*(st.aspect||1.414)));
   const c=document.createElement("canvas"); c.width=W; c.height=H;
   const ctx=c.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,W,H); ctx.textBaseline="alphabetic";
-  lines.forEach(function(ln){
-    const txt=tidy(ln.text||"").trim(); if(!txt) return;
-    const x0=ln.x0*W,y0=ln.y0*H,x1=ln.x1*W,y1=ln.y1*H;
-    const boxW=Math.max(6,x1-x0),boxH=Math.max(8,y1-y0);
-    const rtl=isArabicStr(txt);
-    let size=Math.round(boxH*0.80); if(size<11) size=11; if(size>140) size=140;
-    const fam=rtl?"Amiri":"Georgia,'Amiri',serif";
-    ctx.font="400 "+size+"px "+fam;
-    const tw=ctx.measureText(txt).width||1;
-    const sx=Math.max(0.35,Math.min(1.12,boxW/tw));   /* squeeze to original line width, limited stretch */
-    const baseline=y1-boxH*0.16;
-    ctx.save(); ctx.fillStyle="#15201f"; ctx.direction=rtl?"rtl":"ltr";
-    if(rtl){ ctx.translate(x1,0); ctx.scale(sx,1); ctx.textAlign="right"; ctx.fillText(txt,0,baseline); }
-    else { ctx.translate(x0,0); ctx.scale(sx,1); ctx.textAlign="left"; ctx.fillText(txt,0,baseline); }
-    ctx.restore();
-  });
+  st.elements.forEach(function(el){ drawElement(ctx,W,H,el); });
   return [c];
+}
+function layoutStructReflow(st){
+  const blocks=[];
+  st.elements.forEach(function(el){
+    if(el.role==="pageNumber") return; const t=elText(el).trim(); if(!t) return;
+    blocks.push({type:(el.role==="title"||el.role==="heading")?"h":"p",text:t}); blocks.push({type:"space"});
+  });
+  while(blocks.length&&blocks[blocks.length-1].type==="space") blocks.pop();
+  return blocks.length?layoutToCanvases(blocks):[newPageCanvas()];
 }
 async function buildGeneratedPages(){
   const sig=genSig();
   if(GEN_CACHE&&GEN_CACHE.sig===sig) return GEN_CACHE.pages;
   await ensureDocFonts();
-  const parsed=parsePages(output.value);
-  const count=Math.max(LAST_PAGES.length,parsed.length);
-  const pages=[];
-  for(let idx=0;idx<count;idx++){
-    const lp=LAST_PAGES[idx]||{},pt=parsed[idx]||{};
-    const label=lp.label||pt.label||("Page "+(idx+1));
-    const orig=lp.original||null;
-    let canvases;
-    const hasGeom=lp.lines&&lp.lines.length;
-    if(RECON_MODE==="layout"&&hasGeom){
-      canvases=layoutFromGeometry(lp.lines,lp.aspect);
-    } else {
-      const blocks=parseBlocks(pt.text||"");
-      canvases=blocks.length?layoutToCanvases(blocks):[newPageCanvas()];
-    }
+  const pages=PAGE_STRUCT.map(function(st){
+    const canvases=(RECON_MODE==="layout"&&st.hasGeometry)?layoutFromStructure(st):layoutStructReflow(st);
     const gen=canvases.map(function(cv){ let u=null; try{ u=cv.toDataURL("image/jpeg",0.85); }catch(e){} disposeCanvas(cv); return u; });
-    pages.push({label:label,original:orig,gen:gen});
-  }
+    return {label:st.label, original:st.original||null, gen:gen};
+  });
   GEN_CACHE={sig:sig,pages:pages};
   return pages;
 }
@@ -982,8 +1149,37 @@ function tokenDiffCount(aStr,bStr){
   const lcs=dp[n*(m+1)+m]; return (n-lcs)+(m-lcs);
 }
 
-/* keep eval + cache in sync with manual edits */
-output.addEventListener("input",function(){ GEN_CACHE=null; updateEval(); });
+/* ---- Structure Debug View (requirement C) ---- */
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function renderDebug(){
+  const host=$("debugList"); if(!host) return; host.innerHTML="";
+  PAGE_STRUCT.forEach(function(st){
+    const heads=st.elements.filter(function(e){return e.role==="heading";});
+    const paras=st.elements.filter(function(e){return e.role==="paragraph";});
+    const pn=st.pageNumber?elText(st.pageNumber):null;
+    const title=st.title?elText(st.title):null;
+    const eng=st.englishWords||[];
+    const engShow=eng.slice(0,24).map(esc).join(", ")+(eng.length>24?(" \u2026 (+"+(eng.length-24)+")"):"");
+    const headHtml=heads.length?heads.map(function(e){return '<span class="dbg-chip"><b>H'+(e.level||1)+'</b>'+esc(elText(e))+'</span>';}).join(""):'<span class="vv muted">none detected</span>';
+    const d=document.createElement("div"); d.className="dbg-pg";
+    d.innerHTML=
+      '<div class="hd">'+esc(st.label)+'<small>'+(st.hasGeometry?"geometry":"text-only")+(st.confidence!=null?" \u00b7 "+Math.round(st.confidence)+"%":"")+'</small></div>'+
+      '<div class="dbg-row"><div class="kk">Page number</div><div class="vv'+(pn?'':' muted')+'">'+(pn?esc(pn):"none detected")+'</div></div>'+
+      '<div class="dbg-row"><div class="kk">Title</div><div class="vv'+(title?'':' muted')+'" dir="auto">'+(title?esc(title):"none detected")+'</div></div>'+
+      '<div class="dbg-row"><div class="kk">Headings ('+heads.length+')</div><div class="vv" dir="auto">'+headHtml+'</div></div>'+
+      '<div class="dbg-row"><div class="kk">Paragraphs</div><div class="vv">'+paras.length+' detected \u00b7 '+st.detectedSections.length+' section'+(st.detectedSections.length===1?'':'s')+'</div></div>'+
+      '<div class="dbg-row"><div class="kk">English tokens</div><div class="vv'+(eng.length?'':' muted')+'">'+(eng.length?(eng.length+" \u2014 "+engShow):"none detected")+'</div></div>';
+    host.appendChild(d);
+  });
+}
+$("debugBtn").addEventListener("click",function(){
+  if(!PAGE_STRUCT.length){ showToast("Run an extraction first.",true); return; }
+  const card=$("debug");
+  if(card.style.display==="block"){ card.style.display="none"; return; }
+  renderDebug(); card.style.display="block"; card.scrollIntoView({behavior:"smooth",block:"start"});
+});
+
+
 
 /* reconstruction mode switch */
 $("reconMode").addEventListener("click", async function(e){
@@ -994,97 +1190,125 @@ $("reconMode").addEventListener("click", async function(e){
 });
 
 
+/* collect correctable elements across all pages (page numbers are excluded so
+   they can never be altered); returns [{ref, id, role, text}] */
+function collectAiElements(){
+  const items=[];
+  PAGE_STRUCT.forEach(function(st,pi){
+    st.elements.forEach(function(el){
+      if(el.role==="pageNumber") return;
+      const t=(el.text||"").trim(); if(!t) return;
+      items.push({ref:el, id:"p"+pi+"_"+el.id, role:el.role, text:t});
+    });
+  });
+  return items;
+}
+function stripJsonFence(s){
+  let t=(s||"").trim();
+  t=t.replace(/^```(?:json)?\s*/i,"").replace(/\s*```$/,"");
+  const a=t.indexOf("["),b=t.lastIndexOf("]");
+  if(a>=0&&b>a) t=t.slice(a,b+1);
+  return t;
+}
 $("aiFix").addEventListener("click", async function() {
-    const text = output.value.trim();
-    if (!text) return;
-    
-    // --- SECURE API KEY HANDLING ---
+    if(busy) return;
+    if(!PAGE_STRUCT.length){ showToast("Run an extraction first.",true); return; }
+    const elements=collectAiElements();
+    if(!elements.length){ showToast("No text elements to correct.",true); return; }
+
     let apiKey = localStorage.getItem("gemini_ocr_key");
     if (!apiKey) {
         apiKey = prompt("Please enter your Gemini API Key to use the AI Fix feature.\n\nYour key will be saved securely in your browser's local storage for future use.");
-        if (!apiKey) {
-            showToast("AI Correction requires an API key.", true);
-            return;
-        }
+        if (!apiKey) { showToast("AI Correction requires an API key.", true); return; }
         localStorage.setItem("gemini_ocr_key", apiKey.trim());
     }
     apiKey = apiKey.trim();
-    // -------------------------------
-    
-    const btn = this;
-    const oldHtml = btn.innerHTML;
+
+    const btn = this, oldHtml = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = '<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Fixing...';
-    
+
+    const beforeAll = elements.map(function(e){return e.text;}).join("\n");
+
     try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        
-        const promptText = `You are an expert OCR text corrector. Fix spelling, spacing, punctuation, and structural errors caused by optical character recognition.
-- Fix corrupted words (e.g., "1llusion" -> "illusion").
-- Restore natural paragraph flow.
-- DO NOT rewrite, summarize, or change the meaning. Maintain the original language.
-- DO NOT include any conversational filler. ONLY return the corrected text.
+        const url = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key="+apiKey;
+        const payloadElems = elements.map(function(e){ return {id:e.id, role:e.role, text:e.text}; });
 
-Original Text:
-${text}`;
+        const instructions =
+"You are an OCR correction engine for a page-structure-preserving pipeline. "+
+"You receive a JSON array of page elements, each with an id, a role (title, heading, paragraph, body), and OCR text.\n"+
+"Correct ONLY OCR recognition errors in each element's text. Rules:\n"+
+"1. Return a JSON array of objects {\"id\":\"...\",\"text\":\"...\"} using the EXACT same ids. No extra keys, no commentary, no markdown.\n"+
+"2. Keep every element separate. NEVER merge, split, reorder, add, or drop elements.\n"+
+"3. NEVER move a page number or stray token into a title or heading.\n"+
+"4. NEVER delete a heading or title. Keep its role intact (do not turn a heading into a sentence).\n"+
+"5. Do NOT rewrite, summarize, translate, or change meaning. Preserve the original language of each element.\n"+
+"6. Leave correctly-spelled English words unchanged; only fix words that are clearly OCR-garbled.\n"+
+"7. Preserve paragraph text as one element; do not introduce new line breaks across elements.\n"+
+"Input elements:\n"+JSON.stringify(payloadElems);
 
-        const payload = {
-            contents: [{ parts: [{ text: promptText }] }],
-            systemInstruction: { parts: [{ text: "You are an expert OCR text corrector." }] }
-        };
+        const payload = { contents:[{parts:[{text:instructions}]}], generationConfig:{ temperature:0, responseMimeType:"application/json" } };
 
-        let response = null;
-        let delay = 1000;
-        
-        // 5-step exponential backoff (1s, 2s, 4s, 8s, 16s)
-        for (let i = 0; i < 5; i++) {
-            try {
-                response = await fetch(url, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    credentials: 'omit', // Bypasses specific iOS/GitHub Pages strict CORS bugs
-                    mode: 'cors',
-                    body: JSON.stringify(payload)
-                });
+        let response=null, delay=1000;
+        for (let i=0;i<5;i++){
+            try{
+                response = await fetch(url,{ method:'POST', headers:{'Content-Type':'application/json'}, credentials:'omit', mode:'cors', body:JSON.stringify(payload) });
                 if (response.ok) break;
-            } catch (networkError) {
-                // If fetch completely fails due to networking/CORS, we still retry
-            }
-            
-            if (i < 4) {
-                await new Promise(r => setTimeout(r, delay));
-                delay *= 2; 
-            }
+            }catch(networkError){}
+            if (i<4){ await new Promise(function(r){setTimeout(r,delay);}); delay*=2; }
         }
-
         if (!response || !response.ok) {
-            if (response && (response.status === 400 || response.status === 401 || response.status === 403)) {
-                localStorage.removeItem("gemini_ocr_key"); // clear bad key so user is prompted again
+            if (response && (response.status===400||response.status===401||response.status===403)) {
+                localStorage.removeItem("gemini_ocr_key");
                 throw new Error("Invalid API key or unauthorized. Please try again.");
             }
             throw new Error(response ? response.statusText : "Network or configuration error.");
         }
 
         const data = await response.json();
-        const fixedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        
-        if (fixedText) {
-            LAST_AI_CHANGES = tokenDiffCount(output.value, fixedText.trim());
-            output.value = fixedText.trim();
-            GEN_CACHE = null;
-            updateEval();
-            output.classList.add("ai-fixed");
-            flash(btn, "\u2728 Fixed!", oldHtml);
-            showToast("AI cleanup applied \u00b7 " + LAST_AI_CHANGES + " token changes", false);
-        } else {
-            throw new Error("Empty response from AI");
-        }
+        const raw = data && data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0] && data.candidates[0].content.parts[0].text;
+        if (!raw) throw new Error("Empty response from AI");
+
+        let arr;
+        try { arr = JSON.parse(stripJsonFence(raw)); } catch(e){ throw new Error("AI returned unstructured output; structure left unchanged."); }
+        if (!Array.isArray(arr)) throw new Error("AI response was not a JSON array.");
+
+        const byId={}; arr.forEach(function(o){ if(o&&typeof o.id!=="undefined") byId[String(o.id)]=(o.text!=null?String(o.text):null); });
+
+        let applied=0;
+        elements.forEach(function(e){
+            const corrected=byId[e.id];
+            if(corrected!=null){
+                const newText=corrected.trim();
+                e.ref.aiText=newText;
+                e.ref.aiChanged = newText.replace(/\s+/g," ")!==e.text.replace(/\s+/g," ");
+                if(e.ref.aiChanged) applied++;
+            } else {
+                e.ref.aiText=e.ref.text; e.ref.aiChanged=false; // missing id -> keep raw
+            }
+        });
+
+        // refresh derived views that surface corrected text
+        PAGE_STRUCT.forEach(function(st){
+            st.headings=st.elements.filter(function(x){return x.role==="heading";}).map(function(x){return {id:x.id,text:elText(x),level:x.level||1};});
+            st.paragraphs=st.elements.filter(function(x){return x.role==="paragraph";}).map(function(x){return {id:x.id,text:elText(x)};});
+            st.detectedSections=buildSections(st.elements);
+        });
+
+        const afterAll = elements.map(function(e){return elText(e.ref);}).join("\n");
+        LAST_AI_CHANGES = tokenDiffCount(beforeAll, afterAll);
+        STRUCT_VERSION++; GEN_CACHE=null;
+        structToTextarea(); output.classList.add("ai-fixed"); updateEval(); renderDebug();
+        if($("compare").style.display==="block"){ try{ const pages=await buildGeneratedPages(); renderCompare(pages); }catch(e){} }
+
+        flash(btn, "\u2728 Fixed!", oldHtml);
+        showToast("AI cleanup applied to "+applied+" element"+(applied===1?"":"s")+" \u00b7 "+LAST_AI_CHANGES+" token changes", false);
     } catch (err) {
-        let msg = err.message.includes("key") ? "API key required or missing." : err.message;
+        const msg = (err&&err.message)?err.message:"AI correction failed.";
         showToast("AI Correction Error: " + msg, true);
         flash(btn, "Error", oldHtml);
     } finally {
-        setTimeout(() => { if(!btn.textContent.includes("Fixed!")) btn.innerHTML = oldHtml; btn.disabled = false; }, 1200);
+        setTimeout(function(){ if(!btn.textContent.includes("Fixed!")) btn.innerHTML = oldHtml; btn.disabled = false; }, 1200);
     }
 });
 
