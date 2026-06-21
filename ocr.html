@@ -136,6 +136,10 @@
   .metric .v{font-size:19px;font-weight:700;color:var(--gold-soft);font-variant-numeric:tabular-nums;line-height:1.1}
   .metric .v small{font-size:11px;font-weight:600;color:var(--muted)}
 
+  /* ---- reconstruction mode row ---- */
+  .recon-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
+  .recon-lbl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2)}
+
   /* ---- Comparison workspace ---- */
   #compare{display:none}
   .cmp-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
@@ -289,6 +293,13 @@
       <div class="metric"><div class="k">Processing time</div><div class="v" id="mTime">&mdash;</div></div>
       <div class="metric"><div class="k">AI corrections</div><div class="v" id="mAi">&mdash;</div></div>
     </div>
+    <div class="recon-row">
+      <span class="recon-lbl">PDF / compare style</span>
+      <div class="view-seg" id="reconMode" role="group" aria-label="Reconstruction style">
+        <button data-mode="layout" aria-pressed="true">Match layout</button>
+        <button data-mode="reflow" aria-pressed="false">Clean reflow</button>
+      </div>
+    </div>
     <div class="res-tools">
       <span class="spacer"></span>
       <button class="mini ai-btn" id="aiFix" title="Uses AI to correct spelling and formatting based on context">
@@ -323,7 +334,7 @@
       <div class="cmp-pane" id="paneOrig"><div class="cap">Original scan</div><div class="cmp-frame" id="frameOrig"></div></div>
       <div class="cmp-pane" id="paneGen"><div class="cap">OCR-generated</div><div class="cmp-frame" id="frameGen"></div></div>
     </div>
-    <p class="note" style="margin-top:14px"><b>Reading this view:</b> the left page is the raw source scan; the right page is the document rebuilt from the extracted text (with any AI cleanup applied). Judge whether the right page is complete, correctly spelled, and properly laid out before trusting the pipeline.</p>
+    <p class="note" style="margin-top:14px"><b>Reading this view:</b> left is the raw source scan; right is the page rebuilt from the OCR result. <b>Match layout</b> redraws each detected line at its original position, size and width &mdash; so line count, headings, margins and density mirror the book page (uses the raw OCR line text). <b>Clean reflow</b> ignores geometry and typesets the edited / AI-corrected text as a fresh document. Switch modes with the toggle above the text.</p>
   </section>
 
 </div>
@@ -357,6 +368,7 @@ let LAST_PROC_MS=0;         /* extraction wall-clock */
 let LAST_AI_CHANGES=null;   /* token-diff count after AI fix, or null */
 let GEN_CACHE=null;         /* { sig, pages:[{label, original, gen:[dataURL,...]}] } */
 let cmpIdx=0, cmpView="both";
+let RECON_MODE="layout";    /* "layout" = match original geometry, "reflow" = clean document */
 
 /* ---- Custom UI Toast System ---- */
 function showToast(msg, isError) {
@@ -617,12 +629,25 @@ async function applyParams(psm,preferDict){
   if(preferDict){ p.language_model_penalty_non_dict_word="0.4"; p.language_model_penalty_non_freq_dict_word="0.3"; }
   await worker.setParameters(p);
 }
-async function recognizeOne(canvas){ const r=await worker.recognize(canvas,{},{text:true}); return { text:(r.data.text||"").trim(), conf:(typeof r.data.confidence==="number"?r.data.confidence:0) }; }
+/* pull line-level boxes (normalised 0..1) out of Tesseract's block hierarchy */
+function extractLines(data,W,H){
+  const lines=[]; if(!data||!data.blocks||!W||!H) return lines;
+  data.blocks.forEach(function(b){ (b.paragraphs||[]).forEach(function(p){ (p.lines||[]).forEach(function(ln){
+    const bb=ln.bbox; if(!bb) return; const txt=(ln.text||"").replace(/\s+/g," ").trim(); if(!txt) return;
+    lines.push({x0:bb.x0/W,y0:bb.y0/H,x1:bb.x1/W,y1:bb.y1/H,text:txt});
+  }); }); });
+  return lines;
+}
+async function recognizeOne(canvas){
+  const r=await worker.recognize(canvas,{},{text:true,blocks:true});
+  const W=canvas.width||1,H=canvas.height||1;
+  return { text:(r.data.text||"").trim(), conf:(typeof r.data.confidence==="number"?r.data.confidence:0), lines:extractLines(r.data,W,H) };
+}
 async function ocrSingle(canvas,psm,preferDict){ await applyParams(psm,preferDict); const r=await recognizeOne(canvas); r.which=null; return r; }
 async function ocrBestLang(canvas,psm,preferDict){
   await worker.reinitialize("eng"); await applyParams(psm,preferDict); const e=await recognizeOne(canvas);
   await worker.reinitialize("ara"); await applyParams(psm,preferDict); const a=await recognizeOne(canvas);
-  return a.conf>e.conf?{text:a.text,conf:a.conf,which:"Arabic"}:{text:e.text,conf:e.conf,which:"English"};
+  return a.conf>e.conf?{text:a.text,conf:a.conf,which:"Arabic",lines:a.lines}:{text:e.text,conf:e.conf,which:"English",lines:e.lines};
 }
 
 /* ---- auto-optimize grid ---- */
@@ -687,7 +712,7 @@ runBtn.addEventListener("click", async function(){
         page.cleanup();
       }
 
-      let resultText="",resultConf=0,resultThumb=null,resultTag="";
+      let resultText="",resultConf=0,resultThumb=null,resultTag="",resultLines=[],resultAspect=1.414;
 
       if(!optimize){
         jobProgress=function(p){ setBar(baseFrac+span*p); };
@@ -697,6 +722,7 @@ runBtn.addEventListener("click", async function(){
         const procZ=zoomCanvas(proc,baseZoom); resultThumb=thumbDataURL(procZ);
         pSub.textContent="Reading text..."; await yieldUI();
         const r=isAuto?await ocrBestLang(procZ,psm,preferDict):await ocrSingle(procZ,psm,preferDict);
+        resultLines=r.lines||[]; resultAspect=procZ.height/procZ.width;
         if(procZ!==proc) disposeCanvas(procZ); disposeCanvas(raw); disposeCanvas(proc);
         resultText=r.text; resultConf=r.conf; resultTag=tagOf(baseDpi,baseZoom,baseClean,r.which,baseBias)+(Math.abs(skew)>=0.5?" deskew"+skew.toFixed(1):"");
       } else {
@@ -719,13 +745,14 @@ runBtn.addEventListener("click", async function(){
           
           const raw=await renderRaw(job,cd.dpi,adv); const proc=preprocess(raw,{mode:cd.clean,bias:cd.bias,sharpen:adv.sharpen,despeckle:adv.despeckle}); const procZ=zoomCanvas(proc,cd.zoom);
           const r=await ocrSingle(procZ,psm,preferDict);
-          if(!best||r.conf>best.conf){ best={text:r.text,conf:r.conf}; resultThumb=thumbDataURL(procZ); resultTag="best: "+tagOf(cd.dpi,cd.zoom,cd.clean,(isAuto?(L==="ara"?"Arabic":"English"):null),cd.bias); }
+          if(!best||r.conf>best.conf){ best={text:r.text,conf:r.conf,lines:r.lines||[],aspect:procZ.height/procZ.width}; resultThumb=thumbDataURL(procZ); resultTag="best: "+tagOf(cd.dpi,cd.zoom,cd.clean,(isAuto?(L==="ara"?"Arabic":"English"):null),cd.bias); }
           if(procZ!==proc) disposeCanvas(procZ); disposeCanvas(raw); disposeCanvas(proc);
         }
-        resultText=best.text; resultConf=best.conf;
+        resultText=best.text; resultConf=best.conf; resultLines=best.lines; resultAspect=best.aspect;
       }
 
       resultText=postProcess(resultText,tidyOn,splitOn);
+      if(LAST_PAGES[i]){ LAST_PAGES[i].lines=resultLines; LAST_PAGES[i].aspect=resultAspect; }
       collected.push({label:job.label,text:resultText,conf:resultConf,source:resultTag,thumb:resultThumb});
       job.done(); setBar((i+1)/jobs.length);
     }
@@ -837,19 +864,54 @@ function layoutToCanvases(blocks){
   });
   canvases.push(c); return canvases;
 }
-function genSig(){ const v=output.value; return v.length+"|"+v.slice(0,160)+"|"+v.slice(-120); }
+function genSig(){ const v=output.value; return RECON_MODE+"|"+v.length+"|"+v.slice(0,160)+"|"+v.slice(-120); }
+/* LAYOUT mode: redraw each OCR line at its detected position / size / width
+   so the result mirrors the original page geometry (line count, block width,
+   heading placement, margins, density) rather than reflowing for readability. */
+function layoutFromGeometry(lines,aspect){
+  const W=PG_W,H=Math.max(200,Math.round(PG_W*(aspect||1.414)));
+  const c=document.createElement("canvas"); c.width=W; c.height=H;
+  const ctx=c.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,W,H); ctx.textBaseline="alphabetic";
+  lines.forEach(function(ln){
+    const txt=tidy(ln.text||"").trim(); if(!txt) return;
+    const x0=ln.x0*W,y0=ln.y0*H,x1=ln.x1*W,y1=ln.y1*H;
+    const boxW=Math.max(6,x1-x0),boxH=Math.max(8,y1-y0);
+    const rtl=isArabicStr(txt);
+    let size=Math.round(boxH*0.80); if(size<11) size=11; if(size>140) size=140;
+    const fam=rtl?"Amiri":"Georgia,'Amiri',serif";
+    ctx.font="400 "+size+"px "+fam;
+    const tw=ctx.measureText(txt).width||1;
+    const sx=Math.max(0.35,Math.min(1.12,boxW/tw));   /* squeeze to original line width, limited stretch */
+    const baseline=y1-boxH*0.16;
+    ctx.save(); ctx.fillStyle="#15201f"; ctx.direction=rtl?"rtl":"ltr";
+    if(rtl){ ctx.translate(x1,0); ctx.scale(sx,1); ctx.textAlign="right"; ctx.fillText(txt,0,baseline); }
+    else { ctx.translate(x0,0); ctx.scale(sx,1); ctx.textAlign="left"; ctx.fillText(txt,0,baseline); }
+    ctx.restore();
+  });
+  return [c];
+}
 async function buildGeneratedPages(){
   const sig=genSig();
   if(GEN_CACHE&&GEN_CACHE.sig===sig) return GEN_CACHE.pages;
   await ensureDocFonts();
   const parsed=parsePages(output.value);
-  const pages=parsed.map(function(p,idx){
-    const blocks=parseBlocks(p.text);
-    const canvases=blocks.length?layoutToCanvases(blocks):[newPageCanvas()];
+  const count=Math.max(LAST_PAGES.length,parsed.length);
+  const pages=[];
+  for(let idx=0;idx<count;idx++){
+    const lp=LAST_PAGES[idx]||{},pt=parsed[idx]||{};
+    const label=lp.label||pt.label||("Page "+(idx+1));
+    const orig=lp.original||null;
+    let canvases;
+    const hasGeom=lp.lines&&lp.lines.length;
+    if(RECON_MODE==="layout"&&hasGeom){
+      canvases=layoutFromGeometry(lp.lines,lp.aspect);
+    } else {
+      const blocks=parseBlocks(pt.text||"");
+      canvases=blocks.length?layoutToCanvases(blocks):[newPageCanvas()];
+    }
     const gen=canvases.map(function(cv){ let u=null; try{ u=cv.toDataURL("image/jpeg",0.85); }catch(e){} disposeCanvas(cv); return u; });
-    const orig=(LAST_PAGES[idx]&&LAST_PAGES[idx].original)?LAST_PAGES[idx].original:null;
-    return {label:p.label,original:orig,gen:gen};
-  });
+    pages.push({label:label,original:orig,gen:gen});
+  }
   GEN_CACHE={sig:sig,pages:pages};
   return pages;
 }
@@ -922,6 +984,14 @@ function tokenDiffCount(aStr,bStr){
 
 /* keep eval + cache in sync with manual edits */
 output.addEventListener("input",function(){ GEN_CACHE=null; updateEval(); });
+
+/* reconstruction mode switch */
+$("reconMode").addEventListener("click", async function(e){
+  const b=e.target.closest("button"); if(!b||b.dataset.mode===RECON_MODE) return;
+  RECON_MODE=b.dataset.mode;
+  Array.prototype.forEach.call(this.children,function(c){ c.setAttribute("aria-pressed",String(c===b)); });
+  if($("compare").style.display==="block"){ try{ const pages=await buildGeneratedPages(); renderCompare(pages); }catch(err){} }
+});
 
 
 $("aiFix").addEventListener("click", async function() {
