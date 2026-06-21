@@ -11,9 +11,10 @@
 <title>OCR Studio Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=DM+Serif+Display&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
   :root{--bg-0:#081d1d;--bg-1:#0b2828;--panel:#0f3333;--panel-2:#103a39;--teal:#15b8a6;--teal-deep:#0f766e;--gold:#d8b24a;--gold-soft:#ecd089;--gold-line:rgba(216,178,74,.22);--text:#eef6f3;--muted:#93b3ad;--muted-2:#6d9690;--danger:#e98b6b;--radius:18px;--radius-sm:12px;--shadow:0 18px 50px -18px rgba(0,0,0,.7)}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -126,6 +127,34 @@
   }
   #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
   #toast.err { border-color: var(--danger); color: #f3c4b3; background: rgba(233,139,107,.95); }
+
+  /* ---- Evaluation panel ---- */
+  .evalgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:4px 0 16px}
+  @media(max-width:560px){.evalgrid{grid-template-columns:repeat(2,1fr)}}
+  .metric{background:rgba(0,0,0,.22);border:1px solid var(--gold-line);border-radius:12px;padding:11px 12px;min-width:0}
+  .metric .k{font-size:10px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2);margin-bottom:5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .metric .v{font-size:19px;font-weight:700;color:var(--gold-soft);font-variant-numeric:tabular-nums;line-height:1.1}
+  .metric .v small{font-size:11px;font-weight:600;color:var(--muted)}
+
+  /* ---- Comparison workspace ---- */
+  #compare{display:none}
+  .cmp-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
+  .cmp-nav{display:flex;align-items:center;gap:8px}
+  .cmp-nav .pgn{font-size:13px;font-weight:600;color:var(--text);min-width:78px;text-align:center;font-variant-numeric:tabular-nums}
+  .navbtn{border:1px solid var(--gold-line);background:rgba(0,0,0,.22);color:var(--text);border-radius:9px;width:34px;height:34px;font-size:17px;line-height:1;cursor:pointer;display:grid;place-items:center}
+  .navbtn:disabled{opacity:.35;cursor:not-allowed}
+  .view-seg{display:flex;background:rgba(0,0,0,.25);border:1px solid var(--gold-line);border-radius:10px;padding:3px;gap:3px}
+  .view-seg button{border:0;background:transparent;color:var(--muted);font-family:'Sora';font-size:12px;font-weight:600;padding:7px 12px;border-radius:7px;cursor:pointer}
+  .view-seg button[aria-pressed="true"]{background:linear-gradient(155deg,var(--teal),var(--teal-deep));color:#04201d}
+  .cmp-stage{display:grid;gap:14px}
+  .cmp-stage.both{grid-template-columns:1fr 1fr}
+  @media(max-width:680px){.cmp-stage.both{grid-template-columns:1fr}}
+  .cmp-pane{min-width:0}
+  .cmp-pane .cap{font-size:10.5px;font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--gold-soft);margin-bottom:7px;text-align:center}
+  .cmp-frame{border:1px solid var(--gold-line);border-radius:10px;background:#fff;overflow:auto;max-height:70vh;-webkit-overflow-scrolling:touch}
+  .cmp-frame img{display:block;width:100%;height:auto}
+  .cmp-frame .multi{display:flex;flex-direction:column;gap:6px;background:#777;padding:6px}
+  .cmp-empty{padding:40px 14px;text-align:center;color:#5a7a74;font-size:12.5px}
 
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -242,7 +271,7 @@
 
     <div class="row"><button class="btn btn-primary" id="run" disabled>Extract text</button><button class="btn btn-ghost" id="clear">Clear</button></div>
     <div class="err" id="error"></div>
-    <p class="note"><b>Pro Accuracy Features:</b> Selecting the <b>Tesseract Best</b> model utilizes a heavier, highly accurate neural network. The <b>Exhaustive Sweep</b> strategy tests multiple mathematical binarization algorithms (Otsu, Sauvola, Adaptive) automatically to find the perfect contrast for difficult scans. Once extracted, you can use the <b>✨ Fix with AI</b> button to contextualize and correct remaining OCR typos.</p>
+    <p class="note"><b>Pro Accuracy Features:</b> Selecting the <b>Tesseract Best</b> model utilizes a heavier, highly accurate neural network. The <b>Exhaustive Sweep</b> strategy tests multiple mathematical binarization algorithms (Otsu, Sauvola, Adaptive) automatically to find the perfect contrast for difficult scans. Once extracted, you can use the <b>&#10024; Fix with AI</b> button to contextualize and correct remaining OCR typos.</p>
   </section>
 
   <section class="card" id="progress">
@@ -254,18 +283,47 @@
 
   <section class="card" id="results">
     <h2>Extracted text</h2>
+    <div class="evalgrid" id="evalGrid">
+      <div class="metric"><div class="k">Word count</div><div class="v" id="mWords">0</div></div>
+      <div class="metric"><div class="k">OCR confidence</div><div class="v" id="mConf">&mdash;</div></div>
+      <div class="metric"><div class="k">Processing time</div><div class="v" id="mTime">&mdash;</div></div>
+      <div class="metric"><div class="k">AI corrections</div><div class="v" id="mAi">&mdash;</div></div>
+    </div>
     <div class="res-tools">
-      <span class="stat" id="sPages"></span><span class="stat" id="sWords"></span><span class="stat" id="sConf"></span>
       <span class="spacer"></span>
       <button class="mini ai-btn" id="aiFix" title="Uses AI to correct spelling and formatting based on context">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
         Fix with AI
       </button>
+      <button class="mini" id="genPdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Generate PDF</button>
+      <button class="mini" id="compareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg>Compare</button>
       <button class="mini" id="copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>Copy</button>
       <button class="mini" id="download"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 4v11M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>.txt</button>
     </div>
     <textarea id="output" dir="auto" spellcheck="false" placeholder="Extracted text will appear here..."></textarea>
     <div class="pages" id="pages"></div>
+  </section>
+
+  <section class="card" id="compare">
+    <h2>Original vs Generated</h2>
+    <div class="cmp-bar">
+      <div class="cmp-nav">
+        <button class="navbtn" id="cmpPrev" aria-label="Previous page">&#8249;</button>
+        <span class="pgn" id="cmpPgn">Page 1 / 1</span>
+        <button class="navbtn" id="cmpNext" aria-label="Next page">&#8250;</button>
+      </div>
+      <span class="spacer"></span>
+      <div class="view-seg" id="cmpView" role="group" aria-label="View mode">
+        <button data-view="both" aria-pressed="true">Both</button>
+        <button data-view="orig" aria-pressed="false">Original</button>
+        <button data-view="gen" aria-pressed="false">Generated</button>
+      </div>
+    </div>
+    <div class="cmp-stage both" id="cmpStage">
+      <div class="cmp-pane" id="paneOrig"><div class="cap">Original scan</div><div class="cmp-frame" id="frameOrig"></div></div>
+      <div class="cmp-pane" id="paneGen"><div class="cap">OCR-generated</div><div class="cmp-frame" id="frameGen"></div></div>
+    </div>
+    <p class="note" style="margin-top:14px"><b>Reading this view:</b> the left page is the raw source scan; the right page is the document rebuilt from the extracted text (with any AI cleanup applied). Judge whether the right page is complete, correctly spelled, and properly laid out before trusting the pipeline.</p>
   </section>
 
 </div>
@@ -283,13 +341,22 @@ if (pdfjsLib) pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare
 const $ = function (id){ return document.getElementById(id); };
 const input=$("input"),drop=$("drop"),fileList=$("fileList"),runBtn=$("run"),clearBtn=$("clear"),errorBox=$("error");
 const progress=$("progress"),pLabel=$("pLabel"),pPct=$("pPct"),pBar=$("pBar"),pSub=$("pSub");
-const results=$("results"),output=$("output"),pagesEl=$("pages"),sPages=$("sPages"),sWords=$("sWords"),sConf=$("sConf");
+const results=$("results"),output=$("output"),pagesEl=$("pages");
+const mWords=$("mWords"),mConf=$("mConf"),mTime=$("mTime"),mAi=$("mAi");
 const dpiSlider=$("dpi"),dpiVal=$("dpiVal"),biasSlider=$("bias"),biasVal=$("biasVal"),cleanSel=$("clean"),zoomSel=$("zoom"),optChk=$("optimize");
 const modelQuality=$("modelQuality"), exhaustiveMode=$("exhaustive");
 
 let files=[], lang="eng", worker=null, workerSig="", busy=false, jobProgress=function(){};
 let DICT=new Set();
 const MAX_AREA=15000000, MAX_SIDE=4000;
+
+/* ---- evaluation + comparison state ---- */
+let LAST_PAGES=[];          /* [{label, original}] captured per source page during a run */
+let LAST_AVG_CONF=null;     /* number | null */
+let LAST_PROC_MS=0;         /* extraction wall-clock */
+let LAST_AI_CHANGES=null;   /* token-diff count after AI fix, or null */
+let GEN_CACHE=null;         /* { sig, pages:[{label, original, gen:[dataURL,...]}] } */
+let cmpIdx=0, cmpView="both";
 
 /* ---- Custom UI Toast System ---- */
 function showToast(msg, isError) {
@@ -390,7 +457,7 @@ input.addEventListener("change",function(){ addFiles(input.files); input.value="
 ["dragenter","dragover"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add("over"); }); });
 ["dragleave","drop"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove("over"); }); });
 drop.addEventListener("drop",function(e){ if(e.dataTransfer&&e.dataTransfer.files) addFiles(e.dataTransfer.files); });
-clearBtn.addEventListener("click",function(){ if(busy)return; files=[]; renderFiles(); results.style.display="none"; errorBox.style.display="none"; output.value=""; output.classList.remove("ai-fixed"); pagesEl.innerHTML=""; });
+clearBtn.addEventListener("click",function(){ if(busy)return; files=[]; renderFiles(); results.style.display="none"; errorBox.style.display="none"; output.value=""; output.classList.remove("ai-fixed"); pagesEl.innerHTML=""; $("compare").style.display="none"; GEN_CACHE=null; LAST_PAGES=[]; LAST_AVG_CONF=null; LAST_PROC_MS=0; LAST_AI_CHANGES=null; });
 function showError(m){ errorBox.textContent=m; errorBox.style.display="block"; }
 
 /* ============================================================ PREPROCESSING ============================================================ */
@@ -484,6 +551,23 @@ function thumbDataURL(canvas){
   const t=document.createElement("canvas"); t.width=w; t.height=h; t.getContext("2d").drawImage(canvas,0,0,w,h);
   try{ return t.toDataURL("image/jpeg",0.7); }catch(e){ return null; }
 }
+/* full-colour, resolution-capped copy of the SOURCE page for the comparison view */
+function downscaleDataURL(canvas,maxSide,q){
+  let w=canvas.width,h=canvas.height; const long=Math.max(w,h);
+  const s=long>maxSide?maxSide/long:1;
+  const t=document.createElement("canvas"); t.width=Math.max(1,Math.round(w*s)); t.height=Math.max(1,Math.round(h*s));
+  const ctx=t.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,t.width,t.height);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high"; ctx.drawImage(canvas,0,0,t.width,t.height);
+  try{ return t.toDataURL("image/jpeg",q||0.72); }catch(e){ return null; }
+}
+async function captureOriginal(job){
+  try{
+    let c;
+    if(job.getPage){ const page=await job.getPage(); c=await pdfPageToCanvas(page,150); page.cleanup(); }
+    else c=imageToCanvas(await loadImage(job.image),150);
+    const url=downscaleDataURL(c,1100,0.72); disposeCanvas(c); return url;
+  }catch(e){ return null; }
+}
 /* deskew */
 function estimateSkew(canvas){
   const sw=Math.min(520,canvas.width),sh=Math.round(canvas.height*(sw/canvas.width));
@@ -573,7 +657,9 @@ runBtn.addEventListener("click", async function(){
   if(busy||files.length===0) return;
   busy=true; runBtn.disabled=true; clearBtn.disabled=true;
   errorBox.style.display="none"; results.style.display="none"; pagesEl.innerHTML=""; output.value=""; output.classList.remove("ai-fixed");
+  $("compare").style.display="none"; GEN_CACHE=null; LAST_PAGES=[]; LAST_AVG_CONF=null; LAST_AI_CHANGES=null;
   progress.style.display="block"; setBar(0); pLabel.textContent="Preparing files..."; pSub.textContent="";
+  const t0=performance.now();
 
   const psm=$("layout").value, useLegacy=psm==="1";
   const mQuality=$("modelQuality").value, isExhaustive=$("exhaustive").value==="deep";
@@ -590,6 +676,7 @@ runBtn.addEventListener("click", async function(){
 
     for(let i=0;i<jobs.length;i++){
       const job=jobs[i],baseFrac=i/jobs.length,span=1/jobs.length; pLabel.textContent=job.label;
+      const origURL=await captureOriginal(job); LAST_PAGES.push({label:job.label,original:origURL});
 
       if(job.getPage&&job.useEmbedded){
         pSub.textContent="Checking text layer...";
@@ -642,6 +729,7 @@ runBtn.addEventListener("click", async function(){
       collected.push({label:job.label,text:resultText,conf:resultConf,source:resultTag,thumb:resultThumb});
       job.done(); setBar((i+1)/jobs.length);
     }
+    LAST_PROC_MS=performance.now()-t0;
     renderResults(collected);
   } catch(err){ showError((err&&err.message)?err.message:"Something went wrong during extraction."); }
   finally{ progress.style.display="none"; busy=false; clearBtn.disabled=false; runBtn.disabled=files.length===0; jobProgress=function(){}; }
@@ -650,13 +738,21 @@ runBtn.addEventListener("click", async function(){
 function setBar(frac){ const p=Math.max(0,Math.min(1,frac)); pBar.style.width=(p*100).toFixed(1)+"%"; pPct.textContent=Math.round(p*100)+"%"; }
 
 /* ---- results ---- */
+function countWords(s){ s=(s||"").trim(); return s?s.split(/\s+/).length:0; }
+function fmtTime(ms){ if(ms<1000) return Math.round(ms)+"<small>ms</small>"; if(ms<60000) return (ms/1000).toFixed(1)+"<small>s</small>"; const m=Math.floor(ms/60000),s=Math.round((ms%60000)/1000); return m+"<small>m</small> "+s+"<small>s</small>"; }
+function updateEval(){
+  const combined=output.value;
+  mWords.innerHTML=String(countWords(combined.replace(/=====.+?=====/g,"")));
+  mConf.innerHTML=(LAST_AVG_CONF!=null)?(LAST_AVG_CONF+"<small>%</small>"):"&mdash;";
+  mTime.innerHTML=LAST_PROC_MS?fmtTime(LAST_PROC_MS):"&mdash;";
+  mAi.innerHTML=(LAST_AI_CHANGES!=null)?(LAST_AI_CHANGES+"<small> tok</small>"):"&mdash;";
+}
 function renderResults(items){
   const combined=items.map(function(it){ return "===== "+it.label+" =====\n\n"+(it.text||"(no text found)"); }).join("\n\n\n");
   output.value=combined;
-  const words=combined.trim()?combined.trim().split(/\s+/).length:0;
   const confs=items.filter(function(i){return i.conf!=null&&i.conf>0;}).map(function(i){return i.conf;});
-  const avg=confs.length?Math.round(confs.reduce(function(a,b){return a+b;},0)/confs.length):null;
-  sPages.innerHTML="<b>"+items.length+"</b> page"+(items.length===1?"":"s"); sWords.innerHTML="<b>"+words+"</b> words"; sConf.innerHTML=avg!=null?"avg confidence <b>"+avg+"%</b>":"";
+  LAST_AVG_CONF=confs.length?Math.round(confs.reduce(function(a,b){return a+b;},0)/confs.length):null;
+  updateEval();
   pagesEl.innerHTML="";
   items.forEach(function(it){
     const d=document.createElement("details"); d.className="pg";
@@ -671,7 +767,163 @@ function renderResults(items){
   results.style.display="block"; results.scrollIntoView({behavior:"smooth",block:"start"});
 }
 
-/* ---- AI correction ---- */
+/* ============================================================ DOCUMENT RECONSTRUCTION + PDF + COMPARE ============================================================ */
+const PG_W=1240, PG_H=1754, PG_MARGIN=120;
+let fontsReady=false;
+async function ensureDocFonts(){
+  if(fontsReady) return;
+  try{
+    if(document.fonts&&document.fonts.load){
+      await Promise.all([document.fonts.load("400 34px Amiri"),document.fonts.load("700 46px Amiri"),document.fonts.load("400 34px Georgia")]);
+      await document.fonts.ready;
+    }
+  }catch(e){}
+  fontsReady=true;
+}
+/* split the editable textarea back into pages on the "===== label =====" markers */
+function parsePages(combined){
+  const re=/=====\s*([\s\S]+?)\s*=====/g; const marks=[]; let m;
+  while((m=re.exec(combined))){ marks.push({label:m[1].trim(),end:re.lastIndex,start:m.index}); }
+  if(marks.length===0){ const t=combined.trim(); return t?[{label:"Document",text:t}]:[]; }
+  const pages=[];
+  for(let i=0;i<marks.length;i++){
+    const s=marks[i].end, e=(i+1<marks.length)?marks[i+1].start:combined.length;
+    let t=combined.slice(s,e).trim(); if(t==="(no text found)") t="";
+    pages.push({label:marks[i].label,text:t});
+  }
+  return pages;
+}
+function isArabicStr(s){ const ar=(s.match(/[\u0600-\u06FF]/g)||[]).length, lat=(s.match(/[A-Za-z]/g)||[]).length; return ar>0&&ar>=lat; }
+/* heuristic structure: blank lines -> paragraph breaks; short standalone lines -> headings */
+function parseBlocks(text){
+  const lines=text.replace(/\r/g,"").split("\n"); const blocks=[]; let para=[];
+  function flush(){ if(para.length){ blocks.push({type:"p",text:para.join(" ").replace(/\s{2,}/g," ").trim()}); para=[]; } }
+  for(let i=0;i<lines.length;i++){
+    const line=lines[i].trim();
+    if(line===""){ flush(); if(blocks.length&&blocks[blocks.length-1].type!=="space") blocks.push({type:"space"}); continue; }
+    const prevBlank=(i===0)||lines[i-1].trim()==="", nextBlank=(i===lines.length-1)||lines[i+1].trim()==="";
+    const words=line.split(/\s+/).length, endsPunct=/[.!?:\u061B,\u060C]$/.test(line);
+    if(prevBlank&&nextBlank&&words<=8&&line.length<=64&&!endsPunct){ flush(); blocks.push({type:"h",text:line}); }
+    else para.push(line);
+  }
+  flush();
+  while(blocks.length&&blocks[0].type==="space") blocks.shift();
+  while(blocks.length&&blocks[blocks.length-1].type==="space") blocks.pop();
+  return blocks;
+}
+function newPageCanvas(){ const c=document.createElement("canvas"); c.width=PG_W; c.height=PG_H; const ctx=c.getContext("2d"); ctx.fillStyle="#fff"; ctx.fillRect(0,0,PG_W,PG_H); return c; }
+function wrapLine(ctx,text,maxW){
+  const words=text.split(/\s+/),lines=[]; let cur="";
+  for(let i=0;i<words.length;i++){ const w=words[i],test=cur?cur+" "+w:w; if(!cur||ctx.measureText(test).width<=maxW){ cur=test; } else { lines.push(cur); cur=w; } }
+  if(cur) lines.push(cur); return lines;
+}
+function layoutToCanvases(blocks){
+  const canvases=[],maxW=PG_W-PG_MARGIN*2; let c=newPageCanvas(),ctx=c.getContext("2d"),y=PG_MARGIN;
+  function ensureSpace(h){ if(y+h>PG_H-PG_MARGIN){ canvases.push(c); c=newPageCanvas(); ctx=c.getContext("2d"); y=PG_MARGIN; } }
+  blocks.forEach(function(b){
+    if(b.type==="space"){ y+=24; return; }
+    const rtl=isArabicStr(b.text),heading=b.type==="h",size=heading?46:34,weight=heading?"700":"400";
+    const fam=rtl?"Amiri":"Georgia,'Amiri',serif",lh=Math.round(size*(heading?1.5:1.55));
+    ctx.font=weight+" "+size+"px "+fam;
+    const lines=wrapLine(ctx,b.text,maxW);
+    if(heading) y+=14;
+    lines.forEach(function(ln){
+      ensureSpace(lh);
+      ctx.font=weight+" "+size+"px "+fam; ctx.fillStyle=heading?"#0f3b38":"#16201f"; ctx.direction=rtl?"rtl":"ltr";
+      if(rtl){ ctx.textAlign="right"; ctx.fillText(ln,PG_W-PG_MARGIN,y+size); } else { ctx.textAlign="left"; ctx.fillText(ln,PG_MARGIN,y+size); }
+      y+=lh;
+    });
+    y+=heading?18:12;
+  });
+  canvases.push(c); return canvases;
+}
+function genSig(){ const v=output.value; return v.length+"|"+v.slice(0,160)+"|"+v.slice(-120); }
+async function buildGeneratedPages(){
+  const sig=genSig();
+  if(GEN_CACHE&&GEN_CACHE.sig===sig) return GEN_CACHE.pages;
+  await ensureDocFonts();
+  const parsed=parsePages(output.value);
+  const pages=parsed.map(function(p,idx){
+    const blocks=parseBlocks(p.text);
+    const canvases=blocks.length?layoutToCanvases(blocks):[newPageCanvas()];
+    const gen=canvases.map(function(cv){ let u=null; try{ u=cv.toDataURL("image/jpeg",0.85); }catch(e){} disposeCanvas(cv); return u; });
+    const orig=(LAST_PAGES[idx]&&LAST_PAGES[idx].original)?LAST_PAGES[idx].original:null;
+    return {label:p.label,original:orig,gen:gen};
+  });
+  GEN_CACHE={sig:sig,pages:pages};
+  return pages;
+}
+
+/* ---- Generate PDF ---- */
+$("genPdf").addEventListener("click", async function(){
+  if(busy) return;
+  if(!output.value.trim()){ showToast("Nothing to generate yet.",true); return; }
+  const btn=this,old=btn.innerHTML; btn.disabled=true;
+  btn.innerHTML='<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Building...';
+  try{
+    const pages=await buildGeneratedPages();
+    const JS=(window.jspdf&&window.jspdf.jsPDF)?window.jspdf.jsPDF:null;
+    if(!JS) throw new Error("PDF library not loaded.");
+    const pdf=new JS({orientation:"portrait",unit:"pt",format:"a4"}); let first=true,any=false;
+    pages.forEach(function(pg){ pg.gen.forEach(function(u){ if(!u) return; if(!first) pdf.addPage(); first=false; any=true; pdf.addImage(u,"JPEG",0,0,595.28,841.89); }); });
+    if(!any) throw new Error("No pages to write.");
+    const blob=pdf.output("blob"),url=URL.createObjectURL(blob);
+    const a=document.createElement("a"); a.href=url; a.download="ocr-document.pdf"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} },4000);
+    flash(btn,"PDF ready",old); showToast("PDF generated.",false);
+  }catch(err){ showToast("PDF error: "+((err&&err.message)||err),true); flash(btn,"Error",old); }
+  finally{ setTimeout(function(){ if(!/ready/i.test(btn.textContent)) btn.innerHTML=old; btn.disabled=false; },1200); }
+});
+
+/* ---- Comparison workspace ---- */
+function applyCmpView(){
+  $("cmpStage").classList.toggle("both",cmpView==="both");
+  $("paneOrig").style.display=(cmpView==="gen")?"none":"";
+  $("paneGen").style.display=(cmpView==="orig")?"none":"";
+}
+function renderCompare(pages){
+  const n=pages.length; if(n===0){ return; } if(cmpIdx>=n) cmpIdx=n-1; if(cmpIdx<0) cmpIdx=0;
+  const pg=pages[cmpIdx];
+  $("cmpPgn").textContent="Page "+(cmpIdx+1)+" / "+n;
+  $("cmpPrev").disabled=cmpIdx<=0; $("cmpNext").disabled=cmpIdx>=n-1;
+  const fo=$("frameOrig"),fg=$("frameGen");
+  fo.innerHTML=""; if(pg.original){ const im=new Image(); im.alt="original"; im.src=pg.original; fo.appendChild(im); } else fo.innerHTML='<div class="cmp-empty">No original preview for this page.</div>';
+  fg.innerHTML=""; const valid=(pg.gen||[]).filter(Boolean);
+  if(valid.length){ const wrap=document.createElement("div"); wrap.className=valid.length>1?"multi":""; valid.forEach(function(u){ const im=new Image(); im.alt="generated"; im.src=u; wrap.appendChild(im); }); fg.appendChild(wrap); }
+  else fg.innerHTML='<div class="cmp-empty">No generated page.</div>';
+  applyCmpView();
+}
+$("compareBtn").addEventListener("click", async function(){
+  if(busy) return;
+  if(!output.value.trim()){ showToast("Run an extraction first.",true); return; }
+  const btn=this,old=btn.innerHTML; btn.disabled=true;
+  btn.innerHTML='<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Rendering...';
+  try{
+    const pages=await buildGeneratedPages(); cmpIdx=0; renderCompare(pages);
+    $("compare").style.display="block"; $("compare").scrollIntoView({behavior:"smooth",block:"start"});
+    flash(btn,"Ready",old);
+  }catch(err){ showToast("Compare error: "+((err&&err.message)||err),true); flash(btn,"Error",old); }
+  finally{ setTimeout(function(){ if(!/ready/i.test(btn.textContent)) btn.innerHTML=old; btn.disabled=false; },1000); }
+});
+$("cmpPrev").addEventListener("click",function(){ if(GEN_CACHE){ cmpIdx--; renderCompare(GEN_CACHE.pages); } });
+$("cmpNext").addEventListener("click",function(){ if(GEN_CACHE){ cmpIdx++; renderCompare(GEN_CACHE.pages); } });
+$("cmpView").addEventListener("click",function(e){ const b=e.target.closest("button"); if(!b) return; cmpView=b.dataset.view; Array.prototype.forEach.call(this.children,function(c){ c.setAttribute("aria-pressed",String(c===b)); }); applyCmpView(); });
+
+/* ---- AI-change token diff ---- */
+function tokenize(s){ return (s||"").replace(/=====[\s\S]+?=====/g," ").trim().split(/\s+/).filter(Boolean); }
+function tokenDiffCount(aStr,bStr){
+  const A=tokenize(aStr),B=tokenize(bStr),CAP=2600;
+  if(A.length>CAP||B.length>CAP){ let d=Math.abs(A.length-B.length),m=Math.min(A.length,B.length); for(let i=0;i<m;i++) if(A[i]!==B[i]) d++; return d; }
+  const n=A.length,m=B.length; if(!n&&!m) return 0;
+  const dp=new Uint16Array((n+1)*(m+1));
+  for(let i=1;i<=n;i++) for(let j=1;j<=m;j++){ const idx=i*(m+1)+j; if(A[i-1]===B[j-1]) dp[idx]=dp[(i-1)*(m+1)+(j-1)]+1; else { const u=dp[(i-1)*(m+1)+j],l=dp[i*(m+1)+(j-1)]; dp[idx]=u>l?u:l; } }
+  const lcs=dp[n*(m+1)+m]; return (n-lcs)+(m-lcs);
+}
+
+/* keep eval + cache in sync with manual edits */
+output.addEventListener("input",function(){ GEN_CACHE=null; updateEval(); });
+
+
 $("aiFix").addEventListener("click", async function() {
     const text = output.value.trim();
     if (!text) return;
@@ -747,10 +999,13 @@ ${text}`;
         const fixedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
         
         if (fixedText) {
+            LAST_AI_CHANGES = tokenDiffCount(output.value, fixedText.trim());
             output.value = fixedText.trim();
+            GEN_CACHE = null;
+            updateEval();
             output.classList.add("ai-fixed");
-            flash(btn, "✨ Fixed!", oldHtml);
-            showToast("AI Correction Applied successfully.", false);
+            flash(btn, "\u2728 Fixed!", oldHtml);
+            showToast("AI cleanup applied \u00b7 " + LAST_AI_CHANGES + " token changes", false);
         } else {
             throw new Error("Empty response from AI");
         }
