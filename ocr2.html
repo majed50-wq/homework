@@ -866,16 +866,40 @@ function extractBoxes(prob, W, H, thresh, minArea){
   }
   return boxes;
 }
-/* recognition preprocessing: crop -> height 48, pad to maxW, normalise to [-1,1] */
+/* recognition preprocessing: crop -> height 48, keep the line's true aspect ratio
+   (the PP-OCR rec model has a DYNAMIC width axis, so we must NOT squish long lines
+   into a fixed width or characters merge into garble). Canvas width = the resized
+   width rounded up to a multiple of 32, padded with neutral gray (== 0 after norm),
+   capped at maxW. Returns the actual width so the caller sizes the tensor to match. */
 function recPreprocess(srcCanvas, box, recH, maxW){
   const w=Math.max(1,Math.round(box.x1-box.x0)), h=Math.max(1,Math.round(box.y1-box.y0));
-  let tw=Math.round(recH*w/h); if(tw>maxW) tw=maxW; if(tw<8) tw=8;
-  const c=document.createElement("canvas"); c.width=maxW; c.height=recH;
-  const ctx=c.getContext("2d"); ctx.fillStyle="rgb(127,127,127)"; ctx.fillRect(0,0,maxW,recH);
+  let tw=Math.round(recH*w/h); if(tw<8) tw=8; if(tw>maxW) tw=maxW;
+  let cw=Math.ceil(tw/32)*32; if(cw>maxW) cw=maxW; if(cw<32) cw=32;
+  const c=document.createElement("canvas"); c.width=cw; c.height=recH;
+  const ctx=c.getContext("2d"); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high";
+  ctx.fillStyle="rgb(127,127,127)"; ctx.fillRect(0,0,cw,recH);
   ctx.drawImage(srcCanvas, box.x0, box.y0, w, h, 0, 0, tw, recH);
-  const data=ctx.getImageData(0,0,maxW,recH).data, plane=maxW*recH, arr=new Float32Array(3*plane);
+  const data=ctx.getImageData(0,0,cw,recH).data, plane=cw*recH, arr=new Float32Array(3*plane);
   for(let i=0,p=0;i<data.length;i+=4,p++){ arr[p]=(data[i]/255-0.5)/0.5; arr[plane+p]=(data[i+1]/255-0.5)/0.5; arr[2*plane+p]=(data[i+2]/255-0.5)/0.5; }
-  return { data:arr, w:maxW, h:recH };
+  return { data:arr, w:cw, h:recH };
+}
+/* A single OCR'd line comes off the recogniser in left-to-right visual scan order.
+   For an RTL script that is reverse reading order, so reverse it back to logical
+   order, while keeping embedded Latin/number runs (e.g. "ESSE", "25") un-reversed
+   so the browser's bidi algorithm displays everything correctly. */
+function visualToLogicalRTL(chars){
+  const rev=chars.slice().reverse();
+  const isLTR=function(ch){ return /[A-Za-z0-9@#%&_/\\+=<>\u00C0-\u024F]/.test(ch); };
+  let i=0; const n=rev.length;
+  while(i<n){
+    if(isLTR(rev[i])){
+      let j=i; while(j<n && isLTR(rev[j])) j++;
+      const run=rev.slice(i,j).reverse();
+      for(let k=0;k<run.length;k++) rev[i+k]=run[k];
+      i=j;
+    } else i++;
+  }
+  return rev;
 }
 class PaddleOcrAdapter extends OcrAdapter {
   constructor(){ super(); this.det=null; this.rec=null; this.dict=null; this.recH=48; this._variant=null; this._detUrl=null; }
@@ -903,7 +927,7 @@ class PaddleOcrAdapter extends OcrAdapter {
   _decode(idx, C){ if(idx<=0) return null; if(C===this.dict.length+2 && idx===C-1) return " "; const ch=this.dict[idx-1]; return (ch!=null)?ch:null; }
   async recognize(canvas, opts, progress){
     await this.init(progress);
-    const ort=window.ort, recH=this.recH;
+    const ort=window.ort, recH=this.recH, set=activeModels(), rtl=!!set.rtl;
     if(progress) progress("Detecting text lines...");
     const pre=detPreprocess(canvas, 960);
     const dfeed={}; dfeed[this.det.inputNames[0]]=new ort.Tensor("float32", pre.data, [1,3,pre.nh,pre.nw]);
@@ -911,21 +935,50 @@ class PaddleOcrAdapter extends OcrAdapter {
     const pm=dout[this.det.outputNames[0]], PW=pm.dims[3], PH=pm.dims[2];
     let boxes=extractBoxes(pm.data, PW, PH, 0.3, Math.max(20,(PW*PH)*0.00003));
     const rx=canvas.width/PW, ry=canvas.height/PH;
-    boxes=boxes.map(function(b){ return { x0:b.x0*rx, y0:b.y0*ry, x1:b.x1*rx, y1:b.y1*ry }; }).sort(function(a,b){ return a.y0-b.y0; });
-    const lines=[], allConf=[];
+    boxes=boxes.map(function(b){ return { x0:b.x0*rx, y0:b.y0*ry, x1:b.x1*rx, y1:b.y1*ry }; })
+               .filter(function(b){ return (b.y1-b.y0)>=6 && (b.x1-b.x0)>=6; })
+               .sort(function(a,b){ return a.y0-b.y0; });
+    /* group detected boxes into reading rows: top -> bottom, and within a row
+       left -> right (or right -> left for RTL). Fixes word-order scrambling and
+       fragment-per-line output when detection splits a line into several boxes. */
+    const rows=[]; const usedB=new Array(boxes.length).fill(false);
     for(let i=0;i<boxes.length;i++){
-      const b=boxes[i]; if((b.y1-b.y0)<6||(b.x1-b.x0)<6) continue;
-      if(progress && i%5===0) progress("Recognising lines... "+lines.length+"/"+boxes.length);
-      const rp=recPreprocess(canvas, b, recH, 320);
-      const rf={}; rf[this.rec.inputNames[0]]=new ort.Tensor("float32", rp.data, [1,3,recH,320]);
-      const ro=await this.rec.run(rf);
-      const ot=ro[this.rec.outputNames[0]], T=ot.dims[1], C=ot.dims[2], dd=ot.data;
-      let last=0, chars=[], confs=[];
-      for(let t=0;t<T;t++){ let best=0,bv=-Infinity; for(let c=0;c<C;c++){ const v=dd[t*C+c]; if(v>bv){bv=v;best=c;} }
-        if(best!==0&&best!==last){ const ch=this._decode(best,C); if(ch!=null){ chars.push(ch); confs.push(bv); } } last=best; }
-      const text=chars.join("").trim();
-      if(text){ lines.push({ text:text, x0:b.x0/canvas.width, y0:b.y0/canvas.height, x1:b.x1/canvas.width, y1:b.y1/canvas.height });
-        if(confs.length) allConf.push(confs.reduce(function(a,b){return a+b;},0)/confs.length); }
+      if(usedB[i]) continue;
+      const cy=(boxes[i].y0+boxes[i].y1)/2, hh=Math.max(1,boxes[i].y1-boxes[i].y0);
+      const row=[boxes[i]]; usedB[i]=true;
+      for(let j=i+1;j<boxes.length;j++){
+        if(usedB[j]) continue;
+        const cy2=(boxes[j].y0+boxes[j].y1)/2;
+        if(Math.abs(cy2-cy) < hh*0.6){ row.push(boxes[j]); usedB[j]=true; }
+      }
+      row.sort(function(a,b){ return rtl ? (b.x0-a.x0) : (a.x0-b.x0); });
+      rows.push(row);
+    }
+    const lines=[], allConf=[]; let processed=0, total=boxes.length;
+    for(let r=0;r<rows.length;r++){
+      const row=rows[r], rowTexts=[], rowConfs=[];
+      let rx0=Infinity, ry0=Infinity, rx1=-Infinity, ry1=-Infinity;
+      for(let bi=0;bi<row.length;bi++){
+        const b=row[bi];
+        if(progress && processed%5===0) progress("Recognising lines... "+processed+"/"+total);
+        const rp=recPreprocess(canvas, b, recH, 1600);
+        const rf={}; rf[this.rec.inputNames[0]]=new ort.Tensor("float32", rp.data, [1,3,recH,rp.w]);
+        const ro=await this.rec.run(rf);
+        const ot=ro[this.rec.outputNames[0]], T=ot.dims[1], C=ot.dims[2], dd=ot.data;
+        let last=0, chars=[], confs=[];
+        for(let t=0;t<T;t++){ let best=0,bv=-Infinity; for(let c=0;c<C;c++){ const v=dd[t*C+c]; if(v>bv){bv=v;best=c;} }
+          if(best!==0&&best!==last){ const ch=this._decode(best,C); if(ch!=null){ chars.push(ch); confs.push(bv); } } last=best; }
+        processed++;
+        if(rtl) chars=visualToLogicalRTL(chars);
+        const wtext=chars.join("").trim();
+        if(!wtext) continue;
+        rowTexts.push(wtext);
+        if(confs.length) rowConfs.push(confs.reduce(function(a,b){return a+b;},0)/confs.length);
+        if(b.x0<rx0)rx0=b.x0; if(b.y0<ry0)ry0=b.y0; if(b.x1>rx1)rx1=b.x1; if(b.y1>ry1)ry1=b.y1;
+      }
+      if(!rowTexts.length) continue;
+      lines.push({ text:rowTexts.join(" "), x0:rx0/canvas.width, y0:ry0/canvas.height, x1:rx1/canvas.width, y1:ry1/canvas.height });
+      if(rowConfs.length) allConf.push(rowConfs.reduce(function(a,b){return a+b;},0)/rowConfs.length);
     }
     const conf=allConf.length?allConf.reduce(function(a,b){return a+b;},0)/allConf.length:null;
     return { text:lines.map(function(l){return l.text;}).join("\n"), confidence:(conf!=null&&conf<=1?conf:(conf!=null?Math.min(1,conf):null)), lines:lines };
