@@ -157,6 +157,12 @@
   #aiModeSeg button{flex:1 1 28%;min-width:118px;border:1px solid var(--gold-line);background:rgba(0,0,0,.25);color:var(--muted);font-family:'Sora';font-size:13px;font-weight:600;padding:11px 10px;border-radius:10px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
   #aiModeSeg button[aria-pressed="true"]{background:linear-gradient(155deg,var(--teal),var(--teal-deep));color:#04201d;border-color:transparent}
 
+  /* ---- AI call usage meter (Gemini daily quota) ---- */
+  .ai-usage{font-size:12px;color:var(--muted);background:rgba(0,0,0,.22);border:1px solid var(--gold-line);border-radius:10px;padding:9px 12px;line-height:1.5}
+  .ai-usage b{color:var(--gold-soft);font-variant-numeric:tabular-nums}
+  .ai-usage.warn{border-color:var(--danger);color:#f3c4b3}
+  .ai-usage.warn b{color:#f3c4b3}
+
   /* ---- Comparison workspace ---- */
   #compare{display:none}
   .cmp-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
@@ -231,6 +237,7 @@
         <label for="geminiKey" style="display:block;font-size:12px;color:var(--muted);margin-bottom:7px;font-weight:500">Gemini API key &mdash; cloud vision OCR (also powers Fix with AI &amp; AI Processing)</label>
         <input type="password" id="geminiKey" spellcheck="false" autocomplete="off" placeholder="AIzaSy..." style="width:100%;background:rgba(0,0,0,.25);color:var(--text);border:1px solid var(--gold-line);border-radius:11px;padding:11px 13px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px">
         <p class="hint">Gemini Vision sends each page image to Google's cloud and returns highly accurate Arabic/English text. The key is stored only in this browser (localStorage) and reused by Fix with AI and the AI Processing modes. Get a free key at <b>aistudio.google.com/apikey</b>.</p>
+        <div class="ai-usage" style="margin-top:10px"></div>
       </div>
     </div>
 
@@ -387,7 +394,8 @@
         <button data-mode="layout" aria-pressed="false">Layout Reconstruction</button>
       </div>
     </div>
-    <p class="note" id="aiModeDesc" style="margin:0 0 16px;color:var(--muted)"></p>
+    <p class="note" id="aiModeDesc" style="margin:0 0 14px;color:var(--muted)"></p>
+    <div class="ai-usage" style="margin:0 0 16px"></div>
     <div class="row" style="margin-top:0">
       <button class="btn btn-primary" id="aiProcRun">Process document</button>
       <button class="btn btn-ghost" id="aiProcRevert" disabled>Revert</button>
@@ -1104,8 +1112,38 @@ function requireGeminiKey(){
   if(!k) throw new Error("A Gemini API key is required. Add it under the OCR engine settings.");
   return k;
 }
+/* ---- AI call usage meter: counts every Gemini request (Vision OCR, Fix with AI,
+   and AI Processing). Persisted in localStorage so it survives reloads, and reset
+   per Gemini's rule: Requests-Per-Day quota resets at midnight Pacific time. ---- */
+const AI_LIMIT=1500;
+const AI_USAGE_KEY="gemini_ai_usage";
+function pacificDayKey(d){ try{ return new Intl.DateTimeFormat("en-CA",{timeZone:"America/Los_Angeles",year:"numeric",month:"2-digit",day:"2-digit"}).format(d||new Date()); }catch(e){ return (d||new Date()).toISOString().slice(0,10); } }
+function loadAiUsage(){
+  let u=null; try{ u=JSON.parse(localStorage.getItem(AI_USAGE_KEY)||"null"); }catch(e){}
+  const today=pacificDayKey();
+  if(!u||u.day!==today){ u={day:today,count:0}; try{ localStorage.setItem(AI_USAGE_KEY,JSON.stringify(u)); }catch(e){} }
+  return u;
+}
+function aiCallCount(){ return loadAiUsage().count; }
+function bumpAiCount(n){ const u=loadAiUsage(); u.count+=(n||1); try{ localStorage.setItem(AI_USAGE_KEY,JSON.stringify(u)); }catch(e){} renderAiUsage(); return u.count; }
+function msUntilPacificReset(){
+  let h=0,m=0,s=0;
+  try{
+    const parts=new Intl.DateTimeFormat("en-US",{timeZone:"America/Los_Angeles",hour12:false,hour:"2-digit",minute:"2-digit",second:"2-digit"}).formatToParts(new Date());
+    parts.forEach(function(p){ if(p.type==="hour")h=parseInt(p.value,10)%24; else if(p.type==="minute")m=parseInt(p.value,10); else if(p.type==="second")s=parseInt(p.value,10); });
+  }catch(e){ const d=new Date(); h=d.getHours(); m=d.getMinutes(); s=d.getSeconds(); }
+  return Math.max(0,86400-((h*60+m)*60+s))*1000;
+}
+function renderAiUsage(){
+  const nodes=document.querySelectorAll(".ai-usage"); if(!nodes.length) return;
+  const c=aiCallCount(), ms=msUntilPacificReset(), hh=Math.floor(ms/3600000), mm=Math.floor((ms%3600000)/60000), over=c>=AI_LIMIT;
+  const html="AI calls today: <b>"+c+"</b> / "+AI_LIMIT+" &middot; resets in "+hh+"h "+mm+"m (midnight Pacific)"+(over?" &middot; daily limit reached":"");
+  nodes.forEach(function(n){ n.innerHTML=html; n.classList.toggle("warn",over); });
+}
+
 async function geminiGenerate(parts, genConfig){
   const key=requireGeminiKey();
+  bumpAiCount(1);
   const payload={ contents:[{parts:parts}] };
   if(genConfig) payload.generationConfig=genConfig;
   let response=null, delay=1000;
@@ -1684,9 +1722,9 @@ $("genPdf").addEventListener("click", async function(){
    The library is lazy-loaded only when DOCX export is first used.
    ============================================================ */
 const DOCX_SOURCES=[
-  "https://cdn.jsdelivr.net/npm/docx@9.7.1/build/index.umd.js",
-  "https://cdn.jsdelivr.net/npm/docx@9.7.1/build/index.js",
-  "https://unpkg.com/docx@9.7.1/build/index.umd.js"
+  "https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js",
+  "https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.umd.cjs",
+  "https://unpkg.com/docx@9.7.1/dist/index.iife.js"
 ];
 let _docxPromise=null;
 function ensureDocx(){
@@ -1914,6 +1952,7 @@ $("aiFix").addEventListener("click", async function() {
 "Input elements:\n"+JSON.stringify(payloadElems);
 
         const payload = { contents:[{parts:[{text:instructions}]}], generationConfig:{ temperature:0, responseMimeType:"application/json" } };
+        bumpAiCount(1);
 
         let response=null, delay=1000;
         for (let i=0;i<5;i++){
@@ -2160,6 +2199,7 @@ $("aiProcRevert").addEventListener("click", function(){
 });
 
 window.addEventListener("load", function(){ if(typeof Tesseract==="undefined") showError("The OCR engine failed to load. Check your connection or refresh the page."); });
+renderAiUsage(); setInterval(renderAiUsage, 60000);
 </script>
 </body>
 </html>
