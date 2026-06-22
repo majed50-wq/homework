@@ -217,10 +217,16 @@
       <label>OCR engine</label>
       <div class="seg" id="engineSeg" role="group" aria-label="OCR engine">
         <button data-engine="tesseract" aria-pressed="true">Tesseract</button>
-        <button data-engine="paddle" aria-pressed="false">PaddleOCR Mobile</button>
+        <button data-engine="paddle" aria-pressed="false">PaddleOCR</button>
+        <button data-engine="gemini" aria-pressed="false">Gemini Vision</button>
       </div>
       <p class="hint" id="engineHint" style="display:none">PaddleOCR (PP-OCRv5) runs its own detection + recognition on WebAssembly, so the Tesseract model / sweep / preprocessing options are ignored. The <b>Language</b> control picks the model: English by default, or Arabic when Language = Arabic. Models load on first use and are cached.</p>
       <button class="mini" id="paddleDiagBtn" type="button" style="display:none;margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 4-2 6H7c0-2-2-3-2-6a7 7 0 0 1 7-7z"/><path d="M9 21h6"/></svg>Run PaddleOCR diagnostics</button>
+      <div id="geminiKeyField" style="display:none;margin-top:12px">
+        <label for="geminiKey" style="display:block;font-size:12px;color:var(--muted);margin-bottom:7px;font-weight:500">Gemini API key &mdash; cloud vision OCR (also powers Fix with AI &amp; AI Processing)</label>
+        <input type="password" id="geminiKey" spellcheck="false" autocomplete="off" placeholder="AIzaSy..." style="width:100%;background:rgba(0,0,0,.25);color:var(--text);border:1px solid var(--gold-line);border-radius:11px;padding:11px 13px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:13px">
+        <p class="hint">Gemini Vision sends each page image to Google's cloud and returns highly accurate Arabic/English text. The key is stored only in this browser (localStorage) and reused by Fix with AI and the AI Processing modes. Get a free key at <b>aistudio.google.com/apikey</b>.</p>
+      </div>
     </div>
 
     <div class="settings">
@@ -364,6 +370,24 @@
     <div class="pages" id="pages"></div>
   </section>
 
+  <section class="card" id="aiproc" style="display:none">
+    <h2>AI Document Processing</h2>
+    <p class="note" style="margin:-4px 0 14px">Transform the raw extraction into a clean, well-structured document. Processing runs page-by-page through Gemini and rewrites the result below, so <b>Generate PDF</b>, <b>Compare</b> and <b>Copy</b> all reflect the cleaned version. Use <b>Revert</b> to return to the raw OCR.</p>
+    <div class="recon-row" style="margin-bottom:14px">
+      <span class="recon-lbl">Mode</span>
+      <div class="view-seg" id="aiModeSeg" role="group" aria-label="AI processing mode">
+        <button data-mode="light" aria-pressed="true">Light</button>
+        <button data-mode="medium" aria-pressed="false">Medium</button>
+        <button data-mode="heavy" aria-pressed="false">Heavy</button>
+      </div>
+    </div>
+    <p class="note" id="aiModeDesc" style="margin:0 0 16px;color:var(--muted)"></p>
+    <div class="row" style="margin-top:0">
+      <button class="btn btn-primary" id="aiProcRun">Process document</button>
+      <button class="btn btn-ghost" id="aiProcRevert" disabled>Revert</button>
+    </div>
+  </section>
+
   <section class="card" id="benchmark" style="display:none">
     <h2>Engine benchmark</h2>
     <p class="note" style="margin:-4px 0 14px">Each engine you run is recorded here. Run the same files with Tesseract and PaddleOCR Mobile to compare directly.</p>
@@ -426,8 +450,9 @@ let GEN_CACHE=null;         /* { sig, pages:[{label, original, gen:[dataURL,...]
 let cmpIdx=0, cmpView="all";
 let RECON_MODE="layout";    /* "layout" = match original geometry, "reflow" = clean document */
 let ENGINE="tesseract";     /* selected OCR engine */
-const ENGINE_LABELS={ tesseract:"Tesseract", paddle:"PaddleOCR Mobile" };
+const ENGINE_LABELS={ tesseract:"Tesseract", paddle:"PaddleOCR Mobile", gemini:"Gemini Vision" };
 let ENGINE_RUNS={};         /* engineId -> { id, label, struct, stats, ts, _genCache } */
+let RAW_STRUCT_BACKUP=null;  /* raw OCR PAGE_STRUCT kept before AI Processing, for Revert */
 let CMP=null;               /* {engs, genByEng, n} cache for the comparison workspace */
 
 /* ---- Custom UI Toast System ---- */
@@ -507,7 +532,7 @@ function syncOptimizeUI(){
 }
 optChk.addEventListener("change",syncOptimizeUI);
 $("langSeg").addEventListener("click",function(e){ const b=e.target.closest("button"); if(!b)return; lang=b.dataset.lang; Array.prototype.forEach.call($("langSeg").children,function(c){ c.setAttribute("aria-pressed",String(c===b)); }); setDefaultsForLang(lang); });
-$("engineSeg").addEventListener("click",function(e){ const b=e.target.closest("button"); if(!b)return; ENGINE=b.dataset.engine; Array.prototype.forEach.call($("engineSeg").children,function(c){ c.setAttribute("aria-pressed",String(c===b)); }); const isP=(ENGINE==="paddle"); $("engineHint").style.display=isP?"block":"none"; $("paddleDiagBtn").style.display=isP?"inline-flex":"none"; });
+$("engineSeg").addEventListener("click",function(e){ const b=e.target.closest("button"); if(!b)return; ENGINE=b.dataset.engine; Array.prototype.forEach.call($("engineSeg").children,function(c){ c.setAttribute("aria-pressed",String(c===b)); }); const isP=(ENGINE==="paddle"); $("engineHint").style.display=isP?"block":"none"; $("paddleDiagBtn").style.display=isP?"inline-flex":"none"; $("geminiKeyField").style.display=(ENGINE==="gemini")?"block":"none"; });
 $("paddleDiagBtn").addEventListener("click", async function(){
   const btn=this,old=btn.innerHTML; btn.disabled=true;
   btn.innerHTML='<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Running checks...';
@@ -543,7 +568,7 @@ input.addEventListener("change",function(){ addFiles(input.files); input.value="
 ["dragenter","dragover"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.add("over"); }); });
 ["dragleave","drop"].forEach(function(ev){ drop.addEventListener(ev,function(e){ e.preventDefault(); drop.classList.remove("over"); }); });
 drop.addEventListener("drop",function(e){ if(e.dataTransfer&&e.dataTransfer.files) addFiles(e.dataTransfer.files); });
-clearBtn.addEventListener("click",function(){ if(busy)return; files=[]; renderFiles(); results.style.display="none"; errorBox.style.display="none"; output.value=""; output.classList.remove("ai-fixed"); pagesEl.innerHTML=""; $("compare").style.display="none"; $("debug").style.display="none"; $("benchmark").style.display="none"; $("paddleDiag").style.display="none"; GEN_CACHE=null; LAST_PAGES=[]; PAGE_STRUCT=[]; STRUCT_VERSION=0; LAST_AVG_CONF=null; LAST_PROC_MS=0; LAST_AI_CHANGES=null; ENGINE_RUNS={}; CMP=null; });
+clearBtn.addEventListener("click",function(){ if(busy)return; files=[]; renderFiles(); results.style.display="none"; errorBox.style.display="none"; output.value=""; output.classList.remove("ai-fixed"); pagesEl.innerHTML=""; $("compare").style.display="none"; $("debug").style.display="none"; $("benchmark").style.display="none"; $("paddleDiag").style.display="none"; $("aiproc").style.display="none"; GEN_CACHE=null; LAST_PAGES=[]; PAGE_STRUCT=[]; STRUCT_VERSION=0; LAST_AVG_CONF=null; LAST_PROC_MS=0; LAST_AI_CHANGES=null; ENGINE_RUNS={}; CMP=null; RAW_STRUCT_BACKUP=null; });
 function showError(m){ errorBox.textContent=m; errorBox.style.display="block"; }
 
 /* ============================================================ PREPROCESSING ============================================================ */
@@ -1048,8 +1073,80 @@ function diagToText(d){
   if(d.finalError) L.push("Error: "+d.finalError);
   return L.join("\n");
 }
-let tessAdapter=new TesseractAdapter(), paddleAdapter=new PaddleOcrAdapter();
-function currentAdapter(){ return ENGINE==="paddle"?paddleAdapter:tessAdapter; }
+/* ============================================================
+   GEMINI VISION ADAPTER  (cloud OCR - third engine)
+   Reuses ONLY the extraction step from the reference project:
+     page canvas -> JPEG -> Gemini Vision -> raw text.
+   Output is normalised to the same shape every other engine returns,
+   so it flows through the existing Structure Analyzer / reconstruction /
+   PDF / compare / Fix-with-AI pipeline with no downstream changes.
+   No geometry (lines:[]) -> Structure Analyzer uses its text path and
+   reconstruction falls back to clean reflow automatically.
+   ============================================================ */
+const GEMINI_MODEL = "gemini-3.5-flash";
+function geminiEndpoint(key){ return "https://generativelanguage.googleapis.com/v1beta/models/"+GEMINI_MODEL+":generateContent?key="+encodeURIComponent(key); }
+function getGeminiKey(){
+  const f=$("geminiKey"), v=(f&&f.value)?f.value.trim():"";
+  if(v){ try{ localStorage.setItem("gemini_ocr_key", v); }catch(e){} return v; }
+  let s=null; try{ s=localStorage.getItem("gemini_ocr_key"); }catch(e){}
+  return s?s.trim():"";
+}
+function saveGeminiKey(k){ if(!k) return; k=k.trim(); try{ localStorage.setItem("gemini_ocr_key", k); }catch(e){} const f=$("geminiKey"); if(f&&!f.value) f.value=k; }
+function requireGeminiKey(){
+  let k=getGeminiKey();
+  if(!k){ k=prompt("Enter your Gemini API key.\n\nStored only in this browser and reused for Gemini Vision OCR, Fix with AI and AI Processing."); if(k){ k=k.trim(); saveGeminiKey(k); } }
+  if(!k) throw new Error("A Gemini API key is required. Add it under the OCR engine settings.");
+  return k;
+}
+async function geminiGenerate(parts, genConfig){
+  const key=requireGeminiKey();
+  const payload={ contents:[{parts:parts}] };
+  if(genConfig) payload.generationConfig=genConfig;
+  let response=null, delay=1000;
+  for(let i=0;i<5;i++){
+    try{ response=await fetch(geminiEndpoint(key),{ method:"POST", headers:{"Content-Type":"application/json"}, credentials:"omit", mode:"cors", body:JSON.stringify(payload) }); if(response.ok) break; }
+    catch(e){}
+    if(response && (response.status===400||response.status===401||response.status===403)){ try{ localStorage.removeItem("gemini_ocr_key"); }catch(e){} throw new Error("Gemini rejected the request (HTTP "+response.status+"). Check your API key."); }
+    if(i<4){ await new Promise(function(r){ setTimeout(r,delay); }); delay*=2; }
+  }
+  if(!response||!response.ok) throw new Error(response?("Gemini error: HTTP "+response.status+" "+(response.statusText||"")):"Network error contacting Gemini.");
+  const data=await response.json();
+  const cand=data&&data.candidates&&data.candidates[0];
+  if(cand && cand.finishReason==="SAFETY") throw new Error("Gemini blocked this page (safety filter).");
+  const raw=(cand&&cand.content&&cand.content.parts)?cand.content.parts.map(function(p){return p.text||"";}).join(""):"";
+  if(!raw) throw new Error("Gemini returned an empty response for this page.");
+  return raw;
+}
+function stripFences(s){ let t=(s||"").trim(); t=t.replace(/^```[a-zA-Z]*\s*/,"").replace(/\s*```\s*$/,""); return t.trim(); }
+function canvasJpegB64(canvas,q){ return canvas.toDataURL("image/jpeg",q||0.85).split(",")[1]; }
+function imagePart(b64){ return { inlineData:{ mimeType:"image/jpeg", data:b64 } }; }
+function downscaleForVision(canvas){
+  const maxSide=2200, long=Math.max(canvas.width,canvas.height);
+  if(long<=maxSide) return canvas;
+  const s=maxSide/long, c=document.createElement("canvas"); c.width=Math.round(canvas.width*s); c.height=Math.round(canvas.height*s);
+  const ctx=c.getContext("2d"); ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality="high"; ctx.drawImage(canvas,0,0,c.width,c.height); return c;
+}
+const GEMINI_OCR_PROMPT =
+"You are a precise OCR engine. Extract ALL text from this scanned page exactly as it appears. "+
+"The page may contain Arabic, English, or both. Preserve the reading order and the original line breaks. "+
+"For Arabic, output text in correct right-to-left logical order. "+
+"Do NOT translate, summarize, correct, reorder, merge, or add anything. "+
+"Do NOT invent headings or labels. Do NOT wrap output in markdown code fences or add commentary. "+
+"Return only the raw extracted text.";
+class GeminiAdapter extends OcrAdapter {
+  get id(){ return "gemini"; }
+  get label(){ return "Gemini Vision"; }
+  async recognize(canvas, opts, progress){
+    if(progress) progress("Encoding page for Gemini Vision...");
+    const b64=canvasJpegB64(downscaleForVision(canvas),0.85);
+    if(progress) progress("Gemini Vision is reading the page...");
+    const text=await geminiGenerate([{text:GEMINI_OCR_PROMPT}, imagePart(b64)], null);
+    return { text:stripFences(text), confidence:null, lines:[] };
+  }
+}
+
+let tessAdapter=new TesseractAdapter(), paddleAdapter=new PaddleOcrAdapter(), geminiAdapter=new GeminiAdapter();
+function currentAdapter(){ return ENGINE==="paddle"?paddleAdapter:(ENGINE==="gemini"?geminiAdapter:tessAdapter); }
 
 
 /* ---- auto-optimize grid ---- */
@@ -1098,7 +1195,7 @@ runBtn.addEventListener("click", async function(){
   const collected=[];
 
   try{
-    await ensureWorker(useLegacy, mQuality);
+    if(ENGINE==="tesseract") await ensureWorker(useLegacy, mQuality);
     const jobs=await buildJobs(useEmbedded); if(jobs.length===0) throw new Error("No readable pages found.");
 
     for(let i=0;i<jobs.length;i++){
@@ -1116,7 +1213,16 @@ runBtn.addEventListener("click", async function(){
 
       let resultText="",resultConf=0,resultThumb=null,resultTag="",resultLines=[],resultAspect=1.414;
 
-      if(ENGINE==="paddle"){
+      if(ENGINE==="gemini"){
+        pSub.textContent="Rendering page..."; await yieldUI();
+        const raw=await renderRaw(job,200,adv);
+        resultThumb=thumbDataURL(raw); resultAspect=raw.height/raw.width;
+        setBar(baseFrac+span*0.2);
+        const res=await geminiAdapter.recognize(raw,{},function(m){ if(m) pSub.textContent=m; });
+        resultText=res.text||""; resultConf=null; resultLines=[];
+        resultTag="Gemini Vision \u00b7 "+GEMINI_MODEL;
+        disposeCanvas(raw); setBar(baseFrac+span*0.95);
+      } else if(ENGINE==="paddle"){
         jobProgress=function(p){ setBar(baseFrac+span*p); };
         pSub.textContent="Rendering page..."; await yieldUI();
         const raw=await renderRaw(job,200,adv);
@@ -1256,7 +1362,9 @@ function renderResults(){
     pagesEl.appendChild(d);
   });
   renderDebug();
-  results.style.display="block"; results.scrollIntoView({behavior:"smooth",block:"start"});
+  results.style.display="block";
+  $("aiproc").style.display="block"; resetAiProcState();
+  results.scrollIntoView({behavior:"smooth",block:"start"});
 }
 
 /* ============================================================ DOCUMENT RECONSTRUCTION + PDF + COMPARE ============================================================ */
@@ -1803,6 +1911,158 @@ $("copy").addEventListener("click", function(){
 
 $("download").addEventListener("click", function(){ const b=new Blob([output.value],{type:"text/plain;charset=utf-8"}),u=URL.createObjectURL(b),a=document.createElement("a"); a.href=u; a.download="ocr-text.txt"; document.body.appendChild(a); a.click(); document.body.removeChild(a); setTimeout(function(){ URL.revokeObjectURL(u); },1000); });
 function flash(btn,txt,old){ btn.textContent=txt; setTimeout(function(){ btn.innerHTML=old; },1200); }
+
+/* ============================================================
+   AI DOCUMENT PROCESSING  (Light / Medium / Heavy)
+   The current bottleneck is turning raw extraction into a clean,
+   well-structured document. These modes run the extracted text
+   (Heavy also sends the original page image) through Gemini, then
+   rebuild PAGE_STRUCT from the cleaned result so every existing
+   output - textarea, Generate PDF, Compare, Copy, .txt - reflects
+   the cleaned document. Revert restores the raw OCR.
+   ============================================================ */
+let AI_PROC_MODE="light";
+const AI_MODE_DESC={
+  light:"Light - structural cleanup only. Removes page numbers, headers, footers and side notes, and joins lines broken mid-sentence. Wording is preserved exactly.",
+  medium:"Medium - rebuilds paragraphs, detects real headings, fixes obvious OCR errors and standardizes punctuation. Meaning and language are preserved.",
+  heavy:"Heavy - sends the original page image together with the OCR text. Reconstructs full structure (headings, lists, tables) for the cleanest final-PDF output."
+};
+function setAiModeDesc(){ const d=$("aiModeDesc"); if(d) d.textContent=AI_MODE_DESC[AI_PROC_MODE]||""; }
+function resetAiProcState(){ RAW_STRUCT_BACKUP=null; const r=$("aiProcRevert"); if(r) r.disabled=true; setAiModeDesc(); }
+
+/* pre-fill + persist the shared Gemini key field */
+(function(){ const f=$("geminiKey"); if(!f) return; try{ const s=localStorage.getItem("gemini_ocr_key"); if(s&&!f.value) f.value=s; }catch(e){} f.addEventListener("input",function(){ const v=f.value.trim(); if(v){ try{ localStorage.setItem("gemini_ocr_key",v); }catch(e){} } }); })();
+
+$("aiModeSeg").addEventListener("click",function(e){ const b=e.target.closest("button"); if(!b) return; AI_PROC_MODE=b.dataset.mode; Array.prototype.forEach.call($("aiModeSeg").children,function(c){ c.setAttribute("aria-pressed",String(c===b)); }); setAiModeDesc(); });
+setAiModeDesc();
+
+function rawPageText(st){ return (st.rawText&&st.rawText.trim()) ? st.rawText : st.elements.filter(function(e){return e.role!=="decoration";}).map(function(e){return elText(e).trim();}).filter(Boolean).join("\n\n"); }
+
+function lightPrompt(t){ return ""+
+"You are cleaning OCR output WITHOUT changing the words.\n"+
+"Tasks:\n"+
+"- Remove page numbers, running headers and footers, and marginal side notes.\n"+
+"- Join lines broken mid-sentence into continuous paragraphs (drop hard line breaks inside a sentence; repair words hyphenated at line ends).\n"+
+"- Keep genuine paragraph breaks as blank lines.\n"+
+"Strict rules:\n"+
+"- Preserve the wording EXACTLY: do not rephrase, translate, spell-correct, or add or remove words.\n"+
+"- Do not add headings, titles or labels.\n"+
+"- Keep the original language and reading order; for Arabic keep right-to-left order.\n"+
+"- Return only the cleaned text. No commentary, no code fences.\n\nOCR text:\n"+t; }
+
+function mediumPrompt(t){ return ""+
+"You are reconstructing a clean, readable document from rough OCR text.\n"+
+"Tasks:\n"+
+"- Remove page numbers, headers, footers and side notes.\n"+
+"- Rebuild paragraphs and join broken lines.\n"+
+"- Detect real headings and mark them with markdown: # for a main heading, ## for a subheading. Only mark text that is clearly a heading in the source; never invent one.\n"+
+"- Fix obvious OCR recognition errors (garbled words, swapped letters).\n"+
+"- Standardize punctuation and spacing.\n"+
+"Strict rules:\n"+
+"- Preserve the meaning and the original language; do not translate or summarize.\n"+
+"- Do not add content that is not in the source.\n"+
+"- Use markdown ONLY for headings. No code fences, no commentary.\n\nOCR text:\n"+t; }
+
+function heavyPrompt(t){ return ""+
+"You are producing a faithful, clean reconstruction of this scanned page.\n"+
+"You are given the ORIGINAL page image (ground truth) and a rough OCR transcription. Use the image to resolve anything unclear in the OCR.\n"+
+"Tasks:\n"+
+"- Reproduce the document structure as closely as possible: headings, paragraphs, lists and tables.\n"+
+"- Use markdown: #, ##, ### for heading levels; - for list items; markdown pipe tables for tabular data.\n"+
+"- Remove page numbers, running headers/footers and margin notes.\n"+
+"- Fix OCR errors using the image; keep the original language and reading order. For Arabic keep right-to-left order.\n"+
+"Strict rules:\n"+
+"- Do not translate, summarize or invent content; transcribe what is on the page.\n"+
+"- The output will be used to rebuild a final PDF, so keep it clean and well structured.\n"+
+"- Return only the reconstructed markdown. No commentary, no code fences.\n\nRough OCR text:\n"+t; }
+
+function mkProcEl(role,t){ return { id:"e"+(++__eid), role:role, bbox:null, lines:[{bbox:null,text:t}], text:t, aiText:null, aiChanged:false }; }
+function buildProcessedStruct(markdown, prev, pageIndex){
+  const base={ label:prev.label, pageIndex:pageIndex, aspect:prev.aspect||1.414, confidence:(prev.confidence!=null?prev.confidence:null),
+    rawText:markdown, pageNumber:null, title:null, decoration:[], elements:[], paragraphs:[], englishWords:[], hasGeometry:false };
+  const els=[]; let buf=[];
+  function flush(){ const t=buf.join(" ").replace(/\s+/g," ").trim(); if(t) els.push(mkProcEl("body",t)); buf=[]; }
+  const lines=(markdown||"").replace(/\r/g,"").split("\n");
+  for(let i=0;i<lines.length;i++){
+    const s=lines[i].trim();
+    if(!s){ flush(); continue; }
+    const h=s.match(/^(#{1,6})\s+(.*)$/);
+    if(h){ flush(); const ht=h[2].trim(); if(ht) els.push(mkProcEl("title",ht)); continue; }
+    if(/^([-*+]|\d+[.)])\s+/.test(s) || /^\|.*\|/.test(s)){ flush(); els.push(mkProcEl("body",s)); continue; }
+    buf.push(s);
+  }
+  flush();
+  base.elements=els;
+  base.title=els.filter(function(e){return e.role==="title";})[0]||null;
+  base.paragraphs=els.filter(function(e){return e.role==="body";}).map(function(e){return {id:e.id,text:e.text};});
+  base.englishWords=englishTokens(els.map(function(e){return e.text;}).join(" "));
+  base.original=prev.original||null; base.thumb=prev.thumb||null; base.source=prev.source||null; base.engine=prev.engine||null;
+  return base;
+}
+
+/* rebuild textarea + page list + debug + eval from current PAGE_STRUCT (no scroll / no card reset) */
+function refreshDerivedViews(){
+  structToTextarea();
+  const confs=PAGE_STRUCT.filter(function(s){return s.confidence!=null&&s.confidence>0;}).map(function(s){return s.confidence;});
+  LAST_AVG_CONF=confs.length?Math.round(confs.reduce(function(a,b){return a+b;},0)/confs.length):null;
+  updateEval();
+  pagesEl.innerHTML="";
+  PAGE_STRUCT.forEach(function(st){
+    const d=document.createElement("details"); d.className="pg";
+    d.innerHTML='<summary><svg class="chev" width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 2l4 4-4 4"/></svg><span class="ttl"></span><span class="tag"></span></summary><div class="page-body"></div>';
+    d.querySelector(".ttl").textContent=st.label;
+    d.querySelector(".tag").textContent=(st.engine?st.engine+" \u00b7 ":"")+(st.source||"")+(st.confidence!=null&&st.confidence>0?" "+Math.round(st.confidence)+"%":"");
+    const body=d.querySelector(".page-body");
+    if(st.thumb){ const th=document.createElement("div"); th.className="thumb"; th.innerHTML='<img alt="page">'+((st.source||"").indexOf("text layer")>=0?'':'<div class="cap">original page</div>'); th.querySelector("img").src=st.thumb; body.appendChild(th); }
+    const tx=document.createElement("div"); tx.className="page-text"; tx.setAttribute("dir","auto"); tx.textContent=serializeStruct(st); body.appendChild(tx);
+    pagesEl.appendChild(d);
+  });
+  renderDebug();
+}
+
+$("aiProcRun").addEventListener("click", async function(){
+  if(busy) return;
+  if(!PAGE_STRUCT.length){ showToast("Run an extraction first.",true); return; }
+  try{ requireGeminiKey(); }catch(e){ showToast((e&&e.message)||"A Gemini API key is required.",true); return; }
+  const mode=AI_PROC_MODE, btn=this, old=btn.textContent;
+  if(!RAW_STRUCT_BACKUP) RAW_STRUCT_BACKUP=PAGE_STRUCT;     /* always process from the raw OCR */
+  const source=RAW_STRUCT_BACKUP, out=[];
+  busy=true; btn.disabled=true; $("aiProcRevert").disabled=true; runBtn.disabled=true; clearBtn.disabled=true;
+  try{
+    for(let i=0;i<source.length;i++){
+      const st=source[i]; btn.textContent="Processing "+(i+1)+"/"+source.length+"...";
+      const ptext=rawPageText(st); let md;
+      if(mode==="heavy"){
+        const parts=[{text:heavyPrompt(ptext)}];
+        if(st.original){ const b64=String(st.original).split(",")[1]; if(b64) parts.push(imagePart(b64)); }
+        md=stripFences(await geminiGenerate(parts,null));
+      } else {
+        md=stripFences(await geminiGenerate([{text:(mode==="light"?lightPrompt(ptext):mediumPrompt(ptext))}],null));
+      }
+      out.push(buildProcessedStruct(md, st, i));
+      await yieldUI();
+    }
+    PAGE_STRUCT=out; STRUCT_VERSION++; GEN_CACHE=null; LAST_AI_CHANGES=null;
+    snapshotEngineRun();
+    refreshDerivedViews(); output.classList.add("ai-fixed");
+    if($("compare").style.display==="block"){ try{ await openCompare(); }catch(e){} }
+    $("aiProcRevert").disabled=false;
+    showToast("Processed "+out.length+" page"+(out.length===1?"":"s")+" - "+mode+" mode.",false);
+  }catch(err){
+    showToast("AI Processing error: "+((err&&err.message)||"failed"),true);
+  }finally{
+    btn.textContent=old; busy=false; btn.disabled=false; runBtn.disabled=files.length===0; clearBtn.disabled=false;
+  }
+});
+
+$("aiProcRevert").addEventListener("click", function(){
+  if(busy||!RAW_STRUCT_BACKUP) return;
+  PAGE_STRUCT=RAW_STRUCT_BACKUP; RAW_STRUCT_BACKUP=null; STRUCT_VERSION++; GEN_CACHE=null; LAST_AI_CHANGES=null;
+  snapshotEngineRun();
+  refreshDerivedViews(); output.classList.remove("ai-fixed");
+  this.disabled=true;
+  showToast("Reverted to raw OCR.",false);
+});
 
 window.addEventListener("load", function(){ if(typeof Tesseract==="undefined") showError("The OCR engine failed to load. Check your connection or refresh the page."); });
 </script>
