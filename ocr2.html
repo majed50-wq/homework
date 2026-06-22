@@ -11,7 +11,7 @@
 <title>OCR Studio Pro</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=DM+Serif+Display&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Naskh+Arabic:wght@400;700&family=DM+Serif+Display&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
@@ -95,7 +95,7 @@
   .ai-btn:hover {background: rgba(216,178,74,0.25); border-color: #f1c453;}
   .ai-btn svg {stroke: var(--gold);}
   .ai-btn:disabled {opacity: 0.6; cursor: wait;}
-  textarea#output{width:100%;min-height:230px;resize:vertical;background:rgba(0,0,0,.28);border:1px solid var(--gold-line);border-radius:var(--radius-sm);color:var(--text);font-family:'Sora';font-size:14px;line-height:1.7;padding:15px; transition: border-color 0.3s;}
+  textarea#output{width:100%;min-height:230px;resize:vertical;background:rgba(0,0,0,.28);border:1px solid var(--gold-line);border-radius:var(--radius-sm);color:var(--text);font-family:'Sora','Noto Naskh Arabic',sans-serif;font-size:14px;line-height:1.8;padding:15px; transition: border-color 0.3s;}
   textarea#output.ai-fixed { border-color: var(--gold); box-shadow: 0 0 15px rgba(216,178,74,0.15); }
   textarea#output:focus{outline:none;border-color:var(--teal)}
   .pages{margin-top:14px;display:flex;flex-direction:column;gap:9px}
@@ -110,7 +110,7 @@
   .thumb{flex:0 0 auto;width:150px;border:1px solid var(--gold-line);border-radius:8px;background:#fff;overflow:hidden}
   .thumb img{display:block;width:100%}
   .thumb .cap{font-size:10px;color:#5a7a74;text-align:center;padding:3px;background:rgba(0,0,0,.04)}
-  .page-text{flex:1;min-width:0;font-size:13.5px;line-height:1.7;white-space:pre-wrap;word-break:break-word;color:var(--text)}
+  .page-text{flex:1;min-width:0;font-size:13.5px;line-height:1.85;white-space:pre-wrap;word-break:break-word;color:var(--text);font-family:'Sora','Noto Naskh Arabic',sans-serif}
   .note{font-size:11.5px;color:var(--muted-2);margin-top:16px;line-height:1.6}.note b{color:var(--muted)}
   .err{display:none;background:rgba(233,139,107,.1);border:1px solid rgba(233,139,107,.35);color:#f3c4b3;border-radius:10px;padding:12px 14px;font-size:13px;margin-top:14px}
   @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -308,7 +308,7 @@
           <label class="check"><input type="checkbox" id="deskew"><span><b>Deskew</b> &mdash; straighten tilted scans.</span></label>
           <label class="check"><input type="checkbox" id="sharpen"><span><b>Sharpen</b> &mdash; recover edges on blurry photos.</span></label>
           <label class="check"><input type="checkbox" id="despeckle"><span><b>Despeckle</b> &mdash; drop isolated noise dots.</span></label>
-          <label class="check"><input type="checkbox" id="embedded" checked><span><b>Use the PDF text layer</b> when present (perfect output on digital PDFs).</span></label>
+          <label class="check"><input type="checkbox" id="embedded" checked><span><b>Auto-skip OCR for digital PDFs</b> &mdash; when a PDF already contains selectable text, extract it directly and skip OCR (recommended). Image-only pages still run the OCR engine automatically.</span></label>
         </div>
 
         <div class="field">
@@ -366,6 +366,7 @@
         Fix with AI
       </button>
       <button class="mini" id="genPdf"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>Generate PDF</button>
+      <button class="mini" id="genDocx"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M9 13l1.5 4 1.5-4 1.5 4L15 13"/></svg>Word .docx</button>
       <button class="mini" id="compareBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="7" height="16" rx="1"/><rect x="14" y="4" width="7" height="16" rx="1"/></svg>Compare</button>
       <button class="mini" id="debugBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2"/></svg>Structure</button>
       <button class="mini" id="copy"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a2 2 0 0 1 2-2h8"/></svg>Copy</button>
@@ -1211,8 +1212,8 @@ runBtn.addEventListener("click", async function(){
         pSub.textContent="Checking text layer...";
         const page=await job.getPage(); let emb="";
         try{ const tc=await page.getTextContent(); emb=tc.items.map(function(it){return it.str;}).join(" ").replace(/\s+/g," ").trim(); }catch(e){}
-        if(emb.length>=24&&letterRatio(emb)>0.4){ let thumb=null; try{ const pc=await pdfPageToCanvas(page,110); thumb=thumbDataURL(pc); disposeCanvas(pc); }catch(e){}
-          collected.push({label:job.label,text:emb,conf:null,source:"text layer",thumb:thumb,engine:ENGINE_LABELS[ENGINE]}); page.cleanup(); job.done(); setBar((i+1)/jobs.length); continue; }
+        if(emb.length>=24&&letterRatio(emb)>0.4){ pSub.textContent="Embedded text found - skipping OCR"; let thumb=null; try{ const pc=await pdfPageToCanvas(page,110); thumb=thumbDataURL(pc); disposeCanvas(pc); }catch(e){}
+          collected.push({label:job.label,text:emb,conf:null,source:"text layer (no OCR)",thumb:thumb,engine:ENGINE_LABELS[ENGINE]}); page.cleanup(); job.done(); setBar((i+1)/jobs.length); continue; }
         page.cleanup();
       }
 
@@ -1374,12 +1375,15 @@ function renderResults(){
 
 /* ============================================================ DOCUMENT RECONSTRUCTION + PDF + COMPARE ============================================================ */
 const PG_W=1240, PG_H=1754, PG_MARGIN=120;
+/* document fonts (book-like): Noto Naskh Arabic for Arabic, serif for Latin (Arabic fallback covers mixed) */
+const FONT_AR="'Noto Naskh Arabic'", FONT_LAT="Georgia,'Noto Naskh Arabic',serif";
+function docFont(rtl){ return rtl?FONT_AR:FONT_LAT; }
 let fontsReady=false;
 async function ensureDocFonts(){
   if(fontsReady) return;
   try{
     if(document.fonts&&document.fonts.load){
-      await Promise.all([document.fonts.load("400 34px Amiri"),document.fonts.load("700 46px Amiri"),document.fonts.load("400 34px Georgia")]);
+      await Promise.all([document.fonts.load("400 34px 'Noto Naskh Arabic'"),document.fonts.load("700 46px 'Noto Naskh Arabic'"),document.fonts.load("400 34px Georgia")]);
       await document.fonts.ready;
     }
   }catch(e){}
@@ -1428,7 +1432,7 @@ function layoutToCanvases(blocks){
   blocks.forEach(function(b){
     if(b.type==="space"){ y+=24; return; }
     const rtl=isArabicStr(b.text),heading=b.type==="h",size=heading?46:34,weight=heading?"700":"400";
-    const fam=rtl?"Amiri":"Georgia,'Amiri',serif",lh=Math.round(size*(heading?1.5:1.55));
+    const fam=docFont(rtl),lh=Math.round(size*(heading?1.5:1.55));
     ctx.font=weight+" "+size+"px "+fam;
     const lines=wrapLine(ctx,b.text,maxW);
     if(heading) y+=14;
@@ -1567,25 +1571,25 @@ function analyzeText(base, rawText){
    - title / decoration: geometry-locked (drawn at original boxes)
    - body: original line boxes if untouched; reflow-in-box only if AI changed it
    ============================================================ */
-function drawLineAtBox(ctx,W,H,bbox,text){
+function drawLineAtBox(ctx,W,H,bbox,text,weight){
   const txt=(text||"").trim(); if(!txt||!bbox) return;
   const x0=bbox.x0*W,y0=bbox.y0*H,x1=bbox.x1*W,y1=bbox.y1*H;
   const boxW=Math.max(6,x1-x0),boxH=Math.max(8,y1-y0),rtl=isArabicStr(txt);
   let size=Math.round(boxH*0.80); if(size<11) size=11; if(size>150) size=150;
-  ctx.font="400 "+size+"px "+(rtl?"Amiri":"Georgia,'Amiri',serif");
+  ctx.font=(weight||"400")+" "+size+"px "+docFont(rtl);
   const tw=ctx.measureText(txt).width||1,sx=Math.max(0.35,Math.min(1.12,boxW/tw)),baseline=y1-boxH*0.16;
   ctx.save(); ctx.fillStyle="#15201f"; ctx.direction=rtl?"rtl":"ltr";
   if(rtl){ ctx.translate(x1,0); ctx.scale(sx,1); ctx.textAlign="right"; ctx.fillText(txt,0,baseline); }
   else { ctx.translate(x0,0); ctx.scale(sx,1); ctx.textAlign="left"; ctx.fillText(txt,0,baseline); }
   ctx.restore();
 }
-function reflowInBox(ctx,W,H,el){
+function reflowInBox(ctx,W,H,el,weight){
   const txt=elText(el).trim(); if(!txt||!el.bbox) return;
   const x0=el.bbox.x0*W,y0=el.bbox.y0*H,x1=el.bbox.x1*W,y1=el.bbox.y1*H,boxW=Math.max(20,x1-x0);
   const lineHs=el.lines.map(function(l){return l.bbox?(l.bbox.y1-l.bbox.y0)*H:(y1-y0);});
   let size=Math.round((median(lineHs)||(y1-y0))*0.80); if(size<11) size=11; if(size>150) size=150;
   const rtl=isArabicStr(txt);
-  ctx.font="400 "+size+"px "+(rtl?"Amiri":"Georgia,'Amiri',serif");
+  ctx.font=(weight||"400")+" "+size+"px "+docFont(rtl);
   const wrapped=wrapLine(ctx,txt,boxW),lh=Math.round(size*1.5);
   ctx.save(); ctx.fillStyle="#15201f"; ctx.direction=rtl?"rtl":"ltr"; ctx.textAlign=rtl?"right":"left";
   let yy=y0+size;
@@ -1596,13 +1600,14 @@ function drawElement(ctx,W,H,el){
   if(!el.bbox) return;
   if(el.role==="body"){
     /* paragraph block: keep original OCR line boxes unless AI changed the text */
-    if(el.aiChanged) reflowInBox(ctx,W,H,el);
-    else el.lines.forEach(function(l){ drawLineAtBox(ctx,W,H,l.bbox,l.text); });
+    if(el.aiChanged) reflowInBox(ctx,W,H,el,"400");
+    else el.lines.forEach(function(l){ drawLineAtBox(ctx,W,H,l.bbox,l.text,"400"); });
   } else {
-    /* title / decoration: geometry-locked */
-    if(el.lines.length===1) drawLineAtBox(ctx,W,H,el.lines[0].bbox, elText(el));
-    else if(el.aiChanged) reflowInBox(ctx,W,H,el);
-    else el.lines.forEach(function(l){ drawLineAtBox(ctx,W,H,l.bbox,l.text); });
+    /* title -> bold; decoration -> regular; both geometry-locked */
+    const w=(el.role==="title")?"700":"400";
+    if(el.lines.length===1) drawLineAtBox(ctx,W,H,el.lines[0].bbox, elText(el), w);
+    else if(el.aiChanged) reflowInBox(ctx,W,H,el,w);
+    else el.lines.forEach(function(l){ drawLineAtBox(ctx,W,H,l.bbox,l.text,w); });
   }
 }
 function layoutFromStructure(st){
@@ -1666,6 +1671,77 @@ $("genPdf").addEventListener("click", async function(){
     setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} },4000);
     flash(btn,"PDF ready",old); showToast("PDF generated.",false);
   }catch(err){ showToast("PDF error: "+((err&&err.message)||err),true); flash(btn,"Error",old); }
+  finally{ setTimeout(function(){ if(!/ready/i.test(btn.textContent)) btn.innerHTML=old; btn.disabled=false; },1200); }
+});
+
+/* ============================================================
+   DOCX EXPORT  (Microsoft Word)
+   Reuses the same reconstruction source as the PDF export: the
+   current PAGE_STRUCT (raw OCR, or the AI-processed document after
+   AI Document Processing). Produces real Word paragraphs/headings
+   with Noto Naskh Arabic and per-element RTL, so the flow is:
+     PDF/Image -> OCR (or embedded-text bypass) -> AI Processing -> PDF or DOCX.
+   The library is lazy-loaded only when DOCX export is first used.
+   ============================================================ */
+const DOCX_SOURCES=[
+  "https://cdn.jsdelivr.net/npm/docx@9.7.1/build/index.umd.js",
+  "https://cdn.jsdelivr.net/npm/docx@9.7.1/build/index.js",
+  "https://unpkg.com/docx@9.7.1/build/index.umd.js"
+];
+let _docxPromise=null;
+function ensureDocx(){
+  if(window.docx) return Promise.resolve(window.docx);
+  if(_docxPromise) return _docxPromise;
+  _docxPromise=(async function(){
+    let lastErr=null;
+    for(let i=0;i<DOCX_SOURCES.length;i++){ try{ await loadScript(DOCX_SOURCES[i]); if(window.docx) return window.docx; }catch(e){ lastErr=e; } }
+    throw new Error("Word export library failed to load. Check your connection. "+((lastErr&&lastErr.message)||""));
+  })();
+  return _docxPromise;
+}
+const DOCX_AR_FONT="Noto Naskh Arabic";
+function buildDocxFromStruct(structArr){
+  const D=window.docx, children=[];
+  structArr.forEach(function(st,pi){
+    let firstInPage=true;
+    st.elements.forEach(function(el){
+      if(el.role==="decoration") return;
+      const t=elText(el).trim(); if(!t) return;
+      const rtl=isArabicStr(t), isTitle=(el.role==="title");
+      const run=new D.TextRun({ text:t, font:DOCX_AR_FONT, bold:isTitle, size:isTitle?32:24, color:isTitle?"0F3B38":"1A1A1A", rightToLeft:rtl });
+      const para=new D.Paragraph({
+        children:[run],
+        bidirectional:rtl,
+        alignment: rtl?D.AlignmentType.RIGHT:D.AlignmentType.LEFT,
+        heading: isTitle?D.HeadingLevel.HEADING_1:undefined,
+        spacing:{ after:isTitle?180:140, before:(isTitle&&!(pi===0&&firstInPage))?200:0, line:rtl?340:300 },
+        pageBreakBefore:(pi>0&&firstInPage)
+      });
+      firstInPage=false;
+      children.push(para);
+    });
+  });
+  if(!children.length) children.push(new D.Paragraph({ children:[new D.TextRun({ text:"(no text)", font:DOCX_AR_FONT })] }));
+  return new D.Document({
+    styles:{ default:{ document:{ run:{ font:DOCX_AR_FONT, size:24 } } } },
+    sections:[{ properties:{}, children:children }]
+  });
+}
+$("genDocx").addEventListener("click", async function(){
+  if(busy) return;
+  if(!PAGE_STRUCT.length){ showToast("Nothing to export yet.",true); return; }
+  const btn=this,old=btn.innerHTML; btn.disabled=true;
+  btn.innerHTML='<svg class="spinner" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg> Building...';
+  try{
+    const D=await ensureDocx();
+    if(!D||!D.Packer) throw new Error("Word export library not available.");
+    const doc=buildDocxFromStruct(PAGE_STRUCT);
+    const blob=await D.Packer.toBlob(doc);
+    const url=URL.createObjectURL(blob),a=document.createElement("a");
+    a.href=url; a.download="ocr-"+ENGINE+".docx"; document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(function(){ try{ URL.revokeObjectURL(url); }catch(e){} },4000);
+    flash(btn,"DOCX ready",old); showToast("Word document generated.",false);
+  }catch(err){ showToast("DOCX error: "+((err&&err.message)||err),true); flash(btn,"Error",old); }
   finally{ setTimeout(function(){ if(!/ready/i.test(btn.textContent)) btn.innerHTML=old; btn.disabled=false; },1200); }
 });
 
