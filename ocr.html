@@ -765,13 +765,14 @@ const ORT_SOURCES = [
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"
 ];
 const ORT_WASM_BASE = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/";
-/* English PP-OCR ONNX models. These are starting-point URLs - run diagnostics to
-   confirm they resolve on your device; swap in any reachable PP-OCR ONNX if not.
-   The dictionary MUST match the recognition model. */
+/* PP-OCRv5 mobile ONNX (det + rec + matching dictionary), served from GitHub raw
+   with CORS enabled and as real files (not LFS pointers). PP-OCRv5's recognizer
+   covers Latin/English + digits. Swap these three URLs for any reachable PP-OCR ONNX
+   (e.g. a dedicated English or Arabic model) - the dict MUST match the rec model. */
 const PADDLE_MODELS = {
-  det:  "https://huggingface.co/RapidAI/RapidOCR/resolve/main/onnx/PP-OCRv4/det/en_PP-OCRv3_det_infer.onnx",
-  rec:  "https://huggingface.co/RapidAI/RapidOCR/resolve/main/onnx/PP-OCRv4/rec/en_PP-OCRv4_rec_infer.onnx",
-  dict: "https://huggingface.co/RapidAI/RapidOCR/resolve/main/onnx/PP-OCRv4/rec/en_dict.txt"
+  det:  "https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/det/det.onnx",
+  rec:  "https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/rec/rec.onnx",
+  dict: "https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/ppocrv5_dict.txt"
 };
 let _ortPromise=null, ORT_USED=null;
 function loadScript(url){ return new Promise(function(res,rej){ const s=document.createElement("script"); s.src=url; s.async=true; s.onload=function(){res();}; s.onerror=function(){rej(new Error("script load failed: "+url));}; document.head.appendChild(s); }); }
