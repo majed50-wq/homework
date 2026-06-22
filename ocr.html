@@ -219,7 +219,7 @@
         <button data-engine="tesseract" aria-pressed="true">Tesseract</button>
         <button data-engine="paddle" aria-pressed="false">PaddleOCR Mobile</button>
       </div>
-      <p class="hint" id="engineHint" style="display:none">PaddleOCR runs its own detection + recognition, so the Tesseract model / sweep / preprocessing options below are ignored. Models load on first use and are cached.</p>
+      <p class="hint" id="engineHint" style="display:none">PaddleOCR (PP-OCRv5) runs its own detection + recognition on WebAssembly, so the Tesseract model / sweep / preprocessing options are ignored. The <b>Language</b> control picks the model: English by default, or Arabic when Language = Arabic. Models load on first use and are cached.</p>
       <button class="mini" id="paddleDiagBtn" type="button" style="display:none;margin-top:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2a7 7 0 0 1 7 7c0 3-2 4-2 6H7c0-2-2-3-2-6a7 7 0 0 1 7-7z"/><path d="M9 21h6"/></svg>Run PaddleOCR diagnostics</button>
     </div>
 
@@ -765,15 +765,29 @@ const ORT_SOURCES = [
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"
 ];
 const ORT_WASM_BASE = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/";
-/* PP-OCRv5 mobile ONNX (det + rec + matching dictionary), served from GitHub raw
-   with CORS enabled and as real files (not LFS pointers). PP-OCRv5's recognizer
-   covers Latin/English + digits. Swap these three URLs for any reachable PP-OCR ONNX
-   (e.g. a dedicated English or Arabic model) - the dict MUST match the rec model. */
-const PADDLE_MODELS = {
-  det:  "https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/det/det.onnx",
-  rec:  "https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/rec/rec.onnx",
-  dict: "https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/ppocrv5_dict.txt"
+/* Two PP-OCRv5 model sets. Detection is script-agnostic, so both share the verified
+   v5 detector; only recognizer + dictionary differ. Selected by the Language control
+   when the engine is PaddleOCR (Arabic -> ar, otherwise en). All URLs are CORS-enabled
+   real files; the Arabic recognizer is served from GitHub's LFS media endpoint. */
+const PADDLE_DET = "https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/det/det.onnx";
+const PADDLE_MODEL_SETS = {
+  en: {
+    label: "English (PP-OCRv5)",
+    det: PADDLE_DET,
+    rec: "https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/rec/rec.onnx",
+    dict:"https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/ppocrv5_dict.txt",
+    recH:48, rtl:false
+  },
+  ar: {
+    label: "Arabic (PP-OCRv5)",
+    det: PADDLE_DET,
+    rec: "https://media.githubusercontent.com/media/PT-Perkasa-Pilar-Utama/ppu-paddle-ocr-models/main/recognition/multi/arabic/v5/arabic_PP-OCRv5_mobile_rec_infer.onnx",
+    dict:"https://raw.githubusercontent.com/PT-Perkasa-Pilar-Utama/ppu-paddle-ocr-models/main/recognition/multi/arabic/v5/ppocrv5_arabic_dict.txt",
+    recH:48, rtl:true
+  }
 };
+function paddleVariant(){ return (typeof lang!=="undefined" && lang==="ara") ? "ar" : "en"; }
+function activeModels(){ return PADDLE_MODEL_SETS[paddleVariant()]; }
 let _ortPromise=null, ORT_USED=null;
 function loadScript(url){ return new Promise(function(res,rej){ const s=document.createElement("script"); s.src=url; s.async=true; s.onload=function(){res();}; s.onerror=function(){rej(new Error("script load failed: "+url));}; document.head.appendChild(s); }); }
 async function ensureOrt(){
@@ -825,32 +839,32 @@ function recPreprocess(srcCanvas, box, recH, maxW){
   return { data:arr, w:maxW, h:recH };
 }
 class PaddleOcrAdapter extends OcrAdapter {
-  constructor(){ super(); this.det=null; this.rec=null; this.dict=null; this._ready=false; }
+  constructor(){ super(); this.det=null; this.rec=null; this.dict=null; this.recH=48; this._variant=null; this._detUrl=null; }
   get id(){ return "paddle"; }
   get label(){ return "PaddleOCR Mobile"; }
   async init(progress){
-    if(this._ready) return;
-    if(!PADDLE_MODELS.det||!PADDLE_MODELS.rec||!PADDLE_MODELS.dict){ const e=new Error("PaddleOCR model URLs are not configured (det / rec / dict)."); e.stage="config"; throw e; }
+    const set=activeModels(), variant=paddleVariant();
+    if(this._variant===variant && this.det && this.rec && this.dict) return;
+    if(!set.det||!set.rec||!set.dict){ const e=new Error("PaddleOCR model URLs are not configured (det / rec / dict)."); e.stage="config"; throw e; }
     if(progress) progress("Loading ONNX runtime (first run only)...");
     let ort; try{ ort=await ensureOrt(); }catch(e){ const err=new Error("ONNX runtime load failed: "+((e&&e.message)||e)); err.cause=e; err.stage="runtime"; throw err; }
     try{ ort.env.wasm.numThreads=1; ort.env.wasm.simd=true; ort.env.wasm.wasmPaths=ORT_WASM_BASE; }catch(e){}
     try{
-      if(progress) progress("Loading detection model...");
-      this.det=await ort.InferenceSession.create(PADDLE_MODELS.det,{executionProviders:["wasm"]});
-      if(progress) progress("Loading recognition model...");
-      this.rec=await ort.InferenceSession.create(PADDLE_MODELS.rec,{executionProviders:["wasm"]});
+      if(!this.det || this._detUrl!==set.det){ if(progress) progress("Loading detection model..."); this.det=await ort.InferenceSession.create(set.det,{executionProviders:["wasm"]}); this._detUrl=set.det; }
+      if(progress) progress("Loading "+set.label+" recognition model...");
+      this.rec=await ort.InferenceSession.create(set.rec,{executionProviders:["wasm"]});
     }catch(e){ const err=new Error("ONNX model session failed: "+((e&&e.message)||e)); err.cause=e; err.stage="session"; throw err; }
     try{
       if(progress) progress("Loading dictionary...");
-      const r=await fetch(PADDLE_MODELS.dict,{cache:"force-cache"}); if(!r.ok) throw new Error("HTTP "+r.status);
+      const r=await fetch(set.dict,{cache:"force-cache"}); if(!r.ok) throw new Error("HTTP "+r.status);
       const txt=await r.text(); this.dict=txt.replace(/\r/g,"").split("\n"); while(this.dict.length&&this.dict[this.dict.length-1]==="") this.dict.pop();
     }catch(e){ const err=new Error("Dictionary load failed: "+((e&&e.message)||e)); err.cause=e; err.stage="dict"; throw err; }
-    this._ready=true;
+    this.recH=set.recH||48; this._variant=variant;
   }
   _decode(idx, C){ if(idx<=0) return null; if(C===this.dict.length+2 && idx===C-1) return " "; const ch=this.dict[idx-1]; return (ch!=null)?ch:null; }
   async recognize(canvas, opts, progress){
     await this.init(progress);
-    const ort=window.ort;
+    const ort=window.ort, recH=this.recH;
     if(progress) progress("Detecting text lines...");
     const pre=detPreprocess(canvas, 960);
     const dfeed={}; dfeed[this.det.inputNames[0]]=new ort.Tensor("float32", pre.data, [1,3,pre.nh,pre.nw]);
@@ -863,8 +877,8 @@ class PaddleOcrAdapter extends OcrAdapter {
     for(let i=0;i<boxes.length;i++){
       const b=boxes[i]; if((b.y1-b.y0)<6||(b.x1-b.x0)<6) continue;
       if(progress && i%5===0) progress("Recognising lines... "+lines.length+"/"+boxes.length);
-      const rp=recPreprocess(canvas, b, 48, 320);
-      const rf={}; rf[this.rec.inputNames[0]]=new ort.Tensor("float32", rp.data, [1,3,48,320]);
+      const rp=recPreprocess(canvas, b, recH, 320);
+      const rf={}; rf[this.rec.inputNames[0]]=new ort.Tensor("float32", rp.data, [1,3,recH,320]);
       const ro=await this.rec.run(rf);
       const ot=ro[this.rec.outputNames[0]], T=ot.dims[1], C=ot.dims[2], dd=ot.data;
       let last=0, chars=[], confs=[];
@@ -913,25 +927,24 @@ async function diagProbeUrl(url, timeoutMs){
   }
 }
 async function runPaddleDiagnostics(){
+  const set=activeModels(), variant=paddleVariant();
   const d={ ortSources:[], ortLoaded:false, ortUsed:null, ortErr:null,
+            variant:variant, setLabel:set.label,
             ua:navigator.userAgent||"", browser:diagBrowser(), wasm:diagHasWasm(), webgl:diagWebGL(),
-            detUrl:PADDLE_MODELS.det, recUrl:PADDLE_MODELS.rec, dictUrl:PADDLE_MODELS.dict,
+            detUrl:set.det, recUrl:set.rec, dictUrl:set.dict,
             det:null, rec:null, dict:null,
             detSession:null, recSession:null, finalError:null };
-  /* 1. ONNX runtime: probe each CDN + actually load it */
   for(let i=0;i<ORT_SOURCES.length;i++){ d.ortSources.push({ url:ORT_SOURCES[i], fetch:await diagProbeUrl(ORT_SOURCES[i],15000) }); }
   let ort=null;
   try{ ort=await ensureOrt(); d.ortLoaded=true; d.ortUsed=ORT_USED; }
   catch(e){ d.ortErr=(e&&e.message)||String(e); d.finalError=d.ortErr; }
   if(ort){ try{ ort.env.wasm.numThreads=1; ort.env.wasm.simd=true; ort.env.wasm.wasmPaths=ORT_WASM_BASE; }catch(e){} }
-  /* 2. model + dict downloads */
   d.det = d.detUrl ? await diagProbeUrl(d.detUrl, 30000) : { kind:"none" };
   d.rec = d.recUrl ? await diagProbeUrl(d.recUrl, 30000) : { kind:"none" };
   d.dict= d.dictUrl? await diagProbeUrl(d.dictUrl,20000) : { kind:"none" };
-  /* 3. try to actually build the inference sessions (validates ORT + model files end-to-end) */
   if(ort && d.det.kind==="ok" && d.rec.kind==="ok"){
     try{
-      paddleAdapter.det=await ort.InferenceSession.create(d.detUrl,{executionProviders:["wasm"]});
+      paddleAdapter.det=await ort.InferenceSession.create(d.detUrl,{executionProviders:["wasm"]}); paddleAdapter._detUrl=d.detUrl;
       d.detSession={ ok:true, inputs:(paddleAdapter.det.inputNames||[]).join(","), outputs:(paddleAdapter.det.outputNames||[]).join(",") };
     }catch(e){ d.detSession={ ok:false, err:(e&&e.message)||String(e) }; d.finalError=d.finalError||d.detSession.err; }
     try{
@@ -939,7 +952,7 @@ async function runPaddleDiagnostics(){
       d.recSession={ ok:true, inputs:(paddleAdapter.rec.inputNames||[]).join(","), outputs:(paddleAdapter.rec.outputNames||[]).join(",") };
     }catch(e){ d.recSession={ ok:false, err:(e&&e.message)||String(e) }; d.finalError=d.finalError||d.recSession.err; }
     if(d.detSession&&d.detSession.ok&&d.recSession&&d.recSession.ok&&d.dict.kind==="ok"){
-      try{ const r=await fetch(d.dictUrl,{cache:"force-cache"}); const t=await r.text(); paddleAdapter.dict=t.replace(/\r/g,"").split("\n"); while(paddleAdapter.dict.length&&paddleAdapter.dict[paddleAdapter.dict.length-1]==="") paddleAdapter.dict.pop(); paddleAdapter._ready=true; }catch(e){}
+      try{ const r=await fetch(d.dictUrl,{cache:"force-cache"}); const t=await r.text(); paddleAdapter.dict=t.replace(/\r/g,"").split("\n"); while(paddleAdapter.dict.length&&paddleAdapter.dict[paddleAdapter.dict.length-1]==="") paddleAdapter.dict.pop(); paddleAdapter.recH=set.recH||48; paddleAdapter._variant=variant; }catch(e){}
     }
   }
   return d;
@@ -965,7 +978,7 @@ function paddleDiagnosis(d){
   if(d.dict.kind!=="ok") return { ok:false, msg:"Dictionary did not download ("+probeTxt(d.dict)+"). The dict URL must match the recognition model." };
   if(d.detSession&&!d.detSession.ok) return { ok:false, msg:"Detection model downloaded but ONNX could not build a session: "+d.detSession.err };
   if(d.recSession&&!d.recSession.ok) return { ok:false, msg:"Recognition model downloaded but ONNX could not build a session: "+d.recSession.err };
-  if(d.detSession&&d.detSession.ok&&d.recSession&&d.recSession.ok) return { ok:true, msg:"ONNX runtime + both models + dictionary all loaded. PaddleOCR (WASM) is ready - run Extract text." };
+  if(d.detSession&&d.detSession.ok&&d.recSession&&d.recSession.ok) return { ok:true, msg:"ONNX runtime + both models + dictionary all loaded for "+d.setLabel+". PaddleOCR (WASM) is ready - run Extract text." };
   return { ok:false, msg:"Runtime loaded; models not yet validated." };
 }
 let LAST_DIAG=null;
@@ -975,6 +988,7 @@ function renderPaddleDiag(d){
   function row(k,v){ rows.push('<div class="diag-row"><div class="dk">'+k+'</div><div class="dv">'+v+'</div></div>'); }
   const dg=paddleDiagnosis(d);
   row("Diagnosis", (dg.ok?'<span class="ok">\u2705</span> ':'<span class="bad">\u274C</span> ')+esc(dg.msg));
+  row("Model set", esc(d.setLabel||"")+" <code>"+esc(d.variant||"")+"</code> &middot; selected via the Language control");
   let ortHtml=d.ortSources.map(function(s,i){ return "ORT "+(i+1)+": "+fmtProbe(s.fetch)+'<br><code>'+esc(s.url)+'</code>'; }).join("<br>");
   ortHtml+='<br>Load: '+(d.ortLoaded?('<span class="ok">\u2705</span> via <code>'+esc(d.ortUsed||"")+'</code>'):('<span class="bad">\u274C</span> '+(d.ortErr?esc(d.ortErr):"failed")));
   row("ONNX runtime", ortHtml);
@@ -992,6 +1006,7 @@ function renderPaddleDiag(d){
 function diagToText(d){
   const L=["PaddleOCR (onnxruntime-web) diagnostics",""];
   L.push("Diagnosis: "+paddleDiagnosis(d).msg); L.push("");
+  L.push("Model set: "+(d.setLabel||"")+" ("+(d.variant||"")+")");
   d.ortSources.forEach(function(s,i){ L.push("ORT source "+(i+1)+": "+s.url); L.push("  fetch: "+probeTxt(s.fetch)); });
   L.push("ORT load: "+(d.ortLoaded?("OK via "+d.ortUsed):("FAILED - "+(d.ortErr||""))));
   L.push("Browser: "+d.browser);
@@ -1085,7 +1100,7 @@ runBtn.addEventListener("click", async function(){
         const res=await paddleAdapter.recognize(raw,{},function(m){ if(m) pSub.textContent=m; });
         resultLines=res.lines||[]; resultAspect=raw.height/raw.width; resultThumb=thumbDataURL(raw);
         resultText=res.text||""; resultConf=(res.confidence!=null?Math.round(res.confidence*100):null);
-        resultTag="PaddleOCR Mobile"; disposeCanvas(raw); setBar(baseFrac+span*0.95);
+        resultTag="PaddleOCR Mobile \u00b7 "+(paddleVariant()==="ar"?"Arabic":"English"); disposeCanvas(raw); setBar(baseFrac+span*0.95);
       } else if(!optimize){
         jobProgress=function(p){ setBar(baseFrac+span*p); };
         pSub.textContent="Cleaning image..."; await yieldUI();
