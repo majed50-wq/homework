@@ -873,6 +873,8 @@ function okBad(b){ return b?'<span class="ok">\u2705</span> ':'<span class="bad"
 function probeTxt(p){ if(!p)return "n/a"; if(p.kind==="ok")return "OK HTTP "+p.status; if(p.kind==="http-error")return "FAIL HTTP "+p.status+" "+(p.statusText||""); if(p.kind==="timeout")return "TIMEOUT"; if(p.kind==="network-or-cors")return "NETWORK/CORS "+(p.message||""); if(p.kind==="default")return "default (internal)"; if(p.kind==="none")return "not set"; return "?"; }
 function diagToText(d){
   const lines=["PaddleOCR diagnostics",""];
+  lines.push("Diagnosis: "+paddleDiagnosis(d).msg);
+  lines.push("");
   d.sources.forEach(function(s,i){
     lines.push("Source "+(i+1)+": "+s.url);
     lines.push("  fetch: "+probeTxt(s.fetch));
@@ -893,11 +895,22 @@ function diagToText(d){
   lines.push("Init stack: "+(d.initStack||"(none)"));
   return lines.join("\n");
 }
+function paddleDiagnosis(d){
+  if(d.importOk&&d.initOk) return { ok:true, msg:"All checks passed - PaddleOCR is ready on this device." };
+  if(!d.importOk) return { ok:false, msg:"Runtime could not be imported on any source. The bundles fetch (HTTP 200) but fail to evaluate - see the import error above." };
+  const e=(d.initErr||"")+"";
+  if(/WebGLShader|\u521B\u5EFA\u5931\u8D25|shader|webgl/i.test(e)){
+    return { ok:false, msg:"Runtime imported OK, but PaddleOCR's WebGL compute backend could not create a shader (\""+e+"\" means \"WebGL shader creation failed\"). Every iOS browser, Chrome included, runs on Apple's WebKit, whose WebGL lacks the float-texture support paddle-js needs - so its backend cannot start here. paddle-js works on desktop Chrome/Firefox; for on-device iOS this engine needs an onnxruntime-web (WASM) backend, which has no WebGL dependency." };
+  }
+  return { ok:false, msg:"Runtime imported, but model init failed: "+e };
+}
 let LAST_DIAG=null;
 function renderPaddleDiag(d){
   LAST_DIAG=d;
   const rows=[];
   function row(k,v){ rows.push('<div class="diag-row"><div class="dk">'+k+'</div><div class="dv">'+v+'</div></div>'); }
+  const dg=paddleDiagnosis(d);
+  row("Diagnosis", (dg.ok?'<span class="ok">\u2705</span> ':'<span class="bad">\u274C</span> ')+esc(dg.msg));
   d.sources.forEach(function(s,i){
     const imp = s.skipped ? 'skipped (runtime already loaded)'
       : (s.importOk?'<span class="ok">\u2705</span> imported'
