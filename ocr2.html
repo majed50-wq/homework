@@ -152,6 +152,11 @@
   .recon-row{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:2px 0 14px}
   .recon-lbl{font-size:11px;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--muted-2)}
 
+  /* ---- AI processing mode selector (wraps on narrow screens) ---- */
+  #aiModeSeg{display:flex;width:100%;flex-wrap:wrap;gap:7px}
+  #aiModeSeg button{flex:1 1 28%;min-width:118px;border:1px solid var(--gold-line);background:rgba(0,0,0,.25);color:var(--muted);font-family:'Sora';font-size:13px;font-weight:600;padding:11px 10px;border-radius:10px;cursor:pointer;transition:background .15s,color .15s,border-color .15s}
+  #aiModeSeg button[aria-pressed="true"]{background:linear-gradient(155deg,var(--teal),var(--teal-deep));color:#04201d;border-color:transparent}
+
   /* ---- Comparison workspace ---- */
   #compare{display:none}
   .cmp-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin-bottom:14px}
@@ -375,10 +380,10 @@
     <p class="note" style="margin:-4px 0 14px">Transform the raw extraction into a clean, well-structured document. Processing runs page-by-page through Gemini and rewrites the result below, so <b>Generate PDF</b>, <b>Compare</b> and <b>Copy</b> all reflect the cleaned version. Use <b>Revert</b> to return to the raw OCR.</p>
     <div class="recon-row" style="margin-bottom:14px">
       <span class="recon-lbl">Mode</span>
-      <div class="view-seg" id="aiModeSeg" role="group" aria-label="AI processing mode">
-        <button data-mode="light" aria-pressed="true">Light</button>
-        <button data-mode="medium" aria-pressed="false">Medium</button>
-        <button data-mode="heavy" aria-pressed="false">Heavy</button>
+      <div id="aiModeSeg" role="group" aria-label="AI processing mode">
+        <button data-mode="cleanup" aria-pressed="true">Cleanup</button>
+        <button data-mode="rebuild" aria-pressed="false">Smart Rebuild</button>
+        <button data-mode="layout" aria-pressed="false">Layout Reconstruction</button>
       </div>
     </div>
     <p class="note" id="aiModeDesc" style="margin:0 0 16px;color:var(--muted)"></p>
@@ -1921,11 +1926,11 @@ function flash(btn,txt,old){ btn.textContent=txt; setTimeout(function(){ btn.inn
    output - textarea, Generate PDF, Compare, Copy, .txt - reflects
    the cleaned document. Revert restores the raw OCR.
    ============================================================ */
-let AI_PROC_MODE="light";
+let AI_PROC_MODE="cleanup";
 const AI_MODE_DESC={
-  light:"Light - structural cleanup only. Removes page numbers, headers, footers and side notes, and joins lines broken mid-sentence. Wording is preserved exactly.",
-  medium:"Medium - rebuilds paragraphs, detects real headings, fixes obvious OCR errors and standardizes punctuation. Meaning and language are preserved.",
-  heavy:"Heavy - sends the original page image together with the OCR text. Reconstructs full structure (headings, lists, tables) for the cleanest final-PDF output."
+  cleanup:"Cleanup - removes page numbers, headers, footers and decorative elements, merges broken lines and normalizes spacing. The original text is preserved exactly.",
+  rebuild:"Smart Rebuild - uses the page image to detect titles, subtitles, questions, lists and paragraphs, rebuild the structure, fix OCR mistakes and improve punctuation. Wording and meaning are preserved.",
+  layout:"Layout Reconstruction - the most advanced mode. Reads the page image to understand layout, hierarchy and sections, then recreates the document's visual organization and reading flow as closely as the text format allows."
 };
 function setAiModeDesc(){ const d=$("aiModeDesc"); if(d) d.textContent=AI_MODE_DESC[AI_PROC_MODE]||""; }
 function resetAiProcState(){ RAW_STRUCT_BACKUP=null; const r=$("aiProcRevert"); if(r) r.disabled=true; setAiModeDesc(); }
@@ -1938,43 +1943,57 @@ setAiModeDesc();
 
 function rawPageText(st){ return (st.rawText&&st.rawText.trim()) ? st.rawText : st.elements.filter(function(e){return e.role!=="decoration";}).map(function(e){return elText(e).trim();}).filter(Boolean).join("\n\n"); }
 
-function lightPrompt(t){ return ""+
+function cleanupPrompt(t){ return ""+
 "You are cleaning OCR output WITHOUT changing the words.\n"+
 "Tasks:\n"+
-"- Remove page numbers, running headers and footers, and marginal side notes.\n"+
-"- Join lines broken mid-sentence into continuous paragraphs (drop hard line breaks inside a sentence; repair words hyphenated at line ends).\n"+
-"- Keep genuine paragraph breaks as blank lines.\n"+
+"- Remove page numbers.\n"+
+"- Remove running headers and footers.\n"+
+"- Remove decorative elements (rules, ornaments, repeated marks, watermark text).\n"+
+"- Merge lines broken mid-sentence into continuous paragraphs (drop hard line breaks inside a sentence; repair words hyphenated at line ends).\n"+
+"- Normalize spacing: single spaces between words, one blank line between paragraphs.\n"+
 "Strict rules:\n"+
-"- Preserve the wording EXACTLY: do not rephrase, translate, spell-correct, or add or remove words.\n"+
+"- Preserve the original text EXACTLY: do not rephrase, translate, spell-correct, or add or remove words.\n"+
 "- Do not add headings, titles or labels.\n"+
 "- Keep the original language and reading order; for Arabic keep right-to-left order.\n"+
 "- Return only the cleaned text. No commentary, no code fences.\n\nOCR text:\n"+t; }
 
-function mediumPrompt(t){ return ""+
-"You are reconstructing a clean, readable document from rough OCR text.\n"+
-"Tasks:\n"+
-"- Remove page numbers, headers, footers and side notes.\n"+
-"- Rebuild paragraphs and join broken lines.\n"+
-"- Detect real headings and mark them with markdown: # for a main heading, ## for a subheading. Only mark text that is clearly a heading in the source; never invent one.\n"+
-"- Fix obvious OCR recognition errors (garbled words, swapped letters).\n"+
-"- Standardize punctuation and spacing.\n"+
+function rebuildPrompt(t){ return ""+
+"You are rebuilding a clean, well-structured document from a scanned page.\n"+
+"You are given the original page image and a rough OCR transcription. Use the image to verify uncertain words.\n"+
+"Detect the structure and mark it with markdown:\n"+
+"- Titles -> #\n"+
+"- Subtitles -> ##\n"+
+"- Questions -> keep their original numbering and put each question on its own line\n"+
+"- Lists -> '- ' before each item\n"+
+"- Paragraphs -> normal text separated by a blank line\n"+
+"Also:\n"+
+"- Rebuild the logical document structure.\n"+
+"- Fix OCR recognition mistakes.\n"+
+"- Improve punctuation and spacing.\n"+
 "Strict rules:\n"+
-"- Preserve the meaning and the original language; do not translate or summarize.\n"+
-"- Do not add content that is not in the source.\n"+
-"- Use markdown ONLY for headings. No code fences, no commentary.\n\nOCR text:\n"+t; }
+"- Preserve the original wording and meaning; do not translate, summarize, or invent content.\n"+
+"- Keep the original language and reading order; for Arabic keep right-to-left order.\n"+
+"- Only mark structure that genuinely exists in the source; never invent headings.\n"+
+"- Return only the rebuilt markdown. No commentary, no code fences.\n\nRough OCR text:\n"+t; }
 
-function heavyPrompt(t){ return ""+
-"You are producing a faithful, clean reconstruction of this scanned page.\n"+
-"You are given the ORIGINAL page image (ground truth) and a rough OCR transcription. Use the image to resolve anything unclear in the OCR.\n"+
-"Tasks:\n"+
-"- Reproduce the document structure as closely as possible: headings, paragraphs, lists and tables.\n"+
-"- Use markdown: #, ##, ### for heading levels; - for list items; markdown pipe tables for tabular data.\n"+
-"- Remove page numbers, running headers/footers and margin notes.\n"+
-"- Fix OCR errors using the image; keep the original language and reading order. For Arabic keep right-to-left order.\n"+
+function layoutPrompt(t){ return ""+
+"You are the highest-quality document reconstruction engine in OCR Studio. Your focus is DOCUMENT UNDERSTANDING and LAYOUT RECREATION, not mere OCR cleanup.\n"+
+"You are given the ORIGINAL page image (the ground truth for layout) and its extracted text.\n"+
+"Work through these steps:\n"+
+"1. Analyze the page layout: columns, blocks, alignment, indentation, and spacing, and how the regions relate to each other.\n"+
+"2. Understand the document: identify what kind of page it is and the role of each block.\n"+
+"3. Detect the hierarchy and sections: title, subtitles, section and sub-section headings, questions, answer choices, lists, tables, captions and sidebars.\n"+
+"4. Reconstruct the visual organization in markdown that mirrors the page:\n"+
+"   - heading levels with #, ##, ### that reflect the real hierarchy depth\n"+
+"   - ordered or unordered lists for enumerated or bulleted content\n"+
+"   - markdown pipe tables for tabular regions\n"+
+"   - blank lines between sections, matching how the page separates them\n"+
+"5. Preserve the natural reading flow and the original reading order. For Arabic keep right-to-left order.\n"+
+"6. Replicate the original page structure as closely as the text format allows.\n"+
 "Strict rules:\n"+
-"- Do not translate, summarize or invent content; transcribe what is on the page.\n"+
-"- The output will be used to rebuild a final PDF, so keep it clean and well structured.\n"+
-"- Return only the reconstructed markdown. No commentary, no code fences.\n\nRough OCR text:\n"+t; }
+"- Transcribe the real content; fix OCR errors using the image, but do not translate, summarize, or invent content.\n"+
+"- Keep the original language.\n"+
+"- Return only the reconstructed markdown. No commentary, no code fences.\n\nExtracted text:\n"+t; }
 
 function mkProcEl(role,t){ return { id:"e"+(++__eid), role:role, bbox:null, lines:[{bbox:null,text:t}], text:t, aiText:null, aiChanged:false }; }
 function buildProcessedStruct(markdown, prev, pageIndex){
@@ -2032,12 +2051,12 @@ $("aiProcRun").addEventListener("click", async function(){
     for(let i=0;i<source.length;i++){
       const st=source[i]; btn.textContent="Processing "+(i+1)+"/"+source.length+"...";
       const ptext=rawPageText(st); let md;
-      if(mode==="heavy"){
-        const parts=[{text:heavyPrompt(ptext)}];
+      if(mode==="rebuild" || mode==="layout"){
+        const parts=[{text:(mode==="layout"?layoutPrompt(ptext):rebuildPrompt(ptext))}];
         if(st.original){ const b64=String(st.original).split(",")[1]; if(b64) parts.push(imagePart(b64)); }
         md=stripFences(await geminiGenerate(parts,null));
       } else {
-        md=stripFences(await geminiGenerate([{text:(mode==="light"?lightPrompt(ptext):mediumPrompt(ptext))}],null));
+        md=stripFences(await geminiGenerate([{text:cleanupPrompt(ptext)}],null));
       }
       out.push(buildProcessedStruct(md, st, i));
       await yieldUI();
