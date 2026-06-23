@@ -999,9 +999,35 @@ class PaddleOcrAdapter extends OcrAdapter {
         const rf={}; rf[this.rec.inputNames[0]]=new ort.Tensor("float32", rp.data, [1,3,recH,rp.w]);
         const ro=await this.rec.run(rf);
         const ot=ro[this.rec.outputNames[0]], T=ot.dims[1], C=ot.dims[2], dd=ot.data;
-        let last=0, chars=[], confs=[];
-        for(let t=0;t<T;t++){ let best=0,bv=-Infinity; for(let c=0;c<C;c++){ const v=dd[t*C+c]; if(v>bv){bv=v;best=c;} }
-          if(best!==0&&best!==last){ const ch=this._decode(best,C); if(ch!=null){ chars.push(ch); confs.push(bv); } } last=best; }
+        /* Space recovery: PP-OCR models trained with a space class (C === dict+2, the
+           space being class C-1) often rank space JUST below the CTC blank inside the
+           gap between words, so greedy argmax never emits it and words run together.
+           In each blank/gap step we check whether space is the top NON-blank class; if
+           so the model is signalling a word break, and we insert one space before the
+           next real character. This only acts during gaps, so it can never split a word. */
+        const SPACE_CLS = (C === this.dict.length + 2) ? (C - 1) : -1;
+        let last=0, chars=[], confs=[], pendingSpace=false;
+        for(let t=0;t<T;t++){
+          let best=0,bv=-Infinity, bestNB=-1,nbv=-Infinity;
+          for(let c=0;c<C;c++){ const v=dd[t*C+c];
+            if(v>bv){bv=v;best=c;}
+            if(c!==0 && v>nbv){nbv=v;bestNB=c;} }
+          if(best===0){
+            if(rtl && SPACE_CLS>0 && bestNB===SPACE_CLS) pendingSpace=true;
+          } else if(best!==last){
+            const ch=this._decode(best,C);
+            if(ch!=null){
+              if(ch===" "){
+                if(chars.length && chars[chars.length-1]!==" "){ chars.push(" "); confs.push(bv); }
+              } else {
+                if(pendingSpace && chars.length && chars[chars.length-1]!==" "){ chars.push(" "); confs.push(nbv); }
+                chars.push(ch); confs.push(bv);
+              }
+              pendingSpace=false;
+            }
+          }
+          last=best;
+        }
         processed++;
         if(rtl) chars=visualToLogicalRTL(chars);
         const wtext=chars.join("").trim();
