@@ -810,35 +810,35 @@ const ORT_WASM_BASE = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/
 const PADDLE_DET = "https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/det/det.onnx";
 
 /* ----------------------------------------------------------------------------------
-   ARABIC RECOGNIZER -- two public PP-OCR generations, both must run rtl:true so each
-   line is flipped from the recognizer's visual (left-to-right scan) order into Arabic
-   logical order.
+   ARABIC RECOGNIZER -- both options run rtl:true so each line is flipped from the
+   recognizer's visual (left-to-right scan) order into Arabic logical order.
 
-   CRITICAL: the recognizer input HEIGHT must match the generation the weights were
-   trained at, or every Arabic line comes out garbled:
-     - PP-OCRv3 Arabic  -> height 32   (this was the bug: the app was sending 48)
-     - PP-OCRv5 Arabic  -> height 48   (same as the working English v5 path)
+   INPUT HEIGHT: both of these ONNX graphs have their recognizer input height fixed at
+   48 (verified at runtime: sending 32 throws "Got: 32 Expected: 48"). The monkt model
+   card mentions 32 for PP-OCRv3, but the converted .onnx actually requires 48 -- so
+   recH must be 48 for both. The diagnostics "Recognizer probe" line confirms the
+   accepted height and the class/dict counts.
 
    (A) PP-OCRv3 Arabic [DEFAULT - zero setup]
-       Served cross-origin from HuggingFace and already loads in the browser, so it
-       works with no extra hosting. Lower accuracy. Height corrected to 32.
+       Served cross-origin from HuggingFace, loads in the browser with no extra hosting.
+       Has a real space class (probe shows delta=2), so the CTC space-recovery in the
+       decoder can restore word spacing.
 
-   (B) PP-OCRv5 Arabic [RECOMMENDED UPGRADE - needs self-hosting]
-       Newest official multilingual weights, higher accuracy, height 48, pairs with the
-       same v5 detector used for English. Download these two Apache-2.0 files once from
+   (B) PP-OCRv5 Arabic [OPTIONAL UPGRADE - needs self-hosting]
+       Newer multilingual weights, height 48, pairs with the same v5 detector used for
+       English. Download these two Apache-2.0 files once from
        https://github.com/GreatV/oar-ocr/releases/tag/v0.3.0
            arabic_pp-ocrv5_mobile_rec.onnx   (7.7 MB)
            ppocrv5_arabic_dict.txt
-       and commit them to your site repo under /models/ . Same-origin relative paths
-       avoid the cross-origin (CORS) fetch errors that GitHub release-asset URLs cause.
-       Then set:  const ARABIC_SET = ARABIC_V5;
+       commit them to your site repo under /models/ (same-origin paths avoid CORS),
+       then set:  const ARABIC_SET = ARABIC_V5;
    ---------------------------------------------------------------------------------- */
 const ARABIC_V3 = {
   label: "Arabic (PP-OCRv3)",
   det: PADDLE_DET,
   rec: "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/arabic/rec.onnx",
   dict:"https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/arabic/dict.txt",
-  recH:32, rtl:true
+  recH:48, rtl:true
 };
 const ARABIC_V5 = {
   label: "Arabic (PP-OCRv5)",
