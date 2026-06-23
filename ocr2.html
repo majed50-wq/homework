@@ -804,11 +804,51 @@ const ORT_SOURCES = [
   "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.18.0/dist/ort.min.js"
 ];
 const ORT_WASM_BASE = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.19.2/dist/";
-/* Two PP-OCRv5 model sets. Detection is script-agnostic, so both share the verified
-   v5 detector; only recognizer + dictionary differ. Selected by the Language control
-   when the engine is PaddleOCR (Arabic -> ar, otherwise en). All URLs are CORS-enabled
-   real files; the Arabic recognizer is served from GitHub's LFS media endpoint. */
+/* Detection is script-agnostic, so every set shares the verified v5 detector; only the
+   recognizer + dictionary + input height differ. Selected by the Language control when
+   the engine is PaddleOCR (Arabic -> ar, otherwise en). */
 const PADDLE_DET = "https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/det/det.onnx";
+
+/* ----------------------------------------------------------------------------------
+   ARABIC RECOGNIZER -- two public PP-OCR generations, both must run rtl:true so each
+   line is flipped from the recognizer's visual (left-to-right scan) order into Arabic
+   logical order.
+
+   CRITICAL: the recognizer input HEIGHT must match the generation the weights were
+   trained at, or every Arabic line comes out garbled:
+     - PP-OCRv3 Arabic  -> height 32   (this was the bug: the app was sending 48)
+     - PP-OCRv5 Arabic  -> height 48   (same as the working English v5 path)
+
+   (A) PP-OCRv3 Arabic [DEFAULT - zero setup]
+       Served cross-origin from HuggingFace and already loads in the browser, so it
+       works with no extra hosting. Lower accuracy. Height corrected to 32.
+
+   (B) PP-OCRv5 Arabic [RECOMMENDED UPGRADE - needs self-hosting]
+       Newest official multilingual weights, higher accuracy, height 48, pairs with the
+       same v5 detector used for English. Download these two Apache-2.0 files once from
+       https://github.com/GreatV/oar-ocr/releases/tag/v0.3.0
+           arabic_pp-ocrv5_mobile_rec.onnx   (7.7 MB)
+           ppocrv5_arabic_dict.txt
+       and commit them to your site repo under /models/ . Same-origin relative paths
+       avoid the cross-origin (CORS) fetch errors that GitHub release-asset URLs cause.
+       Then set:  const ARABIC_SET = ARABIC_V5;
+   ---------------------------------------------------------------------------------- */
+const ARABIC_V3 = {
+  label: "Arabic (PP-OCRv3)",
+  det: PADDLE_DET,
+  rec: "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/arabic/rec.onnx",
+  dict:"https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/arabic/dict.txt",
+  recH:32, rtl:true
+};
+const ARABIC_V5 = {
+  label: "Arabic (PP-OCRv5)",
+  det: PADDLE_DET,
+  rec: "models/arabic_pp-ocrv5_mobile_rec.onnx",
+  dict:"models/ppocrv5_arabic_dict.txt",
+  recH:48, rtl:true
+};
+const ARABIC_SET = ARABIC_V3;   /* flip to ARABIC_V5 after self-hosting the two files */
+
 const PADDLE_MODEL_SETS = {
   en: {
     label: "English (PP-OCRv5)",
@@ -817,13 +857,7 @@ const PADDLE_MODEL_SETS = {
     dict:"https://raw.githubusercontent.com/SotaTne/OnnxOcrJS/main/models/ppocrv5/ppocrv5_dict.txt",
     recH:48, rtl:false
   },
-  ar: {
-    label: "Arabic (PP-OCR)",
-    det: PADDLE_DET,
-    rec: "https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/arabic/rec.onnx",
-    dict:"https://huggingface.co/monkt/paddleocr-onnx/resolve/main/languages/arabic/dict.txt",
-    recH:48, rtl:true
-  }
+  ar: ARABIC_SET
 };
 function paddleVariant(){ return (typeof lang!=="undefined" && lang==="ara") ? "ar" : "en"; }
 function activeModels(){ return PADDLE_MODEL_SETS[paddleVariant()]; }
