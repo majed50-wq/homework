@@ -229,11 +229,32 @@ body{
             <span class="sw"></span>
             <span class="tx">Document also contains English<small>On-device only. Leave off for Arabic-only pages.</small></span>
         </label>
+
+        <label class="toggle" for="optFix">
+            <input type="checkbox" id="optFix">
+            <span class="sw"></span>
+            <span class="tx">AI fix &middot; clean text &amp; rebuild layout<small>Polishes the result with AI. Needs a Groq key (works with either method).</small></span>
+        </label>
+
+        <div class="label" style="margin-top:20px">OUTPUT FORMAT</div>
+        <div class="modes">
+            <button class="mode" id="outWord" type="button" aria-pressed="true">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5"/><path d="M8 13l1.2 4 1.3-4 1.3 4 1.2-4"/></svg>
+                <span class="nm">Word</span>
+                <span class="ds">Editable .docx file</span>
+            </button>
+            <button class="mode" id="outPdf" type="button" aria-pressed="false">
+                <svg class="ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M7 3h7l5 5v11a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M14 3v5h5"/><path d="M8.5 12.5h1.2a1.3 1.3 0 0 1 0 2.6H8.5zm0 0V18M13 12.5V18m0-5.5h2m-2 2.6h1.6M17.5 18v-5.5h1.8"/></svg>
+                <span class="nm">PDF</span>
+                <span class="ds">Formatted, ready to save</span>
+            </button>
+        </div>
     </div>
 
     <!-- ACTION -->
     <button class="cta" id="convert" disabled>Convert to Word</button>
     <div class="status" id="status"></div>
+    <a class="cta" id="pdfOpen" style="display:none;text-decoration:none;text-align:center" target="_blank" rel="noopener">Open printable PDF</a>
     <div class="progress" id="progress"><div class="fill" id="fill"></div></div>
 
     <div class="foot">Single file &middot; nothing is uploaded in On-device mode</div>
@@ -253,7 +274,20 @@ const VISION_PROMPT =
     'The text is mostly Arabic and may contain some English. Keep the original wording, punctuation and diacritics. ' +
     'Separate paragraphs with a blank line. Ignore page numbers, running headers/footers and watermarks. ' +
     'Do not translate, summarise, explain or add anything. Output only the transcribed text.';
-const LS = { mode:'p2w_mode', key:'p2w_groqkey', eng:'p2w_eng' };
+const FIX_PROMPT =
+    'You are a careful text editor. The text below was extracted by OCR from an Arabic document (it may also contain some English) ' +
+    'and may have character mistakes, broken lines, bad spacing and leftover noise. ' +
+    'Clean it: fix obvious OCR errors, join lines that belong to the same paragraph, separate distinct paragraphs with a blank line, ' +
+    'remove stray page numbers, headers, footers and garbage, and keep proper Arabic punctuation and spacing. ' +
+    'Preserve the original meaning, wording, language and order exactly. Do NOT translate, summarise, shorten or add anything. ' +
+    'Output only the cleaned text.';
+
+// AI rate limiting: free Groq tier is limited, so cap requests and pause.
+const AI_RPM       = 5;      // requests allowed per minute
+const AI_WINDOW_MS = 60000;  // length of the minute window
+const FIX_CHUNK    = 2800;   // chars per AI-fix request (keeps output under the token cap)
+
+const LS = { mode:'p2w_mode', key:'p2w_groqkey', eng:'p2w_eng', fix:'p2w_fix', out:'p2w_out' };
 
 // ---- elements ---------------------------------------------------------
 const drop=document.getElementById('drop'), fileInput=document.getElementById('fileInput');
@@ -261,32 +295,53 @@ const fileName=document.getElementById('fileName');
 const modeDevice=document.getElementById('modeDevice'), modeAI=document.getElementById('modeAI');
 const aiBox=document.getElementById('aiBox'), keyInput=document.getElementById('keyInput'), saveKey=document.getElementById('saveKey');
 const optEnglish=document.getElementById('optEnglish');
+const optFix=document.getElementById('optFix');
+const outWord=document.getElementById('outWord'), outPdf=document.getElementById('outPdf');
+const pdfOpen=document.getElementById('pdfOpen');
 const convertBtn=document.getElementById('convert');
 const statusEl=document.getElementById('status'), progress=document.getElementById('progress'), fill=document.getElementById('fill');
 
 let selectedFile=null;
 let mode = localStorage.getItem(LS.mode)==='ai' ? 'ai' : 'device';
+let outFmt = localStorage.getItem(LS.out)==='pdf' ? 'pdf' : 'word';
 
 // ---- restore saved state ---------------------------------------------
 (function init(){
     keyInput.value = localStorage.getItem(LS.key) || '';
     optEnglish.checked = localStorage.getItem(LS.eng)==='1';
+    optFix.checked = localStorage.getItem(LS.fix)==='1';
     setMode(mode);
+    setOutFmt(outFmt);
 })();
 
 // ---- mode handling ----------------------------------------------------
+function keyNeeded(){ return mode==='ai' || optFix.checked; }
+function updateKeyBox(){ aiBox.classList.toggle('show', keyNeeded()); }
+
 function setMode(m){
     mode=m;
     const ai = m==='ai';
     modeAI.setAttribute('aria-pressed', ai);
     modeDevice.setAttribute('aria-pressed', !ai);
-    aiBox.classList.toggle('show', ai);
     optEnglish.closest('.toggle').style.opacity = ai ? '.5' : '1';
     localStorage.setItem(LS.mode, m);
+    updateKeyBox();
+}
+function setOutFmt(f){
+    outFmt=f;
+    const pdf = f==='pdf';
+    outPdf.setAttribute('aria-pressed', pdf);
+    outWord.setAttribute('aria-pressed', !pdf);
+    convertBtn.textContent = pdf ? 'Convert to PDF' : 'Convert to Word';
+    localStorage.setItem(LS.out, f);
+    pdfOpen.style.display='none';
 }
 modeDevice.addEventListener('click', ()=>setMode('device'));
 modeAI.addEventListener('click', ()=>setMode('ai'));
+outWord.addEventListener('click', ()=>setOutFmt('word'));
+outPdf.addEventListener('click', ()=>setOutFmt('pdf'));
 optEnglish.addEventListener('change', ()=>localStorage.setItem(LS.eng, optEnglish.checked?'1':'0'));
+optFix.addEventListener('change', ()=>{ localStorage.setItem(LS.fix, optFix.checked?'1':'0'); updateKeyBox(); });
 saveKey.addEventListener('click', ()=>{
     localStorage.setItem(LS.key, keyInput.value.trim());
     saveKey.textContent='Saved';
@@ -316,7 +371,7 @@ function status(msg,type,prog){
     if(prog!=null){ progress.classList.add('show'); fill.style.width=prog+'%'; }
     else progress.classList.remove('show');
 }
-function hideStatus(){ statusEl.className='status'; progress.classList.remove('show'); }
+function hideStatus(){ statusEl.className='status'; progress.classList.remove('show'); pdfOpen.style.display='none'; }
 
 // ---- shared rendering -------------------------------------------------
 function renderToCanvas(page, longCap){
@@ -413,25 +468,110 @@ async function runDevice(pdf){
     return reconstructParagraphs(parts.join('\n\n'));
 }
 
-async function groqRead(dataUrl, key){
-    const res=await fetch(GROQ_URL,{
-        method:'POST',
-        headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
-        body:JSON.stringify({
-            model:GROQ_MODEL, temperature:0, max_tokens:4096,
-            messages:[{role:'user',content:[
-                {type:'text',text:VISION_PROMPT},
-                {type:'image_url',image_url:{url:dataUrl}}
-            ]}]
-        })
-    });
-    if(!res.ok){
-        let detail=''; try{ const e=await res.json(); detail=e.error&&e.error.message?e.error.message:''; }catch(_){}
-        if(res.status===401) throw new Error('Groq rejected the API key. Check it and Save again.');
-        throw new Error('Groq error '+res.status+(detail?': '+detail:''));
+// ---- AI rate limiting + auto-resume ----------------------------------
+const rate = { windowStart:0, count:0 };
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+// Counts down on screen while paused, so the user knows it is still working.
+async function countdownWait(ms, label){
+    const end = Date.now() + ms;
+    while(Date.now() < end){
+        const secs = Math.ceil((end - Date.now())/1000);
+        status(label+' '+secs+'s...', 'loading');
+        await sleep(Math.min(1000, Math.max(0, end - Date.now())));
     }
-    const j=await res.json();
-    return (j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : '').trim();
+}
+
+// Gate before every AI request: max AI_RPM per rolling minute window.
+async function rateGate(){
+    const now = Date.now();
+    if(rate.windowStart===0 || now - rate.windowStart >= AI_WINDOW_MS){
+        rate.windowStart = now; rate.count = 0;
+    }
+    if(rate.count >= AI_RPM){
+        const wait = rate.windowStart + AI_WINDOW_MS - Date.now();
+        if(wait > 0) await countdownWait(wait, 'Reached '+AI_RPM+' pages this minute. Continuing in');
+        rate.windowStart = Date.now(); rate.count = 0;
+    }
+    rate.count++;
+}
+
+// One Groq request with rate gating + automatic retry on limit/temporary errors.
+async function groqCall(body, key){
+    for(let attempt=0; attempt<8; attempt++){
+        await rateGate();
+        let res;
+        try{
+            res = await fetch(GROQ_URL,{
+                method:'POST',
+                headers:{'Content-Type':'application/json','Authorization':'Bearer '+key},
+                body:JSON.stringify(body)
+            });
+        }catch(netErr){
+            // network hiccup -> brief pause then retry
+            await countdownWait(5000, 'Connection issue. Retrying in');
+            continue;
+        }
+        // 429 = rate limit, 503 = busy: pause the suggested time, then continue.
+        if(res.status===429 || res.status===503){
+            let wait = 20000;
+            const ra = res.headers.get('retry-after');
+            if(ra){ const s=parseFloat(ra); if(!isNaN(s)) wait=Math.ceil(s*1000); }
+            else { try{ const e=await res.json(); const m=(e.error&&e.error.message)||''; const mt=m.match(/in ([\d.]+)s/i); if(mt) wait=Math.ceil(parseFloat(mt[1])*1000); }catch(_){ } }
+            await countdownWait(wait+800, 'Hit the AI limit. Auto-resuming in');
+            rate.windowStart=0; rate.count=0;   // start a fresh minute window
+            continue;
+        }
+        if(!res.ok){
+            let detail=''; try{ const e=await res.json(); detail=e.error&&e.error.message?e.error.message:''; }catch(_){}
+            if(res.status===401) throw new Error('Groq rejected the API key. Check it and Save again.');
+            throw new Error('Groq error '+res.status+(detail?': '+detail:''));
+        }
+        const j=await res.json();
+        return (j.choices && j.choices[0] && j.choices[0].message ? j.choices[0].message.content : '').trim();
+    }
+    throw new Error('Still limited after several automatic retries. Please try again shortly.');
+}
+
+async function groqRead(dataUrl, key){
+    return groqCall({
+        model:GROQ_MODEL, temperature:0, max_tokens:4096,
+        messages:[{role:'user',content:[
+            {type:'text',text:VISION_PROMPT},
+            {type:'image_url',image_url:{url:dataUrl}}
+        ]}]
+    }, key);
+}
+
+async function groqFix(text, key){
+    return groqCall({
+        model:GROQ_MODEL, temperature:0, max_tokens:4096,
+        messages:[
+            {role:'system',content:FIX_PROMPT},
+            {role:'user',content:text}
+        ]
+    }, key);
+}
+
+// ---- AI fix pass: clean text + rebuild paragraphs --------------------
+function chunkParas(paras, maxChars){
+    const chunks=[]; let cur='';
+    for(const p of paras){
+        if(cur && (cur.length + p.length + 2) > maxChars){ chunks.push(cur); cur=''; }
+        cur += (cur ? '\n\n' : '') + p;
+    }
+    if(cur) chunks.push(cur);
+    return chunks;
+}
+async function aiCleanup(paras, key){
+    const chunks = chunkParas(paras, FIX_CHUNK);
+    const out=[];
+    for(let i=0;i<chunks.length;i++){
+        status('AI fix: cleaning section '+(i+1)+' of '+chunks.length+'...','loading',Math.round((i/chunks.length)*100));
+        const cleaned = await groqFix(chunks[i], key);
+        out.push(...simpleParagraphs(cleaned));
+    }
+    return out.length ? out : paras;
 }
 
 async function runAI(pdf, key){
@@ -466,32 +606,85 @@ async function generateDocx(paras){
     return Packer.toBlob(new Document({sections:[{properties:{},children}]}));
 }
 
+// ---- PDF output (print-to-PDF: native Arabic shaping, selectable text) -
+function escapeHTML(s){
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function buildPrintableHTML(paras, title){
+    const blocks = paras.map(text=>{
+        const rtl=isArabicText(text), h=looksLikeHeading(text);
+        const dir = rtl?'rtl':'ltr';
+        const align = rtl?'right':'left';
+        const tag = h?'h2':'p';
+        return '<'+tag+' dir="'+dir+'" style="text-align:'+align+'">'+escapeHTML(text)+'</'+tag+'>';
+    }).join('\n');
+    return '<!DOCTYPE html><html lang="ar"><head><meta charset="UTF-8">'+
+        '<meta name="viewport" content="width=device-width,initial-scale=1">'+
+        '<title>'+escapeHTML(title)+'</title><style>'+
+        '@page{margin:18mm}'+
+        'html,body{margin:0;padding:0}'+
+        'body{font-family:"Times New Roman","Geeza Pro",serif;font-size:14pt;line-height:1.9;color:#000;padding:18mm}'+
+        'h2{font-size:16pt;font-weight:bold;margin:16pt 0 6pt}'+
+        'p{margin:0 0 10pt}'+
+        '@media print{body{padding:0}}'+
+        '</style></head><body>'+blocks+
+        '<script>setTimeout(function(){try{window.focus();window.print();}catch(e){}},500);<\/script>'+
+        '</body></html>';
+}
+function outputPDF(paras, name){
+    const html = buildPrintableHTML(paras, name);
+    const w = window.open('', '_blank');
+    if(w){
+        w.document.open(); w.document.write(html); w.document.close();
+        return true;
+    }
+    // Popup blocked (common on iOS after async work): offer a tappable link.
+    const url = URL.createObjectURL(new Blob([html],{type:'text/html'}));
+    pdfOpen.href = url;
+    pdfOpen.style.display = 'block';
+    return false;
+}
+
 // ---- orchestration ----------------------------------------------------
 convertBtn.addEventListener('click', handleConvert);
 async function handleConvert(){
     if(!selectedFile){ status('Choose a PDF first.','error'); return; }
     const key=keyInput.value.trim();
     if(mode==='ai' && !key){ status('Add your Groq API key to use AI Vision, or switch to On-device.','error'); return; }
+    if(optFix.checked && !key){ status('AI fix needs a Groq API key. Add it above, or turn AI fix off.','error'); return; }
 
     convertBtn.disabled=true;
+    pdfOpen.style.display='none';
     try{
         status('Reading PDF file...','loading',0);
         const buf=await selectedFile.arrayBuffer();
         const pdf=await pdfjsLib.getDocument({data:buf}).promise;
 
-        const paras = mode==='ai' ? await runAI(pdf,key) : await runDevice(pdf);
+        let paras = mode==='ai' ? await runAI(pdf,key) : await runDevice(pdf);
         if(!paras.length) throw new Error('No readable text was found. Try the other reading method or a clearer scan.');
 
-        status('Building your Word document...','loading',100);
-        const blob=await generateDocx(paras);
+        if(optFix.checked){
+            status('AI fix: cleaning text and rebuilding layout...','loading',0);
+            paras = await aiCleanup(paras, key);
+        }
 
-        const url=URL.createObjectURL(blob);
-        const a=document.createElement('a');
-        a.href=url; a.download=selectedFile.name.replace(/\.pdf$/i,'')+'_SmartOCR.docx';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        URL.revokeObjectURL(url);
+        const base = selectedFile.name.replace(/\.pdf$/i,'')+'_SmartOCR';
 
-        status('Done. Recovered '+paras.length+' paragraph'+(paras.length===1?'':'s')+' into your Word file.','success');
+        if(outFmt==='pdf'){
+            status('Building your PDF...','loading',100);
+            const opened = outputPDF(paras, base);
+            if(opened) status('Done. Recovered '+paras.length+' paragraph'+(paras.length===1?'':'s')+'. In the new tab, use Share / Print and choose "Save to Files" or "Save as PDF".','success');
+            else status('Done. Recovered '+paras.length+' paragraph'+(paras.length===1?'':'s')+'. Tap "Open printable PDF" below, then use Share / Print to save it.','success');
+        }else{
+            status('Building your Word document...','loading',100);
+            const blob=await generateDocx(paras);
+            const url=URL.createObjectURL(blob);
+            const a=document.createElement('a');
+            a.href=url; a.download=base+'.docx';
+            document.body.appendChild(a); a.click(); document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+            status('Done. Recovered '+paras.length+' paragraph'+(paras.length===1?'':'s')+' into your Word file.','success');
+        }
     }catch(err){
         console.error(err);
         status('Error: '+err.message,'error');
