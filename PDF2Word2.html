@@ -268,7 +268,7 @@ const TARGET_DPI = 300;   // on-device OCR sweet spot (PDF.js scale 1 = 72 DPI)
 const MAX_DIM    = 3500;  // px cap, on-device
 const AI_MAX_DIM = 2000;  // px cap for the image sent to AI Vision (smaller = faster/cheaper)
 const GROQ_URL   = 'https://api.groq.com/openai/v1/chat/completions';
-const GROQ_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
+const GROQ_MODEL = 'openai/gpt-oss-120b';
 const VISION_PROMPT =
     'You are an OCR engine. Transcribe ALL text from this scanned page exactly as written. ' +
     'The text is mostly Arabic and may contain some English. Keep the original wording, punctuation and diacritics. ' +
